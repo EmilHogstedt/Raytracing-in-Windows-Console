@@ -9,4 +9,5 @@ int main()
     while(Engine::GetInstance()->Run())
     { }
     
+    Engine::GetInstance()->CleanUp();
 }

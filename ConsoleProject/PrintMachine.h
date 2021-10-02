@@ -32,21 +32,33 @@ public:
 	static void SendData(size_t, size_t, char);
 	static void Fill(char);
 	static const bool Print();
+	static void UpdateFPS(int);
 
+	static size_t GetWidth();
+	static size_t GetHeight();
 private:
 	static void ClearConsole();
 
 	static std::vector<std::vector<char>> m_2DPrintArray;
+	static int m_fps;
+
+	static size_t currentWidth;
+	static size_t currentHeight;
 };
 
 PrintMachine* PrintMachine::pInstance{ nullptr };
 std::vector<std::vector<char>> PrintMachine::m_2DPrintArray;
 std::mutex PrintMachine::m_Lock;
+int PrintMachine::m_fps = 60;
+size_t PrintMachine::currentWidth = 0;
+size_t PrintMachine::currentHeight = 0;
 
 //--------------------------------------------------------
 
 PrintMachine::PrintMachine(size_t x, size_t y)
 {
+	currentWidth = x;
+	currentHeight = y;
 	m_2DPrintArray.resize(y);
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
 		m_2DPrintArray[i].resize(x);
@@ -68,6 +80,16 @@ void PrintMachine::CleanUp()
 	delete pInstance;
 }
 
+size_t PrintMachine::GetWidth()
+{
+	return currentWidth;
+}
+
+size_t PrintMachine::GetHeight()
+{
+	return currentHeight;
+}
+
 const bool PrintMachine::ChangeSize(size_t x, size_t y)
 {
 	if (x > WIDTHLIMIT)
@@ -75,12 +97,19 @@ const bool PrintMachine::ChangeSize(size_t x, size_t y)
 	if (y > HEIGHTLIMIT)
 		return false;
 
+	currentWidth = x;
+	currentHeight = y;
 	m_2DPrintArray = {};
 	m_2DPrintArray.resize(x);
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
 		m_2DPrintArray.resize(y);
 
 	return true;
+}
+
+void PrintMachine::UpdateFPS(int fps)
+{
+	m_fps = fps;
 }
 
 void PrintMachine::SendData(size_t x, size_t y, char pixelData)
@@ -100,35 +129,67 @@ void PrintMachine::Fill(char character)
 const bool PrintMachine::Print()
 {
 	//Clear the console before printing.
-	//ClearConsole();
-	system("cls");
+	ClearConsole();
+	//char emptyBuffer[100];
+	//memset(emptyBuffer, '\n', sizeof(emptyBuffer));
+	//fwrite(emptyBuffer, sizeof(emptyBuffer), 1, stdout);
 
-	//Print
-	char n = '\n';
+	char buffer[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
+	memset(buffer, 0, sizeof(buffer));
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
 	{
-		//for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
-		fwrite(m_2DPrintArray[i].data(), sizeof(char), m_2DPrintArray[i].size(), stdout);
-			//std::cout << m_2DPrintArray[i][j];
-		fwrite(&n, sizeof(char), 1, stdout);
+		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
+		{
+			if (j == m_2DPrintArray[i].size() - 1)
+			{
+				buffer[j + i * (m_2DPrintArray[i].size() + 1)] = 'x';
+			}
+			else
+				buffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
+		}
+		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
-		
+	
+	fwrite(buffer, sizeof(buffer), 1, stdout);
+	std::cout << "FPS: " << m_fps;
+	
 	return true;
 }
 
 void PrintMachine::ClearConsole() {
-	COORD topLeft = { 0, 0 };
-	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_SCREEN_BUFFER_INFO screen;
-	DWORD written;
+	HANDLE                     hStdOut;
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	DWORD                      count;
+	DWORD                      cellCount;
+	COORD                      homeCoords = { 0, 0 };
 
-	GetConsoleScreenBufferInfo(console, &screen);
-	FillConsoleOutputCharacterA(
-		console, ' ', screen.dwSize.X * screen.dwSize.Y, topLeft, &written
-	);
-	FillConsoleOutputAttribute(
-		console, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE,
-		screen.dwSize.X * screen.dwSize.Y, topLeft, &written
-	);
-	SetConsoleCursorPosition(console, topLeft);
+	hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hStdOut == INVALID_HANDLE_VALUE) return;
+
+	/* Get the number of cells in the current buffer */
+	if (!GetConsoleScreenBufferInfo(hStdOut, &csbi)) return;
+	cellCount = csbi.dwSize.X * csbi.dwSize.Y;
+
+	/* Fill the entire buffer with spaces */
+	/*
+	if (!FillConsoleOutputCharacter(
+		hStdOut,
+		(TCHAR)' ',
+		cellCount,
+		homeCoords,
+		&count
+	)) return;
+	
+	/* Fill the entire buffer with the current colors and attributes */
+	
+	if (!FillConsoleOutputAttribute(
+		hStdOut,
+		csbi.wAttributes,
+		2000,
+		homeCoords,
+		&count
+	)) return;
+	
+	/* Move the cursor home */
+	SetConsoleCursorPosition(hStdOut, homeCoords);
 }
