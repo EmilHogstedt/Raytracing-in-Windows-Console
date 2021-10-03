@@ -1,4 +1,5 @@
 #pragma once
+#include "MyMath.h"
 
 class Camera
 {
@@ -11,23 +12,23 @@ public:
 	void SetRot(float, float, float);
 	void SetPos(float, float, float);
 
-	float** GetWMatrix();
-	float** GetVMatrix();
-	float** GetPMatrix();
+	Matrix GetWMatrix();
+	Matrix GetVMatrix();
+	Matrix GetPMatrix();
 
-	float* GetPos();
-	float* GetRot();
+	Vector3 GetPos();
+	Vector3 GetRot();
 private:
-	float** m_wMatrix;
-	float** m_vMatrix;
-	float** m_pMatrix;
+	Matrix m_wMatrix;
+	Matrix m_vMatrix;
+	Matrix m_pMatrix;
 
-	float m_right[3];
-	float m_up[3];
-	float m_forward[3];
+	Vector3 m_right;
+	Vector3 m_up;
+	Vector3 m_forward;
 
-	float m_pos[3];
-	float m_rot[3];
+	Vector3 m_pos;
+	Vector3 m_rot;
 
 	float m_screenNear = 0.1f;
 	float m_screenFar = 10000.0f;
