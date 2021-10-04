@@ -122,8 +122,8 @@ void Engine::WaitForJob(
 			Job = queue.front();
 			queue.pop_front();
 		}
-
-		Job.m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job.m_y, Job.m_x);
+		
+			Job.m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job.m_y, Job.m_x);
 	}
 }
 
@@ -144,7 +144,7 @@ void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, f
 void Engine::shutdownThreads()
 {
 	{
-		std::unique_lock<std::mutex> lock(threadpoolMutex);
+		std::unique_lock<std::mutex> lock(queueMutex);
 		terminatePool = true;
 	}
 
@@ -605,7 +605,7 @@ void Engine::Start()
 		printf("Unable to install handler!\n");
 		assert(false);
 	}
-	PrintMachine::CreatePrintMachine(150, 100);
+	PrintMachine::CreatePrintMachine(100, 70);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
