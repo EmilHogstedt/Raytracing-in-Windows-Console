@@ -11,9 +11,10 @@ public:
 	void Update();
 	void SetRot(float, float, float);
 	void SetPos(float, float, float);
-
+	
 	Matrix GetWMatrix();
 	Matrix GetVMatrix();
+	Matrix GetInverseVMatrix();
 	Matrix GetPMatrix();
 
 	Vector3 GetPos();
@@ -29,9 +30,9 @@ private:
 
 	Vector3 m_pos;
 	Vector3 m_rot;
-
+	
 	float m_screenNear = 0.1f;
 	float m_screenFar = 10000.0f;
 
-	float m_FOV = 4.0f;
+	float m_FOV = 3.0f;
 };

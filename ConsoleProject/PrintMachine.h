@@ -1,5 +1,5 @@
-#include "pch.h"
 #pragma once
+#include "pch.h"
 
 #define WIDTHLIMIT 100
 #define HEIGHTLIMIT 50
@@ -29,17 +29,20 @@ public:
 
 public:
 	static const bool ChangeSize(size_t, size_t);
-	static void SendData(size_t, size_t, char);
+	//static void SendData(size_t, size_t, char);
+	static std::vector<std::vector<char>>* Get2DArray();
+
 	static void Fill(char);
-	static const bool Print();
+	static const bool Print(float);
 	static void UpdateFPS(int);
 
 	static size_t GetWidth();
 	static size_t GetHeight();
+
+	static std::vector<std::vector<char>> m_2DPrintArray;
 private:
 	static void ClearConsole();
 
-	static std::vector<std::vector<char>> m_2DPrintArray;
 	static int m_fps;
 
 	static size_t currentWidth;
@@ -112,11 +115,16 @@ void PrintMachine::UpdateFPS(int fps)
 	m_fps = fps;
 }
 
+std::vector<std::vector<char>>* PrintMachine::Get2DArray()
+{
+	return &m_2DPrintArray;
+}
+/*
 void PrintMachine::SendData(size_t x, size_t y, char pixelData)
 {
 	m_2DPrintArray[y][x] = pixelData;
 }
-
+*/
 void PrintMachine::Fill(char character)
 {
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
@@ -126,7 +134,7 @@ void PrintMachine::Fill(char character)
 	}
 }
 
-const bool PrintMachine::Print()
+const bool PrintMachine::Print(float spherepos)
 {
 	//Clear the console before printing.
 	ClearConsole();
@@ -140,19 +148,14 @@ const bool PrintMachine::Print()
 	{
 		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
 		{
-			if (j == m_2DPrintArray[i].size() - 1)
-			{
-				buffer[j + i * (m_2DPrintArray[i].size() + 1)] = 'x';
-			}
-			else
-				buffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
+			buffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
 		}
 		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
 	
 	fwrite(buffer, sizeof(buffer), 1, stdout);
-	std::cout << "FPS: " << m_fps;
-	
+	std::cout << "FPS: " << m_fps << "         \n";
+	std::cout << spherepos << "\n";
 	return true;
 }
 

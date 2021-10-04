@@ -1,14 +1,81 @@
 #pragma once
 #include "pch.h"
 #include "PrintMachine.h"
-#include "Timer.h"
 #include "Camera.h"
+#include "Timer.h"
+
 #include "Scene.h"
 
-void calculatePixel()
+void calculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*> culledObjects, size_t objectNr, std::vector<std::vector<char>>* twoDArray, size_t currentWidth, size_t currentHeight, size_t threadWidthPos, size_t threadHeightPos)
 {
+	//Convert our coordinates to the -1 to 1 range.
+	float convertedX = 2.0f * (((float)threadWidthPos - ((float)currentWidth * 0.5f)) / (float)currentWidth);
+	float convertedY = ((float)currentHeight - (float)threadHeightPos * 2.0f) / (float)currentHeight;
+	Vector4 pixelVSpace = Vector4(convertedX * pElement1, convertedY * pElement2, 1.0f, 0.0f);
+	Vector4 tempDirectionWSpace = inverseVMatrix.Mult(pixelVSpace);
+	Vector3 directionWSpace = Vector3(tempDirectionWSpace.x, tempDirectionWSpace.y, tempDirectionWSpace.z);
+	directionWSpace = directionWSpace.Normalize();
 
+	char data = ' ';
+	float closest = std::numeric_limits<float>::max();
+	Object* closestObject = nullptr;
+	for (size_t i = 0; i < objectNr; i++)
+	{
+		//Ray-Sphere intersection test.
+		if (culledObjects[i]->GetTag() == "Sphere") //Make a switch instead
+		{
+			Vector3 objectToCam = cameraPos - culledObjects[i]->GetPos();
+			float radius = reinterpret_cast<Sphere*>(culledObjects[i])->GetRadius();
 
+			float a = Dot(directionWSpace, directionWSpace);
+			float b = 2.0f * Dot(directionWSpace, objectToCam);
+			float c = Dot(objectToCam, objectToCam) - (radius * radius);
+
+			float discriminant = b*b - 4.0f*a*c;
+
+			//It hit
+			if (discriminant >= 0.0f)
+			{
+				float t1 = (-b + sqrt(discriminant)) / (2.0f * a);
+				float t2 = (-b - sqrt(discriminant)) / (2.0f * a);
+
+				float closerPoint = 0.0f;
+				if (t1 <= t2)
+				{
+					closerPoint = t1;
+				}
+				else
+				{
+					closerPoint = t2;
+				}
+
+				if (closerPoint < closest)
+				{
+					closest = closerPoint;
+					closestObject = culledObjects[i];
+				}
+			}
+		}
+	}
+
+	//If it didnt hit anything.
+	if (!closestObject)
+	{
+		//PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
+		(*twoDArray)[threadHeightPos][threadWidthPos] = data;
+		return;
+	}
+	
+
+	if (closestObject->GetTag() == "Sphere")
+	{
+		//Calculate light etc and then set data.
+		data = '#';
+	}
+
+	(*twoDArray)[threadHeightPos][threadWidthPos] = data;
+	//PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
+	return;
 }
 
 bool DisableConsoleQuickEdit() {
@@ -130,8 +197,9 @@ void Engine::Start()
 		assert(false);
 	}
 	PrintMachine::CreatePrintMachine(50, 20);
-	PrintMachine::GetInstance()->Fill(' '); //Temp
+	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
+	m_scene->Init();
 }
 
 bool Engine::Run()
@@ -158,7 +226,7 @@ bool Engine::Run()
 	//If its bigger than 60fps we print
 	//if (m_frameTimer >= 1.0f / 144.0f)
 	//{
-		PrintMachine::GetInstance()->Print();
+		PrintMachine::GetInstance()->Print(m_scene->SendCulledObjects()[0]->GetPos().y);
 		//m_frameTimer = 0.0f;
 	//}
 	
@@ -168,22 +236,41 @@ bool Engine::Run()
 void Engine::Render()
 {
 	m_camera->Update();
+	m_scene->Update();
 
+	std::vector<Object*> culledObjects = m_scene->SendCulledObjects();
+	size_t objectNr = culledObjects.size();
 	//Like our pixel shader.
 	std::vector<std::thread> pixels;
-	for (size_t i = 0; i < PrintMachine::GetInstance()->GetHeight(); i++)
+	Matrix inverseVMatrix = m_camera->GetVMatrix(); //m_camera->GetInverseVMatrix();
+	size_t x = PrintMachine::GetInstance()->GetWidth();
+	size_t y = PrintMachine::GetInstance()->GetHeight();
+	float element1 = m_camera->GetPMatrix().row1.x;
+	float element2 = m_camera->GetPMatrix().row2.y;
+	Vector3 camPos = m_camera->GetPos();
+	std::vector<std::vector<char>>* TwoDArray = PrintMachine::GetInstance()->Get2DArray();
+	std::cout << sizeof(Object) << " " << sizeof(Sphere);
+	for (size_t i = 0; i < y; i++)
 	{
-		for (size_t j = 0; j < PrintMachine::GetInstance()->GetWidth(); j++)
+		for (size_t j = 0; j < x; j++)
 		{
+			
 			pixels.push_back(std::thread(
 				calculatePixel,
 				//Arguments to pixel shader.
-				m_camera->GetVMatrix(), //Need the inverse here instead
-				m_camera->GetPMatrix(),
-				m_camera->GetPos(),
-				std::ref()
-
+				inverseVMatrix, //Need the inverse here
+				element1,
+				element2,
+				camPos,
+				culledObjects,
+				objectNr,
+				TwoDArray,
+				x,
+				y,
+				j,
+				i
 			));
+			
 		}
 	}
 	for (size_t i = 0; i < pixels.size(); i++)

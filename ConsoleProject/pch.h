@@ -7,9 +7,11 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <limits>
 
 #include <thread>
 #include <mutex>
+#include <functional>
 
 #include <assert.h>
 #include <tchar.h>
