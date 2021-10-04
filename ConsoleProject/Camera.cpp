@@ -21,8 +21,8 @@ Camera::~Camera()
 void Camera::Init()
 {
 	float currentFOV = M_PI / m_FOV;
-	float width = 50;// (float)(PrintMachine::GetInstance()->GetWidth());
-	float height = 50;// (float)(PrintMachine::GetInstance()->GetHeight());
+	float width = 48;// (float)(PrintMachine::GetInstance()->GetWidth());
+	float height = 27;// (float)(PrintMachine::GetInstance()->GetHeight());
 	float aspect = width / height;
 
 	float e = 1.0f / (std::tan(currentFOV / 2.0f));
@@ -42,7 +42,7 @@ void Camera::Init()
 	m_pMatrix.row3.x = 0.0f;
 	m_pMatrix.row3.y = 0.0f;
 	m_pMatrix.row3.z = (m_screenFar + m_screenNear) / (m_screenNear - m_screenFar);
-	m_pMatrix.row3.w = (2 * m_screenFar * m_screenNear) / (m_screenNear - m_screenFar);
+	m_pMatrix.row3.w = (2.0f * m_screenFar * m_screenNear) / (m_screenNear - m_screenFar);
 	//Fourth row
 	m_pMatrix.row4.x = 0.0f;
 	m_pMatrix.row4.y = 0.0f;

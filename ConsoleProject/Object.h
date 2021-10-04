@@ -14,7 +14,7 @@ public:
 	}
 	virtual ~Object() noexcept = default;
 
-	virtual void Update() = 0;
+	virtual void Update(long double) = 0;
 	std::string GetTag();
 	Vector3 GetPos();
 protected:

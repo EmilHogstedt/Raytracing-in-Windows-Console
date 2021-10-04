@@ -44,6 +44,14 @@ public:
 
 		return *this;
 	}
+	Vector3& operator+(const Vector3& other)
+	{
+		x = x + other.x;
+		y = y + other.y;
+		z = z + other.z;
+
+		return *this;
+	}
 	Vector3 Normalize()
 	{
 		Vector3 result = Vector3();

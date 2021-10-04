@@ -29,7 +29,7 @@ public:
 
 public:
 	static const bool ChangeSize(size_t, size_t);
-	//static void SendData(size_t, size_t, char);
+	static void SendData(size_t, size_t, char);
 	static std::vector<std::vector<char>>* Get2DArray();
 
 	static void Fill(char);
@@ -119,12 +119,12 @@ std::vector<std::vector<char>>* PrintMachine::Get2DArray()
 {
 	return &m_2DPrintArray;
 }
-/*
+
 void PrintMachine::SendData(size_t x, size_t y, char pixelData)
 {
 	m_2DPrintArray[y][x] = pixelData;
 }
-*/
+
 void PrintMachine::Fill(char character)
 {
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)

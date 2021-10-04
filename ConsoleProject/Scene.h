@@ -1,5 +1,6 @@
 #pragma once
 #include "Sphere.h"
+#include "Plane.h"
 
 class Scene
 {
@@ -9,12 +10,12 @@ public:
 
 	void Init();
 	//Update all objects
-	void Update();
+	void Update(long double);
 
 	void CleanUp();
 
 	//TODO: Implement culling.
-	std::vector<Object*> SendCulledObjects();
+	std::vector<Object*>* SendCulledObjects();
 private:
 	std::vector<Object*> m_objects;
 };

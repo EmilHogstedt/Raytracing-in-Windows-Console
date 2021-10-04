@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <vector>
+#include <deque>
 #include <string>
 #include <limits>
 

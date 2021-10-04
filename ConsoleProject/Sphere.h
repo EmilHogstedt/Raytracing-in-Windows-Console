@@ -9,10 +9,13 @@ public:
 	{
 	}
 	virtual ~Sphere() noexcept = default;
-	void Update();
+	void Update(long double);
 	float GetRadius();
 private:
 	float m_radius;
 
 	int mover;
+
+	double padding[6];
+	float padding2;
 };

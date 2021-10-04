@@ -34,5 +34,5 @@ private:
 	float m_screenNear = 0.1f;
 	float m_screenFar = 10000.0f;
 
-	float m_FOV = 3.0f;
+	float m_FOV = 2.0f; //Do not set to 1
 };

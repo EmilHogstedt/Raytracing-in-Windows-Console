@@ -3,15 +3,17 @@
 
 void Scene::Init()
 {
-	m_objects.push_back(DBG_NEW Sphere(Vector3(0.0f, 0.0f, 40.0f), 15.0f));
+	//Kolla varför det inte funkar i andra ordningen? Padding i plane?
+	m_objects.push_back(DBG_NEW Plane(Vector3(0.0f, -7.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)));
+	m_objects.push_back(DBG_NEW Sphere(Vector3(0.0f, 10.0f, 20.0f), 7.0f));
 }
 
 //Update all objects
-void Scene::Update()
+void Scene::Update(long double deltaTime)
 {
 	for (auto object : m_objects)
 	{
-		object->Update();
+		object->Update(deltaTime);
 	}
 }
 
@@ -23,7 +25,7 @@ void Scene::CleanUp()
 	}
 }
 
-std::vector<Object*> Scene::SendCulledObjects()
+std::vector<Object*>* Scene::SendCulledObjects()
 {
-	return m_objects;
+	return &m_objects;
 }
