@@ -1,8 +1,8 @@
 #pragma once
 #include "pch.h"
 
-#define WIDTHLIMIT 100
-#define HEIGHTLIMIT 50
+#define WIDTHLIMIT 1000
+#define HEIGHTLIMIT 500
 
 class PrintMachine {
 private:

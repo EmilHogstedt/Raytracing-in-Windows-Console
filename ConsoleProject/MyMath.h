@@ -36,21 +36,26 @@ public:
 
 		return *this;
 	}
-	Vector3& operator-(const Vector3& other)
+	Vector3 operator-(const Vector3& other)
 	{
-		x = x - other.x;
-		y = y - other.y;
-		z = z - other.z;
+		Vector3 temp = Vector3(x - other.x, y - other.y, z - other.z);
 
-		return *this;
+		return temp;
 	}
-	Vector3& operator+(const Vector3& other)
+	Vector3 operator+(const Vector3& other)
 	{
-		x = x + other.x;
-		y = y + other.y;
-		z = z + other.z;
+		Vector3 temp = Vector3(x + other.x, y + other.y, z + other.z);
 
-		return *this;
+		return temp;
+	}
+	Vector3 operator*(const float& other)
+	{
+		x = x * other;
+		y = y * other;
+		z = z * other;
+
+		Vector3 temp = Vector3(x * other, y * other, z * other);
+		return temp;
 	}
 	Vector3 Normalize()
 	{

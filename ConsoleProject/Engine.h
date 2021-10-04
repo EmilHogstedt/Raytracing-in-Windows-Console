@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "pch.h"
 #include "PrintMachine.h"
 #include "Camera.h"
@@ -173,6 +173,7 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 	char data = ' ';
 	float closest = std::numeric_limits<float>::max();
 	Object* closestObject = nullptr;
+	float shadingValue = 0.0f;
 	for (size_t i = 0; i < objectNr; i++)
 	{
 		//Ray-Sphere intersection test.
@@ -208,6 +209,9 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 				{
 					closest = closerPoint;
 					closestObject = (*culledObjects)[i];
+
+					Vector3 normalSphere = (Vector3(cameraPos.x + directionWSpace.x * closerPoint, cameraPos.y + directionWSpace.y * closerPoint, cameraPos.z + directionWSpace.z * closerPoint) - (*culledObjects)[i]->GetPos()).Normalize();
+					shadingValue = Dot(normalSphere, Vector3() - (directionWSpace.Normalize()));
 				}
 			}
 
@@ -231,13 +235,14 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 						{
 							closest = t1;
 							closestObject = (*culledObjects)[i];
+							shadingValue = Dot(planeNormal, Vector3() - directionWSpace);
 						}
 					}
 				}
 			}
 		}
 	}
-
+	/*
 	//If it didnt hit anything.
 	if (!closestObject)
 	{
@@ -260,6 +265,286 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 		PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
 	}
 	//}
+	*/
+	//Dont open this.
+	{
+		//I warned u
+	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
+	float t = 0.01492537f;
+	if (shadingValue < 0.00001f)
+	{
+		data = ' ';
+	}
+	else if (shadingValue < t * 1)
+	{
+		data = '.';
+	}
+	else if (shadingValue < t * 2)
+	{
+		data = '`';
+	}
+	else if (shadingValue < t * 3)
+	{
+		data = '^';
+	}
+	else if (shadingValue < t * 4)
+	{
+		data = '"';
+	}
+	else if (shadingValue < t * 5)
+	{
+		data = ',';
+	}
+	else if (shadingValue < t * 6)
+	{
+		data = ':';
+	}
+	else if (shadingValue < t * 7)
+	{
+		data = ';';
+	}
+	else if (shadingValue < t * 8)
+	{
+		data = 'I';
+	}
+	else if (shadingValue < t * 9)
+	{
+		data = 'l';
+	}
+	else if (shadingValue < t * 10)
+	{
+		data = '!';
+	}
+	else if (shadingValue < t * 11)
+	{
+		data = 'i';
+	}
+	else if (shadingValue < t * 12)
+	{
+		data = '>';
+	}
+	else if (shadingValue < t * 13)
+	{
+		data = '<';
+	}
+	else if (shadingValue < t * 14)
+	{
+		data = '~';
+	}
+	else if (shadingValue < t * 15)
+	{
+		data = '+';
+	}
+	else if (shadingValue < t * 16)
+	{
+		data = '_';
+	}
+	else if (shadingValue < t * 17)
+	{
+		data = '-';
+	}
+	else if (shadingValue < t * 18)
+	{
+		data = '?';
+	}
+	else if (shadingValue < t * 19)
+	{
+		data = ']';
+	}
+	else if (shadingValue < t * 20)
+	{
+		data = '[';
+	}
+	else if (shadingValue < t * 21)
+	{
+		data = '}';
+	}
+	else if (shadingValue < t * 22)
+	{
+		data = '{';
+	}
+	else if (shadingValue < t * 23)
+	{
+		data = '1';
+	}
+	else if (shadingValue < t * 24)
+	{
+		data = ')';
+	}
+	else if (shadingValue < t * 25)
+	{
+		data = '(';
+	}
+	else if (shadingValue < t * 26)
+	{
+		data = '|';
+	}
+	else if (shadingValue < t * 27)
+	{
+		data = '/';
+	}
+	else if (shadingValue < t * 28)
+	{
+		data = 't';
+	}
+	else if (shadingValue < t * 29)
+	{
+		data = 'f';
+	}
+	else if (shadingValue < t * 30)
+	{
+		data = 'j';
+	}
+	else if (shadingValue < t * 31)
+	{
+		data = 'r';
+	}
+	else if (shadingValue < t * 32)
+	{
+		data = 'x';
+	}
+	else if (shadingValue < t * 33)
+	{
+		data = 'n';
+	}
+	else if (shadingValue < t * 34)
+	{
+		data = 'u';
+	}
+	else if (shadingValue < t * 35)
+	{
+		data = 'v';
+	}
+	else if (shadingValue < t * 36)
+	{
+		data = 'c';
+	}
+	else if (shadingValue < t * 37)
+	{
+		data = 'z';
+	}
+	else if (shadingValue < t * 38)
+	{
+		data = 'X';
+	}
+	else if (shadingValue < t * 39)
+	{
+		data = 'Y';
+	}
+	else if (shadingValue < t * 40)
+	{
+		data = 'U';
+	}
+	else if (shadingValue < t * 41)
+	{
+		data = 'J';
+	}
+	else if (shadingValue < t * 42)
+	{
+		data = 'C';
+	}
+	else if (shadingValue < t * 43)
+	{
+		data = 'L';
+	}
+	else if (shadingValue < t * 44)
+	{
+		data = 'Q';
+	}
+	else if (shadingValue < t * 45)
+	{
+		data = '0';
+	}
+	else if (shadingValue < t * 46)
+	{
+		data = 'O';
+	}
+	else if (shadingValue < t * 47)
+	{
+		data = 'Z';
+	}
+	else if (shadingValue < t * 48)
+	{
+		data = 'm';
+	}
+	else if (shadingValue < t * 49)
+	{
+		data = 'w';
+	}
+	else if (shadingValue < t * 50)
+	{
+		data = 'q';
+	}
+	else if (shadingValue < t * 51)
+	{
+		data = 'p';
+	}
+	else if (shadingValue < t * 52)
+	{
+		data = 'd';
+	}
+	else if (shadingValue < t * 53)
+	{
+		data = 'b';
+	}
+	else if (shadingValue < t * 54)
+	{
+		data = 'k';
+	}
+	else if (shadingValue < t * 55)
+	{
+		data = 'h';
+	}
+	else if (shadingValue < t * 56)
+	{
+		data = 'a';
+	}
+	else if (shadingValue < t * 57)
+	{
+		data = 'o';
+	}
+	else if (shadingValue < t * 58)
+	{
+		data = '*';
+	}
+	else if (shadingValue < t * 59)
+	{
+		data = '#';
+	}
+	else if (shadingValue < t * 60)
+	{
+		data = 'M';
+	}
+	else if (shadingValue < t * 61)
+	{
+		data = 'W';
+	}
+	else if (shadingValue < t * 62)
+	{
+		data = '&';
+	}
+	else if (shadingValue < t * 63)
+	{
+		data = '8';
+	}
+	else if (shadingValue < t * 64)
+	{
+		data = '%';
+	}
+	else if (shadingValue < t * 65)
+	{
+		data = 'B';
+	}
+	else if (shadingValue < t * 66)
+	{
+		data = '@';
+	}
+	else
+	{
+		data = '$';
+	}
+	}
+	PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
 }
 
 void Engine::CreateEngine()
@@ -320,7 +605,7 @@ void Engine::Start()
 		printf("Unable to install handler!\n");
 		assert(false);
 	}
-	PrintMachine::CreatePrintMachine(48, 27);
+	PrintMachine::CreatePrintMachine(150, 100);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
