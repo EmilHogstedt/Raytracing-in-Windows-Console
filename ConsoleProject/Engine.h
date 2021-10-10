@@ -109,9 +109,9 @@ void Engine::WaitForJob(
 )
 {
 	Engine* myself = GetInstance();
-	while (true)
+	JobHolder Job;
+	while (!terminatePool)
 	{
-		JobHolder Job;
 		{
 			std::unique_lock<std::mutex> lock(queueMutex);
 
@@ -123,7 +123,7 @@ void Engine::WaitForJob(
 			queue.pop_front();
 		}
 		
-			Job.m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job.m_y, Job.m_x);
+		Job.m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job.m_y, Job.m_x);
 	}
 }
 
@@ -172,7 +172,6 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 
 	char data = ' ';
 	float closest = std::numeric_limits<float>::max();
-	Object* closestObject = nullptr;
 	float shadingValue = 0.0f;
 	for (size_t i = 0; i < objectNr; i++)
 	{
@@ -208,7 +207,6 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 				if (closerPoint < closest)
 				{
 					closest = closerPoint;
-					closestObject = (*culledObjects)[i];
 
 					Vector3 normalSphere = (Vector3(cameraPos.x + directionWSpace.x * closerPoint, cameraPos.y + directionWSpace.y * closerPoint, cameraPos.z + directionWSpace.z * closerPoint) - (*culledObjects)[i]->GetPos()).Normalize();
 					shadingValue = Dot(normalSphere, Vector3() - (directionWSpace.Normalize()));
@@ -234,7 +232,6 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f)
 						{
 							closest = t1;
-							closestObject = (*culledObjects)[i];
 							shadingValue = Dot(planeNormal, Vector3() - directionWSpace);
 						}
 					}
@@ -242,30 +239,7 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 			}
 		}
 	}
-	/*
-	//If it didnt hit anything.
-	if (!closestObject)
-	{
-		PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
-		//(*twoDArray)[threadHeightPos][x] = data;
-	}
-	else
-	{
-		if (closestObject->GetTag() == "Sphere")
-		{
-			//Calculate light etc and then set data.
-			data = '#';
-		}
-		else if (closestObject->GetTag() == "Plane")
-		{
-			//Calculate light etc and then set data.
-			data = '|';
-		}
-		//(*twoDArray)[threadHeightPos][x] = data;
-		PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
-	}
-	//}
-	*/
+	
 	//Dont open this.
 	{
 		//I warned u
@@ -349,199 +323,199 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 	}
 	else if (shadingValue < t * 19)
 	{
-		data = ']';
+		data = '*';
 	}
 	else if (shadingValue < t * 20)
 	{
-		data = '[';
+		data = ']';
 	}
 	else if (shadingValue < t * 21)
 	{
-		data = '}';
+		data = '[';
 	}
 	else if (shadingValue < t * 22)
 	{
-		data = '{';
+		data = '}';
 	}
 	else if (shadingValue < t * 23)
 	{
-		data = '1';
+		data = '{';
 	}
 	else if (shadingValue < t * 24)
 	{
-		data = ')';
+		data = '1';
 	}
 	else if (shadingValue < t * 25)
 	{
-		data = '(';
+		data = ')';
 	}
 	else if (shadingValue < t * 26)
 	{
-		data = '|';
+		data = '(';
 	}
 	else if (shadingValue < t * 27)
 	{
-		data = '/';
+		data = '|';
 	}
 	else if (shadingValue < t * 28)
 	{
-		data = 't';
+		data = '/';
 	}
 	else if (shadingValue < t * 29)
 	{
-		data = 'f';
+		data = 't';
 	}
 	else if (shadingValue < t * 30)
 	{
-		data = 'j';
+		data = 'f';
 	}
 	else if (shadingValue < t * 31)
 	{
-		data = 'r';
+		data = 'j';
 	}
 	else if (shadingValue < t * 32)
 	{
-		data = 'x';
+		data = 'r';
 	}
 	else if (shadingValue < t * 33)
 	{
-		data = 'n';
+		data = 'x';
 	}
 	else if (shadingValue < t * 34)
 	{
-		data = 'u';
+		data = 'n';
 	}
 	else if (shadingValue < t * 35)
 	{
-		data = 'v';
+		data = 'u';
 	}
 	else if (shadingValue < t * 36)
 	{
-		data = 'c';
+		data = 'v';
 	}
 	else if (shadingValue < t * 37)
 	{
-		data = 'z';
+		data = 'c';
 	}
 	else if (shadingValue < t * 38)
 	{
-		data = 'X';
+		data = 'z';
 	}
 	else if (shadingValue < t * 39)
 	{
-		data = 'Y';
+	data = 'm';
 	}
 	else if (shadingValue < t * 40)
 	{
-		data = 'U';
+		data = 'w';
 	}
 	else if (shadingValue < t * 41)
 	{
-		data = 'J';
+		data = 'X';
 	}
 	else if (shadingValue < t * 42)
 	{
-		data = 'C';
+		data = 'Y';
 	}
 	else if (shadingValue < t * 43)
 	{
-		data = 'L';
+		data = 'U';
 	}
 	else if (shadingValue < t * 44)
 	{
-		data = 'Q';
+		data = 'J';
 	}
 	else if (shadingValue < t * 45)
 	{
-		data = '0';
+		data = 'C';
 	}
 	else if (shadingValue < t * 46)
 	{
-		data = 'O';
+		data = 'L';
 	}
 	else if (shadingValue < t * 47)
 	{
-		data = 'Z';
+		data = 'q';
 	}
 	else if (shadingValue < t * 48)
 	{
-		data = 'm';
+		data = 'p';
 	}
 	else if (shadingValue < t * 49)
 	{
-		data = 'w';
+		data = 'd';
 	}
 	else if (shadingValue < t * 50)
 	{
-		data = 'q';
+		data = 'b';
 	}
 	else if (shadingValue < t * 51)
 	{
-		data = 'p';
+		data = 'k';
 	}
 	else if (shadingValue < t * 52)
 	{
-		data = 'd';
+		data = 'h';
 	}
 	else if (shadingValue < t * 53)
 	{
-		data = 'b';
+		data = 'a';
 	}
 	else if (shadingValue < t * 54)
 	{
-		data = 'k';
+		data = 'o';
 	}
 	else if (shadingValue < t * 55)
 	{
-		data = 'h';
+		data = '#';
 	}
 	else if (shadingValue < t * 56)
 	{
-		data = 'a';
+		data = '%';
 	}
 	else if (shadingValue < t * 57)
 	{
-		data = 'o';
+		data = 'Z';
 	}
 	else if (shadingValue < t * 58)
 	{
-		data = '*';
+		data = 'O';
 	}
 	else if (shadingValue < t * 59)
 	{
-		data = '#';
+		data = '8';
 	}
 	else if (shadingValue < t * 60)
 	{
-		data = 'M';
+		data = 'B';
 	}
 	else if (shadingValue < t * 61)
 	{
-		data = 'W';
+		data = '$';
 	}
 	else if (shadingValue < t * 62)
 	{
-		data = '&';
+		data = '0';
 	}
 	else if (shadingValue < t * 63)
 	{
-		data = '8';
+		data = 'Q';
 	}
 	else if (shadingValue < t * 64)
 	{
-		data = '%';
+		data = 'M';
 	}
 	else if (shadingValue < t * 65)
 	{
-		data = 'B';
+		data = '&';
 	}
 	else if (shadingValue < t * 66)
 	{
-		data = '@';
+		data = 'W';
 	}
 	else
 	{
-		data = '$';
+		data = '@';
 	}
 	}
 	PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
@@ -605,7 +579,7 @@ void Engine::Start()
 		printf("Unable to install handler!\n");
 		assert(false);
 	}
-	PrintMachine::CreatePrintMachine(100, 70);
+	PrintMachine::CreatePrintMachine(100, 80);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
@@ -620,8 +594,7 @@ void Engine::Start()
 	Vector3 camPos = m_camera->GetPos(); //Will have to be changed to a pointer
 	std::vector<Object*>* culledObjects = m_scene->SendCulledObjects();
 	size_t objectNr = (*culledObjects).size();
-
-	int num_threads = std::thread::hardware_concurrency();
+	int num_threads = 8; // std::thread::hardware_concurrency();
 	m_workers.reserve(num_threads);
 
 	for (size_t i = 0; i < num_threads; i++)

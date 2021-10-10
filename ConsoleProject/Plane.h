@@ -14,6 +14,6 @@ public:
 private:
 	Vector3 m_normal;
 
-	double padding[6];
+	double padding[4];
 	float padding2;
 };

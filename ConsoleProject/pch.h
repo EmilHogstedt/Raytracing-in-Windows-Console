@@ -13,7 +13,7 @@
 #include <thread>
 #include <mutex>
 #include <functional>
-
+#include <future>
 #include <assert.h>
 #include <tchar.h>
 #include <memory>
