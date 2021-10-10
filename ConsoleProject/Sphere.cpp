@@ -8,8 +8,8 @@ float Sphere::GetRadius()
 
 void Sphere::Update(long double deltaTime)
 {
-	m_middlePos.y += 2 * mover * deltaTime;
-	if (m_middlePos.y < 0.0f || m_middlePos.y > 15.0f)
+	m_middlePos.x += 2 * mover * deltaTime;
+	if (m_middlePos.x < -10.0f || m_middlePos.x > 10.0f)
 	{
 		mover *= -1;
 	}

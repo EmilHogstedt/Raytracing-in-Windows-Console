@@ -153,7 +153,7 @@ const bool PrintMachine::Print()
 		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
 	
-	fwrite(buffer, sizeof(char), m_2DPrintArray.size() * m_2DPrintArray[0].size(), stdout);
+	fwrite(buffer, sizeof(char), m_2DPrintArray.size() * (m_2DPrintArray[0].size() + 1), stdout);
 	std::cout << "FPS: " << m_fps << "         \n";
 	return true;
 }

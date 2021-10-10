@@ -595,7 +595,7 @@ void Engine::Start()
 		printf("Unable to install handler!\n");
 		assert(false);
 	}
-	PrintMachine::CreatePrintMachine(150, 100);
+	PrintMachine::CreatePrintMachine(std::ceil((100 * 16) / 9), 100);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
