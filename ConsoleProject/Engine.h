@@ -49,13 +49,13 @@ public:
 	static bool Run();
 	static void CleanUp();
 private:
-	static std::mutex queueMutex;
+	static std::deque<std::mutex> queueMutex;
 	static std::mutex threadpoolMutex;
-	static std::condition_variable condition;
+	static std::deque<std::condition_variable> condition;
 	static bool terminatePool;
 	static bool stopped;
-	static void WaitForJob(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight);
-	static void AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)>, size_t x, size_t y);
+	static void WaitForJob(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadId);
+	static void AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)>, size_t x, size_t y, size_t threadId);
 	static void shutdownThreads();
 	static void CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos);
 
@@ -71,13 +71,20 @@ private:
 
 	struct JobHolder
 	{
+		JobHolder() = default;
+		JobHolder(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y)
+		{
+			m_Job = newJob;
+			m_x = x;
+			m_y = y;
+		}
 		std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> m_Job;
 		size_t m_x;
 		size_t m_y;
 	};
 
-	static std::deque<JobHolder> queue;
-
+	static std::vector<std::deque<JobHolder*>> queues;
+	static size_t m_num_threads;
 };
 
 Engine* Engine::pInstance{ nullptr };
@@ -88,13 +95,13 @@ long double Engine::m_frameTimer = 0.0f;
 long double Engine::m_fpsTimer = 0.0f;
 int Engine::m_fps = 0;
 std::vector<std::thread> Engine::m_workers;
-std::mutex Engine::queueMutex;
+std::deque<std::mutex> Engine::queueMutex;
 std::mutex Engine::threadpoolMutex;
-std::condition_variable Engine::condition;
+std::deque<std::condition_variable> Engine::condition;
 bool Engine::terminatePool = false;
 bool Engine::stopped = false;
-std::deque<Engine::JobHolder> Engine::queue;
-
+std::vector<std::deque<Engine::JobHolder*>> Engine::queues;
+size_t Engine::m_num_threads = 0;
 //----------------------------------------
 
 void Engine::WaitForJob(
@@ -105,50 +112,59 @@ void Engine::WaitForJob(
 	std::vector<Object*>* culledObjects,
 	size_t objectNr,
 	size_t currentWidth,
-	size_t currentHeight
+	size_t currentHeight,
+	size_t threadId
 )
 {
 	Engine* myself = GetInstance();
-	JobHolder Job;
+	JobHolder* Job;
 	while (!terminatePool)
 	{
 		{
-			std::unique_lock<std::mutex> lock(queueMutex);
+			std::unique_lock<std::mutex> lock(queueMutex[threadId]);
 
-			condition.wait(lock, [myself]()
+			condition[threadId].wait(lock, [&, myself]()
 				{
-					return !queue.empty() || terminatePool;
+					return !queues[threadId].empty();
 				});
-			Job = queue.front();
-			queue.pop_front();
+			Job = queues[threadId].front();
+			queues[threadId].pop_front();
 		}
-		
-		Job.m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job.m_y, Job.m_x);
+			Job->m_Job(inverseVMatrix, pElement1, pElement2, cameraPos, culledObjects, objectNr, currentWidth, currentHeight, Job->m_y, Job->m_x);
+			delete Job;
 	}
 }
 
-void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y)
+void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId)
 {
-	JobHolder newJobHolder;
-	newJobHolder.m_Job = newJob;
-	newJobHolder.m_x = x;
-	newJobHolder.m_y = y;
+	//JobHolder newJobHolder;
+	//newJobHolder.m_Job = newJob;
+	//newJobHolder.m_x = x;
+	//newJobHolder.m_y = y;
 
 	{
-		std::unique_lock<std::mutex> lock(queueMutex);
-		queue.push_back(newJobHolder);
+		std::unique_lock<std::mutex> lock(queueMutex[threadId]);
+		size_t current = queues[threadId].size();
+		queues[threadId].resize(current + x);
+		for (int i = 0; i < x; i++)
+		{
+			//newJobHolder.m_x = i;
+			queues[threadId][current + i] = DBG_NEW JobHolder(newJob, i, y);
+		}
 	}
-	condition.notify_one();
+	condition[threadId].notify_one();
 }
 
 void Engine::shutdownThreads()
 {
 	{
-		std::unique_lock<std::mutex> lock(queueMutex);
+		for(size_t i = 0; i < queueMutex.size(); i++)
+			std::unique_lock<std::mutex> lock(queueMutex[i]);
 		terminatePool = true;
 	}
 
-	condition.notify_all();
+	for(size_t i = 0; i < condition.size(); i++)
+		condition[i].notify_all();
 
 	for (std::thread& th : m_workers)
 	{
@@ -579,12 +595,14 @@ void Engine::Start()
 		printf("Unable to install handler!\n");
 		assert(false);
 	}
-	PrintMachine::CreatePrintMachine(100, 80);
+	PrintMachine::CreatePrintMachine(150, 100);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
 	m_scene->Init();
 
+	
+	
 	//Initialize the threads.
 	Matrix inverseVMatrix = m_camera->GetVMatrix(); //m_camera->GetInverseVMatrix(); Will have to be changed to a pointer.
 	size_t x = PrintMachine::GetInstance()->GetWidth();
@@ -594,10 +612,20 @@ void Engine::Start()
 	Vector3 camPos = m_camera->GetPos(); //Will have to be changed to a pointer
 	std::vector<Object*>* culledObjects = m_scene->SendCulledObjects();
 	size_t objectNr = (*culledObjects).size();
-	int num_threads = 8; // std::thread::hardware_concurrency();
-	m_workers.reserve(num_threads);
+	m_num_threads = std::thread::hardware_concurrency();
+	m_workers.reserve(m_num_threads);
+	//Reserve the mutex'
+	queueMutex.resize(m_num_threads);
+	condition.resize(m_num_threads);
+	
+	//Start the queues
+	queues.reserve(m_num_threads);
+	for (size_t i = 0; i < m_num_threads; i++)
+	{
+		queues.push_back(std::deque<Engine::JobHolder*>());
+	}
 
-	for (size_t i = 0; i < num_threads; i++)
+	for (size_t i = 0; i < m_num_threads; i++)
 	{
 		m_workers.push_back(std::thread(
 			WaitForJob,
@@ -608,7 +636,8 @@ void Engine::Start()
 			culledObjects,
 			objectNr,
 			x,
-			y
+			y,
+			i
 		));
 	}
 }
@@ -637,7 +666,7 @@ bool Engine::Run()
 	//If its bigger than 60fps we print
 	//if (m_frameTimer >= 1.0f / 144.0f)
 	//{
-		PrintMachine::GetInstance()->Print((*m_scene->SendCulledObjects())[0]->GetPos().y);
+		PrintMachine::GetInstance()->Print();
 		//m_frameTimer = 0.0f;
 	//}
 	
@@ -655,10 +684,9 @@ void Engine::Render()
 	size_t y = PrintMachine::GetInstance()->GetHeight();
 	for (size_t i = 0; i < y; i++)
 	{
-		for (size_t j = 0; j < x; j++)
-		{
-			AddJob(&CalculatePixel, j, i);
-		}
+		size_t threadId = std::floor((m_num_threads * i) / y);
+		//Send x and add all jobs on that line.
+		AddJob(&CalculatePixel, x, i, threadId);
 	}
 	
 }

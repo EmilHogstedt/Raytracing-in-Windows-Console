@@ -33,7 +33,7 @@ public:
 	static std::vector<std::vector<char>>* Get2DArray();
 
 	static void Fill(char);
-	static const bool Print(float);
+	static const bool Print();
 	static void UpdateFPS(int);
 
 	static size_t GetWidth();
@@ -134,7 +134,7 @@ void PrintMachine::Fill(char character)
 	}
 }
 
-const bool PrintMachine::Print(float spherepos)
+const bool PrintMachine::Print()
 {
 	//Clear the console before printing.
 	ClearConsole();
@@ -153,9 +153,8 @@ const bool PrintMachine::Print(float spherepos)
 		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
 	
-	fwrite(buffer, sizeof(buffer), 1, stdout);
+	fwrite(buffer, sizeof(char), m_2DPrintArray.size() * m_2DPrintArray[0].size(), stdout);
 	std::cout << "FPS: " << m_fps << "         \n";
-	std::cout << spherepos << "\n";
 	return true;
 }
 
