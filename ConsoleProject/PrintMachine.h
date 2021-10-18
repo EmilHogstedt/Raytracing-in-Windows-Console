@@ -138,13 +138,12 @@ const bool PrintMachine::Print()
 {
 	//Clear the console before printing.
 	ClearConsole();
-	//char emptyBuffer[100];
-	//memset(emptyBuffer, '\n', sizeof(emptyBuffer));
-	//fwrite(emptyBuffer, sizeof(emptyBuffer), 1, stdout);
+
+	size_t pixelHeight = m_2DPrintArray.size();
 
 	char buffer[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
 	memset(buffer, 0, sizeof(buffer));
-	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
+	for (size_t i = 0; i < pixelHeight; i++)
 	{
 		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
 		{
@@ -152,8 +151,8 @@ const bool PrintMachine::Print()
 		}
 		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
-	
-	fwrite(buffer, sizeof(char), m_2DPrintArray.size() * (m_2DPrintArray[0].size() + 1), stdout);
+
+	fwrite(buffer, sizeof(char), pixelHeight * (currentWidth + 1), stdout);
 	std::cout << "FPS: " << m_fps << "         \n";
 	return true;
 }

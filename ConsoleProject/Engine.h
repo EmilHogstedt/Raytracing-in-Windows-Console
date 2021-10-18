@@ -137,11 +137,6 @@ void Engine::WaitForJob(
 
 void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId)
 {
-	//JobHolder newJobHolder;
-	//newJobHolder.m_Job = newJob;
-	//newJobHolder.m_x = x;
-	//newJobHolder.m_y = y;
-
 	{
 		std::unique_lock<std::mutex> lock(queueMutex[threadId]);
 		size_t current = queues[threadId].size();
@@ -662,13 +657,7 @@ bool Engine::Run()
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
-	//VSYNC
-	//If its bigger than 60fps we print
-	//if (m_frameTimer >= 1.0f / 144.0f)
-	//{
-		PrintMachine::GetInstance()->Print();
-		//m_frameTimer = 0.0f;
-	//}
+	PrintMachine::GetInstance()->Print();
 	
 	return true;
 }
