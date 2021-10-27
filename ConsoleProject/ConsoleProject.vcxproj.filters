@@ -21,16 +21,16 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Camera.cpp">
+    <ClCompile Include="Camera3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Scene.cpp">
+    <ClCompile Include="Scene3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MyMath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Object.cpp">
+    <ClCompile Include="Object3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Sphere.cpp">
@@ -39,7 +39,7 @@
     <ClCompile Include="Plane.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine.cpp">
+    <ClCompile Include="Engine3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PrintMachine.cpp">
@@ -50,7 +50,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine.h">
+    <ClInclude Include="Engine3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PrintMachine.h">
@@ -62,13 +62,13 @@
     <ClInclude Include="Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Camera.h">
+    <ClInclude Include="Camera3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Scene.h">
+    <ClInclude Include="Scene3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Object.h">
+    <ClInclude Include="Object3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Sphere.h">

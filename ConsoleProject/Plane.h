@@ -1,11 +1,11 @@
 #pragma once
-#include "Object.h"
+#include "Object3D.h"
 
-class Plane : public Object
+class Plane : public Object3D
 {
 public:
 	Plane(Vector3 point, Vector3 normal) :
-		Object{ point, "Plane" }, m_normal{ normal }
+		Object3D{ point, "Plane" }, m_normal{ normal }
 	{
 	}
 	virtual ~Plane() noexcept = default;

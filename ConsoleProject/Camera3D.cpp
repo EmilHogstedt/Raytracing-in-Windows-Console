@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "Camera.h"
+#include "Camera3D.h"
 #include "PrintMachine.h"
 
-Camera::Camera() :
+Camera3D::Camera3D() :
 	m_pos{ Vector3() },
 	m_rot{ Vector3() },
 	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
@@ -13,15 +13,15 @@ Camera::Camera() :
 {
 }
 
-Camera::~Camera()
+Camera3D::~Camera3D()
 {
 }
 
-void Camera::Init()
+void Camera3D::Init()
 {
 	float currentFOV = (float)(M_PI) / m_FOV;
-	float width = 16;// (float)(PrintMachine::GetInstance()->GetWidth());
-	float height = 9;// (float)(PrintMachine::GetInstance()->GetHeight());
+	float width = (float)(PrintMachine::GetInstance()->GetWidth());
+	float height = (float)(PrintMachine::GetInstance()->GetHeight());
 	float aspect = width / height;
 
 	float e = 1.0f / (std::tan(currentFOV / 2.0f));
@@ -49,7 +49,7 @@ void Camera::Init()
 	m_pMatrix.row4.w = 0.0f;
 }
 
-void Camera::Update()
+void Camera3D::Update()
 {
 	//Update view matrix every frame.
 	//First row
@@ -74,27 +74,27 @@ void Camera::Update()
 	m_vMatrix.row4.w = 1.0f;
 }
 
-void Camera::SetRot(float p, float r, float y)
+void Camera3D::SetRot(float p, float r, float y)
 {
 	m_rot.x = p;
 	m_rot.y = r;
 	m_rot.z = y;
 }
 
-void Camera::SetPos(float x, float y, float z)
+void Camera3D::SetPos(float x, float y, float z)
 {
 	m_pos.x = x;
 	m_pos.y = y;
 	m_pos.z = z;
 }
 
-Matrix Camera::GetVMatrix()
+Matrix Camera3D::GetVMatrix()
 {
 	return m_vMatrix;
 }
 
 //Doesnt work. special det is 0?
-Matrix Camera::GetInverseVMatrix()
+Matrix Camera3D::GetInverseVMatrix()
 {
 	Matrix InverseMatrix = Matrix();
 
@@ -169,17 +169,17 @@ Matrix Camera::GetInverseVMatrix()
 	return InverseMatrix;
 }
 
-Matrix Camera::GetPMatrix()
+Matrix Camera3D::GetPMatrix()
 {
 	return m_pMatrix;
 }
 
-Vector3 Camera::GetPos()
+Vector3 Camera3D::GetPos()
 {
 	return m_pos;
 }
 
-Vector3 Camera::GetRot()
+Vector3 Camera3D::GetRot()
 {
 	return m_rot;
 }

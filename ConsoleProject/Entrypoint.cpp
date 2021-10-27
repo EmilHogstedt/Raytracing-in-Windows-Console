@@ -1,13 +1,13 @@
 #include "pch.h"
-#include "Engine.h"
+#include "Engine3D.h"
 
 int main()
 {
-    Engine::CreateEngine();
-    Engine::GetInstance()->Start();
+    Engine3D::CreateEngine();
+    Engine3D::GetInstance()->Start();
     //Always returns true. Quits and cleans up by closing the console through CEvents.
-    while(Engine::GetInstance()->Run())
+    while(Engine3D::GetInstance()->Run())
     { }
     
-    Engine::GetInstance()->CleanUp();
+    Engine3D::GetInstance()->CleanUp();
 }

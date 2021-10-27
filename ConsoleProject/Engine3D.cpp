@@ -1,34 +1,34 @@
 #include "pch.h"
-#include "Engine.h"
+#include "Engine3D.h"
 
-Engine* Engine::pInstance{ nullptr };
-Time* Engine::m_timer{ nullptr };
-Camera* Engine::m_camera{ nullptr };
-Scene* Engine::m_scene{ nullptr };
-long double Engine::m_frameTimer = 0.0f;
-long double Engine::m_fpsTimer = 0.0f;
-int Engine::m_fps = 0;
-std::vector<std::thread> Engine::m_workers;
-std::deque<std::mutex> Engine::queueMutex;
-std::deque<std::condition_variable> Engine::condition;
-bool Engine::terminatePool = false;
-bool Engine::stopped = false;
-std::vector<std::deque<Engine::JobHolder*>> Engine::queues;
-size_t Engine::m_num_threads = 0;
+Engine3D* Engine3D::pInstance{ nullptr };
+Time* Engine3D::m_timer{ nullptr };
+Camera3D* Engine3D::m_camera{ nullptr };
+Scene3D* Engine3D::m_scene{ nullptr };
+long double Engine3D::m_frameTimer = 0.0f;
+long double Engine3D::m_fpsTimer = 0.0f;
+int Engine3D::m_fps = 0;
+std::vector<std::thread> Engine3D::m_workers;
+std::deque<std::mutex> Engine3D::queueMutex;
+std::deque<std::condition_variable> Engine3D::condition;
+bool Engine3D::terminatePool = false;
+bool Engine3D::stopped = false;
+std::vector<std::deque<Engine3D::JobHolder*>> Engine3D::queues;
+size_t Engine3D::m_num_threads = 0;
 
-void Engine::WaitForJob(
+void Engine3D::WaitForJob(
 	Matrix inverseVMatrix,
 	float pElement1,
 	float pElement2,
 	Vector3 cameraPos,
-	std::vector<Object*>* culledObjects,
+	std::vector<Object3D*>* culledObjects,
 	size_t objectNr,
 	size_t currentWidth,
 	size_t currentHeight,
 	size_t threadId
 )
 {
-	Engine* myself = GetInstance();
+	Engine3D* myself = GetInstance();
 	JobHolder* Job;
 	while (!terminatePool)
 	{
@@ -52,7 +52,7 @@ void Engine::WaitForJob(
 	}
 }
 
-void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId)
+void Engine3D::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId)
 {
 	{
 		std::unique_lock<std::mutex> lock(queueMutex[threadId]);
@@ -66,7 +66,7 @@ void Engine::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, f
 	condition[threadId].notify_one();
 }
 
-void Engine::shutdownThreads()
+void Engine3D::shutdownThreads()
 {
 	{
 		for (size_t i = 0; i < queueMutex.size(); i++)
@@ -87,7 +87,7 @@ void Engine::shutdownThreads()
 	stopped = true;
 }
 
-void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)
+void Engine3D::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)
 {
 	float convertedY = ((float)currentHeight - (float)threadHeightPos * 2.0f) / (float)currentHeight;
 	float convertedX = 2.0f * (((float)threadWidthPos - ((float)currentWidth * 0.5f)) / (float)currentWidth);
@@ -448,25 +448,25 @@ void Engine::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEleme
 	PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
 }
 
-void Engine::CreateEngine()
+void Engine3D::CreateEngine()
 {
 	if (!pInstance)
-		pInstance = DBG_NEW Engine();
+		pInstance = DBG_NEW Engine3D();
 }
 
-Engine* Engine::GetInstance()
+Engine3D* Engine3D::GetInstance()
 {
 	return pInstance;
 }
 
-Engine::Engine() {
+Engine3D::Engine3D() {
 	//Engine objects
 	m_timer = DBG_NEW Time();
-	m_camera = DBG_NEW Camera();
-	m_scene = DBG_NEW Scene();
+	m_camera = DBG_NEW Camera3D();
+	m_scene = DBG_NEW Scene3D();
 }
 
-Engine::~Engine()
+Engine3D::~Engine3D()
 {
 	if (!stopped)
 		shutdownThreads();
@@ -475,7 +475,7 @@ Engine::~Engine()
 	delete m_scene;
 }
 
-void Engine::Start()
+void Engine3D::Start()
 {
 	PrintMachine::CreatePrintMachine((size_t)std::ceil((100 * 16) / 9), 100);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
@@ -492,7 +492,7 @@ void Engine::Start()
 	float element1 = m_camera->GetPMatrix().row1.x;
 	float element2 = m_camera->GetPMatrix().row2.y;
 	Vector3 camPos = m_camera->GetPos(); //Will have to be changed to a pointer
-	std::vector<Object*>* culledObjects = m_scene->SendCulledObjects();
+	std::vector<Object3D*>* culledObjects = m_scene->SendCulledObjects();
 	size_t objectNr = (*culledObjects).size();
 	m_num_threads = std::thread::hardware_concurrency();
 	m_workers.reserve(m_num_threads);
@@ -504,7 +504,7 @@ void Engine::Start()
 	queues.reserve(m_num_threads);
 	for (size_t i = 0; i < m_num_threads; i++)
 	{
-		queues.push_back(std::deque<Engine::JobHolder*>());
+		queues.push_back(std::deque<Engine3D::JobHolder*>());
 	}
 
 	for (size_t i = 0; i < m_num_threads; i++)
@@ -524,7 +524,7 @@ void Engine::Start()
 	}
 }
 
-bool Engine::Run()
+bool Engine3D::Run()
 {
 	//Check if the console window is still running.
 	if (!PrintMachine::GetInstance()->CheckIfRunning())
@@ -554,7 +554,7 @@ bool Engine::Run()
 	return true;
 }
 
-void Engine::Render()
+void Engine3D::Render()
 {
 	m_camera->Update();
 	m_scene->Update(m_timer->DeltaTime());
@@ -572,7 +572,7 @@ void Engine::Render()
 
 }
 
-void Engine::CleanUp()
+void Engine3D::CleanUp()
 {
 	delete pInstance;
 	PrintMachine::GetInstance()->CleanUp();

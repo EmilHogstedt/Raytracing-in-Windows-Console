@@ -1,11 +1,11 @@
 #pragma once
-#include "Object.h"
+#include "Object3D.h"
 
-class Sphere : public Object
+class Sphere : public Object3D
 {
 public:
 	Sphere(Vector3 middle, float r) :
-		Object{ middle, "Sphere" }, m_radius{ r }, mover{ -1 }
+		Object3D{ middle, "Sphere" }, m_radius{ r }, mover{ -1 }
 	{
 	}
 	virtual ~Sphere() noexcept = default;

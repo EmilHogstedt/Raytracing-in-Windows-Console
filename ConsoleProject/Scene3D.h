@@ -2,11 +2,11 @@
 #include "Sphere.h"
 #include "Plane.h"
 
-class Scene
+class Scene3D
 {
 public:
-	Scene() = default;
-	~Scene() = default;
+	Scene3D() = default;
+	~Scene3D() = default;
 
 	void Init();
 	//Update all objects
@@ -15,7 +15,7 @@ public:
 	void CleanUp();
 
 	//TODO: Implement culling.
-	std::vector<Object*>* SendCulledObjects();
+	std::vector<Object3D*>* SendCulledObjects();
 private:
-	std::vector<Object*> m_objects;
+	std::vector<Object3D*> m_objects;
 };

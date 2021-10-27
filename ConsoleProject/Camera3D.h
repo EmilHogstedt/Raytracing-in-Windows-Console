@@ -1,11 +1,11 @@
 #pragma once
 #include "MyMath.h"
 
-class Camera
+class Camera3D
 {
 public:
-	Camera();
-	~Camera();
+	Camera3D();
+	~Camera3D();
 
 	void Init();
 	void Update();

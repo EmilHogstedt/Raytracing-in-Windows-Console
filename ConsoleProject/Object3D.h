@@ -2,17 +2,17 @@
 #include "MyMath.h"
 
 //Barebones baseclass to be able to group all objects together.
-class Object
+class Object3D
 {
 public:
-	Object() : m_middlePos{ Vector3() }, m_tag { "" }
+	Object3D() : m_middlePos{ Vector3() }, m_tag { "" }
 	{
 	}
-	Object(Vector3 middle, std::string tag) :
+	Object3D(Vector3 middle, std::string tag) :
 		m_middlePos{ middle }, m_tag{ tag }
 	{
 	}
-	virtual ~Object() noexcept = default;
+	virtual ~Object3D() noexcept = default;
 
 	virtual void Update(long double) = 0;
 	std::string GetTag();
