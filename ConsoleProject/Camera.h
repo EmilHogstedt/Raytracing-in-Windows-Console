@@ -12,7 +12,6 @@ public:
 	void SetRot(float, float, float);
 	void SetPos(float, float, float);
 	
-	Matrix GetWMatrix();
 	Matrix GetVMatrix();
 	Matrix GetInverseVMatrix();
 	Matrix GetPMatrix();
@@ -20,7 +19,6 @@ public:
 	Vector3 GetPos();
 	Vector3 GetRot();
 private:
-	Matrix m_wMatrix;
 	Matrix m_vMatrix;
 	Matrix m_pMatrix;
 

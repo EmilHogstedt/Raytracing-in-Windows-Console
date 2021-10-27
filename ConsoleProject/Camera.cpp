@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Camera.h"
-//#include "PrintMachine.h" Fuck off linker errors
+#include "PrintMachine.h"
 
 Camera::Camera() :
 	m_pos{ Vector3() },
@@ -8,7 +8,6 @@ Camera::Camera() :
 	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
 	m_up{ Vector3(0.0f, 1.0f, 0.0f) },
 	m_forward{ Vector3(0.0f, 0.0f, 1.0f) },
-	m_wMatrix{ Matrix() },
 	m_vMatrix{ Matrix() },
 	m_pMatrix{ Matrix() }
 {
@@ -20,7 +19,7 @@ Camera::~Camera()
 
 void Camera::Init()
 {
-	float currentFOV = M_PI / m_FOV;
+	float currentFOV = (float)(M_PI) / m_FOV;
 	float width = 16;// (float)(PrintMachine::GetInstance()->GetWidth());
 	float height = 9;// (float)(PrintMachine::GetInstance()->GetHeight());
 	float aspect = width / height;
@@ -87,11 +86,6 @@ void Camera::SetPos(float x, float y, float z)
 	m_pos.x = x;
 	m_pos.y = y;
 	m_pos.z = z;
-}
-
-Matrix Camera::GetWMatrix()
-{
-	return m_wMatrix;
 }
 
 Matrix Camera::GetVMatrix()
