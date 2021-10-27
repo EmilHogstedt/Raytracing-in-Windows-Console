@@ -7,7 +7,59 @@ std::mutex PrintMachine::m_Lock;
 int PrintMachine::m_fps = 60;
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
+bool PrintMachine::m_running = true;
+char* PrintMachine::m_printBuffer = nullptr;
 
+//Move this to PrintMachine.
+bool DisableConsoleQuickEdit() {
+	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
+	HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+
+	//Get current console mode
+	unsigned int consoleMode = 0;
+	if (!GetConsoleMode(consoleHandle, (LPDWORD)&consoleMode)) {
+		//ERROR: Unable to get console mode.
+		return false;
+	}
+
+	// Clear the quick edit bit in the mode flags
+	consoleMode &= ~ENABLE_QUICK_EDIT;
+
+	//Set the new mode
+	if (!SetConsoleMode(consoleHandle, consoleMode)) {
+		//ERROR: Unable to set console mode
+		return false;
+	}
+	return true;
+}
+
+//Handles console events, does the cleanup when console window is closed.
+BOOL WINAPI ConsoleHandler(DWORD CEvent)
+{
+	switch (CEvent)
+	{
+	case CTRL_CLOSE_EVENT:
+		PrintMachine::GetInstance()->SetRunning(false);
+		break;
+	case CTRL_LOGOFF_EVENT:
+		PrintMachine::GetInstance()->SetRunning(false);
+		break;
+	case CTRL_SHUTDOWN_EVENT:
+		PrintMachine::GetInstance()->SetRunning(false);
+		break;
+	}
+	return TRUE;
+}
+
+void PrintMachine::SetRunning(bool state)
+{
+	m_running = state;
+}
+
+bool PrintMachine::CheckIfRunning()
+{
+	return m_running;
+}
 
 PrintMachine::PrintMachine(size_t x, size_t y)
 {
@@ -16,10 +68,24 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	m_2DPrintArray.resize(y);
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
 		m_2DPrintArray[i].resize(x);
+
+	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
 }
 
 void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
 {
+	//Console stuff
+	DisableConsoleQuickEdit(); //Disables being able to click in the console window.
+	std::ios::sync_with_stdio(false);
+
+	if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
+	{
+		// unable to install handler... 
+		// display message to the user
+		printf("Unable to install handler!\n");
+		assert(false);
+	}
+
 	if (!pInstance)
 		pInstance = DBG_NEW PrintMachine(sizeX, sizeY);
 }
@@ -31,6 +97,7 @@ PrintMachine* PrintMachine::GetInstance()
 
 void PrintMachine::CleanUp()
 {
+	delete m_printBuffer;
 	delete pInstance;
 }
 
@@ -90,20 +157,17 @@ const bool PrintMachine::Print()
 	//Clear the console before printing.
 	ClearConsole();
 
-	size_t pixelHeight = m_2DPrintArray.size();
-
-	char buffer[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
-	memset(buffer, 0, sizeof(buffer));
-	for (size_t i = 0; i < pixelHeight; i++)
+	memset(m_printBuffer, 0, sizeof(m_printBuffer));
+	for (size_t i = 0; i < currentHeight; i++)
 	{
 		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
 		{
-			buffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
+			m_printBuffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
 		}
-		buffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
+		m_printBuffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
 
-	fwrite(buffer, sizeof(char), pixelHeight * (currentWidth + 1), stdout);
+	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
 	std::cout << "FPS: " << m_fps << "         \n";
 	return true;
 }

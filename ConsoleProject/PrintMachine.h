@@ -22,6 +22,8 @@ public:
 	static void CreatePrintMachine(size_t, size_t);
 	//Returns the instance if there is one.
 	static PrintMachine* GetInstance();
+	bool CheckIfRunning();
+	void SetRunning(bool);
 
 	//Before closing program
 	static void CleanUp();
@@ -46,4 +48,8 @@ private:
 
 	static size_t currentWidth;
 	static size_t currentHeight;
+
+	static bool m_running;
+
+	static char* m_printBuffer;
 };

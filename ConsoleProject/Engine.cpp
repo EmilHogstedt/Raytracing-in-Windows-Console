@@ -16,47 +16,6 @@ bool Engine::stopped = false;
 std::vector<std::deque<Engine::JobHolder*>> Engine::queues;
 size_t Engine::m_num_threads = 0;
 
-//Move this to PrintMachine.
-bool DisableConsoleQuickEdit() {
-	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
-	HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
-
-	//Get current console mode
-	unsigned int consoleMode = 0;
-	if (!GetConsoleMode(consoleHandle, (LPDWORD)&consoleMode)) {
-		//ERROR: Unable to get console mode.
-		return false;
-	}
-
-	// Clear the quick edit bit in the mode flags
-	consoleMode &= ~ENABLE_QUICK_EDIT;
-
-	//Set the new mode
-	if (!SetConsoleMode(consoleHandle, consoleMode)) {
-		//ERROR: Unable to set console mode
-		return false;
-	}
-	return true;
-}
-
-//Handles console events, does the cleanup when console window is closed.
-BOOL WINAPI ConsoleHandler(DWORD CEvent)
-{
-	switch (CEvent)
-	{
-	case CTRL_CLOSE_EVENT:
-		Engine::GetInstance()->CleanUp();
-		break;
-	case CTRL_LOGOFF_EVENT:
-		Engine::GetInstance()->CleanUp();
-		break;
-	case CTRL_SHUTDOWN_EVENT:
-		Engine::GetInstance()->CleanUp();
-		break;
-	}
-	return TRUE;
-}
-
 void Engine::WaitForJob(
 	Matrix inverseVMatrix,
 	float pElement1,
@@ -501,10 +460,6 @@ Engine* Engine::GetInstance()
 }
 
 Engine::Engine() {
-	//Console stuff
-	DisableConsoleQuickEdit();
-	std::ios::sync_with_stdio(false);
-
 	//Engine objects
 	m_timer = DBG_NEW Time();
 	m_camera = DBG_NEW Camera();
@@ -522,13 +477,6 @@ Engine::~Engine()
 
 void Engine::Start()
 {
-	if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
-	{
-		// unable to install handler... 
-		// display message to the user
-		printf("Unable to install handler!\n");
-		assert(false);
-	}
 	PrintMachine::CreatePrintMachine((size_t)std::ceil((100 * 16) / 9), 100);
 	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
@@ -578,6 +526,13 @@ void Engine::Start()
 
 bool Engine::Run()
 {
+	//Check if the console window is still running.
+	if (!PrintMachine::GetInstance()->CheckIfRunning())
+	{
+		CleanUp();
+		return false;
+	}
+
 	m_timer->Update();
 	m_fps++;
 
