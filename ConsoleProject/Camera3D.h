@@ -25,6 +25,7 @@ public:
 	COORD GetMouseCoords();
 	void SetMouseCoords(COORD newCords);
 
+	//For keeping track of what keys are currently being pressed so that the movement can be updated accordingly.
 	struct PressedKeys
 	{
 		int W = 0;

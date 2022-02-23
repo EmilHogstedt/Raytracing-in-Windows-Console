@@ -17,5 +17,6 @@ public:
 	//TODO: Implement culling.
 	std::vector<Object3D*>* SendCulledObjects();
 private:
+	//Rename this to distinguish volumetric objects?
 	std::vector<Object3D*> m_objects;
 };

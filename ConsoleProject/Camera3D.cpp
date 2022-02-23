@@ -19,6 +19,7 @@ Camera3D::~Camera3D()
 {
 }
 
+//The pMatrix is set up in init. Since there is no option to change it atm.
 void Camera3D::Init()
 {
 	float currentFOV = (float)(M_PI) / m_FOV;
@@ -51,24 +52,13 @@ void Camera3D::Init()
 	m_pMatrix.row4.w = 0.0f;
 }
 
+//All the vectors and the vMatrix gets updated using the camera's movement and rotation.
 void Camera3D::Update()
 {
 	float p = m_rot.x;
 	float y = m_rot.y;
 	float r = m_rot.z;
-	/*
-	m_right.x = cos(p) * cos(y);
-	m_right.y = cos(p) * sin(y);
-	m_right.z = -sin(p);
-
-	m_up.x = sin(p) * cos(y) * sin(r) - sin(y) * cos(r);
-	m_up.y = sin(p) * sin(y) * sin(r) + cos(y) * cos(r);
-	m_up.z = cos(p) * sin(r);
-
-	m_forward.x = sin(p) * cos(y) * cos(r) + sin(y) * sin(r);
-	m_forward.y = sin(p) * sin(y) * cos(r) - cos(y) * sin(r);
-	m_forward.z = cos(p) * cos(r);
-	*/
+	
 	m_forward.x = -sin(y);
 	m_forward.y = -sin(p) * cos(y);
 	m_forward.z = -cos(p) * cos(y);
@@ -80,12 +70,7 @@ void Camera3D::Update()
 	m_up.x = 0.0f;
 	m_up.y = cos(p);
 	m_up.z = -sin(p);
-	/*
-	Vector3 oldPos = m_pos;
-	m_pos.x = oldPos.x * sin(y) - oldPos.y * cos(y);
-	m_pos.y = sin(p) * (oldPos.x * cos(y) + oldPos.y * sin(y)) - oldPos.z * cos(p);
-	m_pos.z = cos(p) * (oldPos.x * cos(y) + oldPos.y * sin(y)) + oldPos.z * sin(p);
-	*/
+	
 	//Update view matrix every frame.
 	//First row
 	m_vMatrix.row1.x = m_right.x;
@@ -109,13 +94,13 @@ void Camera3D::Update()
 	m_vMatrix.row4.w = 1.0f;
 }
 
+//Set rot & pos to a specific value, when teleporting etc.
 void Camera3D::SetRot(float p, float y, float r)
 {
 	m_rot.x = p;
 	m_rot.y = y;
 	m_rot.z = r;
 }
-
 void Camera3D::SetPos(float x, float y, float z)
 {
 	m_pos.x = x;
@@ -123,23 +108,24 @@ void Camera3D::SetPos(float x, float y, float z)
 	m_pos.z = z;
 }
 
+//Moves using the keymap.
 void Camera3D::Move(long double dt)
 {
 	float speed = 10.0f;
-	//Redo this.
-	if (m_Keys.A - m_Keys.D == -1)
-	{
-		std::cout << 1;
-	}
+
+	//Use the current right & forward vectors to calculate movement in the x-z plane.
 	Vector3 moveX = m_right * (m_Keys.D - m_Keys.A);
 	Vector3 moveZ = m_forward * (m_Keys.W - m_Keys.S);
+	//Then add those to the current posision.
 	m_pos.x = m_pos.x + (moveX.x * dt * speed) + (moveZ.x * dt * speed);
 	m_pos.z = m_pos.z + (moveX.z * dt * speed) + (moveZ.z * dt * speed);
-	//m_pos.x += ((m_rot.x / M_PI)) * (m_Keys.A - m_Keys.D) + ((m_rot.x / M_PI) - 1) * (m_Keys.W - m_Keys.S) * dt * speed;
+	
+	//The updating of the y-pos does not get effected by the rotation of the axis'
 	m_pos.y += (m_Keys.Space - m_Keys.Shift) * dt * speed;
-	//m_pos.z += ((m_rot.x / M_PI) - 1) * (m_Keys.A - m_Keys.D) + (m_rot.x / M_PI) * (m_Keys.W - m_Keys.S) * dt * speed;
+	
 }
 
+//Used to add rotation to the already existing rotational position of the camera when moving the mouse for example.
 void Camera3D::AddRot(short p, short y, short r, long double dt)
 {
 	float speed = 0.2f;
@@ -161,7 +147,6 @@ COORD Camera3D::GetMouseCoords()
 {
 	return m_mouseCoords;
 }
-
 void Camera3D::SetMouseCoords(COORD newCoords)
 {
 	m_mouseCoords = newCoords;
@@ -172,6 +157,8 @@ Matrix Camera3D::GetVMatrix()
 	return m_vMatrix;
 }
 
+//Manual calculation of the inverse 4x4 matrix. Is there any way to optimize this???
+//Here be dragons
 Matrix Camera3D::GetInverseVMatrix()
 {
 	Matrix inverseMatrix = Matrix();

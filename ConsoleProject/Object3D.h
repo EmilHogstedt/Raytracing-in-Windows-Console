@@ -1,7 +1,7 @@
 #pragma once
 #include "MyMath.h"
 
-//Barebones baseclass to be able to group all objects together.
+//Barebones baseclass in order to be able to group all objects together.
 class Object3D
 {
 public:

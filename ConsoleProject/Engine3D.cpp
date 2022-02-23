@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Engine3D.h"
 
+//A lot of this will be moved/removed when CUDA is added.
+//Move input stuff to an input handler.
 Engine3D* Engine3D::pInstance{ nullptr };
 Time* Engine3D::m_timer{ nullptr };
 Camera3D* Engine3D::m_camera{ nullptr };
@@ -18,6 +20,7 @@ size_t Engine3D::m_num_threads = 0;
 bool Engine3D::m_lockMouse = false;
 bool Engine3D::m_mouseJustMoved = false;
 
+//Used as a waiting area for the CPU threads until they get something to do. They then do that job.
 void Engine3D::WaitForJob(
 	float pElement1,
 	float pElement2,
@@ -52,6 +55,7 @@ void Engine3D::WaitForJob(
 	}
 }
 
+//Used by the main thread to add jobs into different queues for the worker threads to take from.
 void Engine3D::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId, Matrix inverseVMatrix, Vector3 camPos)
 {
 	{
@@ -66,6 +70,7 @@ void Engine3D::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1,
 	condition[threadId].notify_one();
 }
 
+//Called at the end of the program to make sure the cpu threads get shut down correctly.
 void Engine3D::shutdownThreads()
 {
 	{
@@ -87,6 +92,7 @@ void Engine3D::shutdownThreads()
 	stopped = true;
 }
 
+//The "pixel shader".
 void Engine3D::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)
 {
 	float convertedY = ((float)currentHeight - (float)threadHeightPos * 2.0f) / (float)currentHeight;
@@ -167,7 +173,7 @@ void Engine3D::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEle
 		}
 	}
 
-	//Dont open this.
+	//Dont open this. Here be dragons.
 	{
 		//I warned u
 	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
@@ -448,6 +454,7 @@ void Engine3D::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEle
 	PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
 }
 
+//Creates the singleton instance.
 void Engine3D::CreateEngine()
 {
 	if (!pInstance)
@@ -478,12 +485,9 @@ Engine3D::~Engine3D()
 void Engine3D::Start()
 {
 	PrintMachine::CreatePrintMachine((size_t)std::ceil((150 * 16) / 9), 100);
-	PrintMachine::GetInstance()->Fill('s'); //Temp
 	m_camera->Init();
 	m_camera->Update();
 	m_scene->Init();
-
-
 
 	//Initialize the threads.
 	size_t x = PrintMachine::GetInstance()->GetWidth();
@@ -504,7 +508,7 @@ void Engine3D::Start()
 	{
 		queues.push_back(std::deque<Engine3D::JobHolder*>());
 	}
-
+	//Start the cpu threads.
 	for (size_t i = 0; i < m_num_threads; i++)
 	{
 		m_workers.push_back(std::thread(
@@ -540,7 +544,6 @@ bool Engine3D::Run()
 	m_frameTimer += dt;
 	m_fpsTimer += m_timer->DeltaTime();
 
-	//Render
 	Render();
 
 	//Once every second we update the fps.
@@ -550,14 +553,18 @@ bool Engine3D::Run()
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
+
+	//Here is the actual "painting"
 	PrintMachine::GetInstance()->Print();
 
+	//Some debugging text. Maybe add an information panel at the bottom that can get sent text? Should be done in PrintMachine though.
 	Vector3 pos = m_camera->GetPos();
 	Vector3 rot = m_camera->GetRot();
 	std::cout << "Pos: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
 	std::cout << "Rot: " << rot.x << " " << rot.y << " " << rot.z << std::endl;
 	COORD coords = m_camera->GetMouseCoords();
 	std::cout << "Mousecoords: " << coords.X << " " << coords.Y << std::endl;
+
 	return true;
 }
 
@@ -565,12 +572,13 @@ void Engine3D::Render()
 {
 	//Update the view matrix.
 	m_camera->Update();
+	//Update the objects in the scene.
 	m_scene->Update(m_timer->DeltaTime());
 
-	Matrix inverseVMatrix = m_camera->GetInverseVMatrix();
-	Vector3 camPos = m_camera->GetPos();
 	//Update pixel shader variables.
 	//After update is complete we set the global variable
+	Matrix inverseVMatrix = m_camera->GetInverseVMatrix();
+	Vector3 camPos = m_camera->GetPos();
 	size_t x = PrintMachine::GetInstance()->GetWidth();
 	size_t y = PrintMachine::GetInstance()->GetHeight();
 	for (size_t i = 0; i < y; i++)
@@ -581,19 +589,19 @@ void Engine3D::Render()
 	}
 }
 
+//Move this to an input handler.
 void Engine3D::CheckKeyboard(long double dt)
 {
 	INPUT_RECORD event;
 	HANDLE consoleHandle = PrintMachine::GetInstance()->GetConsoleHandle();
 	DWORD count = 0;
 
+	//Rewrite key presses. https://stackoverflow.com/questions/41600981/how-do-i-check-if-a-key-is-pressed-on-c
 	GetNumberOfConsoleInputEvents(consoleHandle, &count);
 	if (count > 0)
 	{
 		ReadConsoleInput(PrintMachine::GetInstance()->GetConsoleHandle(), &event, 1, &count);
 
-		//Rewrite key presses. https://stackoverflow.com/questions/41600981/how-do-i-check-if-a-key-is-pressed-on-c
-		/* Only respond to key release events */
 		if (event.EventType == KEY_EVENT)
 		{
 			switch (event.Event.KeyEvent.wVirtualKeyCode)
@@ -718,11 +726,10 @@ void Engine3D::CheckKeyboard(long double dt)
 
 				if (m_lockMouse)
 				{
-					SetCursorPos(1000, 500);
+					SetCursorPos(1000, 500); //Just do this in SetMouseCoords lol.
 					newCoords.X = 1000;
 					newCoords.Y = 500;
 				}
-				std::cout << diffX << " " << diffY << std::endl;
 				
 				m_camera->AddRot(diffY, diffX, 0, dt);
 				m_camera->SetMouseCoords(newCoords);

@@ -72,6 +72,8 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
 		m_2DPrintArray[i].resize(x);
 
+	//+ heightlimit is for the line-ending characters.
+	//Needs to be remade if support for color is added.
 	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
 }
 
@@ -180,10 +182,11 @@ const bool PrintMachine::Print()
 	std::cout << "FPS: " << m_fps << "         \n";
 	printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
 	printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
-	
+
 	return true;
 }
 
+//Very strange functionality. Does not behave as it should.
 void PrintMachine::ClearConsole() {
 	/*
 	HANDLE                     hStdOut;

@@ -110,6 +110,8 @@ public:
 
 		return *this;
 	}
+	
+	//Implement operations (+, -, * etc)
 
 	Vector4 Normalize()
 	{
