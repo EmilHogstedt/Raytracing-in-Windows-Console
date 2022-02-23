@@ -50,9 +50,9 @@ public:
 	}
 	Vector3 operator*(const float& other)
 	{
-		x = x * other;
-		y = y * other;
-		z = z * other;
+		//x = x * other;
+		//y = y * other;
+		//z = z * other;
 
 		Vector3 temp = Vector3(x * other, y * other, z * other);
 		return temp;

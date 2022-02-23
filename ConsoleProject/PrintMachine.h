@@ -39,9 +39,12 @@ public:
 
 	static size_t GetWidth();
 	static size_t GetHeight();
+	static HANDLE GetConsoleHandle();
 
 	static std::vector<std::vector<char>> m_2DPrintArray;
 private:
+	static HANDLE m_handle;
+
 	static void ClearConsole();
 
 	static int m_fps;

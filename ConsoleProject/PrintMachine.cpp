@@ -9,11 +9,12 @@ size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
 bool PrintMachine::m_running = true;
 char* PrintMachine::m_printBuffer = nullptr;
+HANDLE PrintMachine::m_handle;
 
-//Move this to PrintMachine.
-bool DisableConsoleQuickEdit() {
+//Sets up the consolemode. Rename this.
+bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
 	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
-	HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+	//HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
 
 	//Get current console mode
 	unsigned int consoleMode = 0;
@@ -24,6 +25,8 @@ bool DisableConsoleQuickEdit() {
 
 	// Clear the quick edit bit in the mode flags
 	consoleMode &= ~ENABLE_QUICK_EDIT;
+	consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	consoleMode |= ENABLE_MOUSE_INPUT;
 
 	//Set the new mode
 	if (!SetConsoleMode(consoleHandle, consoleMode)) {
@@ -74,8 +77,9 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 
 void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
 {
+	m_handle = GetStdHandle(STD_INPUT_HANDLE);
 	//Console stuff
-	DisableConsoleQuickEdit(); //Disables being able to click in the console window.
+	DisableConsoleQuickEdit(m_handle); //Disables being able to click in the console window.
 	std::ios::sync_with_stdio(false);
 
 	if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
@@ -109,6 +113,11 @@ size_t PrintMachine::GetWidth()
 size_t PrintMachine::GetHeight()
 {
 	return currentHeight;
+}
+
+HANDLE PrintMachine::GetConsoleHandle()
+{
+	return m_handle;
 }
 
 const bool PrintMachine::ChangeSize(size_t x, size_t y)
@@ -169,10 +178,14 @@ const bool PrintMachine::Print()
 
 	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
 	std::cout << "FPS: " << m_fps << "         \n";
+	printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
+	printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
+	
 	return true;
 }
 
 void PrintMachine::ClearConsole() {
+	/*
 	HANDLE                     hStdOut;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	DWORD                      count;
@@ -182,12 +195,12 @@ void PrintMachine::ClearConsole() {
 	hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hStdOut == INVALID_HANDLE_VALUE) return;
 
-	/* Get the number of cells in the current buffer */
+	//Get the number of cells in the current buffer
 	if (!GetConsoleScreenBufferInfo(hStdOut, &csbi)) return;
 	cellCount = csbi.dwSize.X * csbi.dwSize.Y;
 
-	/* Fill the entire buffer with spaces */
-	/*
+	//Fill the entire buffer with spaces
+	
 	if (!FillConsoleOutputCharacter(
 		hStdOut,
 		(TCHAR)' ',
@@ -196,8 +209,8 @@ void PrintMachine::ClearConsole() {
 		&count
 	)) return;
 
-	/* Fill the entire buffer with the current colors and attributes */
-
+	//Fill the entire buffer with the current colors and attributes
+	
 	if (!FillConsoleOutputAttribute(
 		hStdOut,
 		csbi.wAttributes,
@@ -206,6 +219,15 @@ void PrintMachine::ClearConsole() {
 		&count
 	)) return;
 
-	/* Move the cursor home */
+	//Move the cursor home
 	SetConsoleCursorPosition(hStdOut, homeCoords);
+	*/
+	HANDLE hOut;
+	COORD Position;
+
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	Position.X = 0;
+	Position.Y = 0;
+	SetConsoleCursorPosition(hOut, Position);
 }

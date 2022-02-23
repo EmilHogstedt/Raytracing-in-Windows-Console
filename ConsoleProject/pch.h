@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
+#include <wchar.h>
 
 #include <iostream>
 #include <vector>
@@ -17,6 +18,9 @@
 #include <assert.h>
 #include <tchar.h>
 #include <memory>
+
+#include <cstdlib>
+#include <time.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>

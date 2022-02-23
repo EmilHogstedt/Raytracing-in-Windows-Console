@@ -4,13 +4,15 @@
 
 Camera3D::Camera3D() :
 	m_pos{ Vector3() },
-	m_rot{ Vector3() },
+	m_rot{ Vector3(0.0f, M_PI, 0.0f) },
 	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
 	m_up{ Vector3(0.0f, 1.0f, 0.0f) },
 	m_forward{ Vector3(0.0f, 0.0f, 1.0f) },
 	m_vMatrix{ Matrix() },
 	m_pMatrix{ Matrix() }
 {
+	m_mouseCoords.X = -1.0f;
+	m_mouseCoords.Y = -1.0f;
 }
 
 Camera3D::~Camera3D()
@@ -22,7 +24,7 @@ void Camera3D::Init()
 	float currentFOV = (float)(M_PI) / m_FOV;
 	float width = (float)(PrintMachine::GetInstance()->GetWidth());
 	float height = (float)(PrintMachine::GetInstance()->GetHeight());
-	float aspect = width / height;
+	float aspect = width / (2 * height);
 
 	float e = 1.0f / (std::tan(currentFOV / 2.0f));
 
@@ -51,6 +53,39 @@ void Camera3D::Init()
 
 void Camera3D::Update()
 {
+	float p = m_rot.x;
+	float y = m_rot.y;
+	float r = m_rot.z;
+	/*
+	m_right.x = cos(p) * cos(y);
+	m_right.y = cos(p) * sin(y);
+	m_right.z = -sin(p);
+
+	m_up.x = sin(p) * cos(y) * sin(r) - sin(y) * cos(r);
+	m_up.y = sin(p) * sin(y) * sin(r) + cos(y) * cos(r);
+	m_up.z = cos(p) * sin(r);
+
+	m_forward.x = sin(p) * cos(y) * cos(r) + sin(y) * sin(r);
+	m_forward.y = sin(p) * sin(y) * cos(r) - cos(y) * sin(r);
+	m_forward.z = cos(p) * cos(r);
+	*/
+	m_forward.x = -sin(y);
+	m_forward.y = -sin(p) * cos(y);
+	m_forward.z = -cos(p) * cos(y);
+
+	m_right.x = cos(y);
+	m_right.y = -sin(p) * sin(y);
+	m_right.z = -cos(p) * sin(y);
+
+	m_up.x = 0.0f;
+	m_up.y = cos(p);
+	m_up.z = -sin(p);
+	/*
+	Vector3 oldPos = m_pos;
+	m_pos.x = oldPos.x * sin(y) - oldPos.y * cos(y);
+	m_pos.y = sin(p) * (oldPos.x * cos(y) + oldPos.y * sin(y)) - oldPos.z * cos(p);
+	m_pos.z = cos(p) * (oldPos.x * cos(y) + oldPos.y * sin(y)) + oldPos.z * sin(p);
+	*/
 	//Update view matrix every frame.
 	//First row
 	m_vMatrix.row1.x = m_right.x;
@@ -74,11 +109,11 @@ void Camera3D::Update()
 	m_vMatrix.row4.w = 1.0f;
 }
 
-void Camera3D::SetRot(float p, float r, float y)
+void Camera3D::SetRot(float p, float y, float r)
 {
 	m_rot.x = p;
-	m_rot.y = r;
-	m_rot.z = y;
+	m_rot.y = y;
+	m_rot.z = r;
 }
 
 void Camera3D::SetPos(float x, float y, float z)
@@ -88,85 +123,240 @@ void Camera3D::SetPos(float x, float y, float z)
 	m_pos.z = z;
 }
 
+void Camera3D::Move(long double dt)
+{
+	float speed = 10.0f;
+	//Redo this.
+	if (m_Keys.A - m_Keys.D == -1)
+	{
+		std::cout << 1;
+	}
+	Vector3 moveX = m_right * (m_Keys.D - m_Keys.A);
+	Vector3 moveZ = m_forward * (m_Keys.W - m_Keys.S);
+	m_pos.x = m_pos.x + (moveX.x * dt * speed) + (moveZ.x * dt * speed);
+	m_pos.z = m_pos.z + (moveX.z * dt * speed) + (moveZ.z * dt * speed);
+	//m_pos.x += ((m_rot.x / M_PI)) * (m_Keys.A - m_Keys.D) + ((m_rot.x / M_PI) - 1) * (m_Keys.W - m_Keys.S) * dt * speed;
+	m_pos.y += (m_Keys.Space - m_Keys.Shift) * dt * speed;
+	//m_pos.z += ((m_rot.x / M_PI) - 1) * (m_Keys.A - m_Keys.D) + (m_rot.x / M_PI) * (m_Keys.W - m_Keys.S) * dt * speed;
+}
+
+void Camera3D::AddRot(short p, short y, short r, long double dt)
+{
+	float speed = 0.2f;
+
+	m_rot.x -= p * dt * speed;
+	m_rot.y += y * dt * speed;
+	m_rot.z += r * dt * speed;
+	if (m_rot.x > M_PI)
+	{
+		m_rot.x = M_PI - 0.0001f;
+	}
+	if (m_rot.x < -M_PI)
+	{
+		m_rot.x = -M_PI + 0.0001f;
+	}
+}
+
+COORD Camera3D::GetMouseCoords()
+{
+	return m_mouseCoords;
+}
+
+void Camera3D::SetMouseCoords(COORD newCoords)
+{
+	m_mouseCoords = newCoords;
+}
+
 Matrix Camera3D::GetVMatrix()
 {
 	return m_vMatrix;
 }
 
-//Doesnt work. special det is 0?
 Matrix Camera3D::GetInverseVMatrix()
 {
-	Matrix InverseMatrix = Matrix();
+	Matrix inverseMatrix = Matrix();
+
+	//First column.
+	//00 Done
+	inverseMatrix.row1.x = 
+		m_vMatrix.row2.y * m_vMatrix.row3.z * m_vMatrix.row4.w -
+		m_vMatrix.row2.y * m_vMatrix.row3.w * m_vMatrix.row4.z -
+		m_vMatrix.row3.y * m_vMatrix.row2.z * m_vMatrix.row4.w +
+		m_vMatrix.row3.y * m_vMatrix.row2.w * m_vMatrix.row4.z +
+		m_vMatrix.row4.y * m_vMatrix.row2.z * m_vMatrix.row3.w -
+		m_vMatrix.row4.y * m_vMatrix.row2.w * m_vMatrix.row3.z;
+
+	//10 Done
+	inverseMatrix.row2.x =
+		-m_vMatrix.row2.x * m_vMatrix.row3.z * m_vMatrix.row4.w +
+		m_vMatrix.row2.x * m_vMatrix.row3.w * m_vMatrix.row4.z +
+		m_vMatrix.row3.x * m_vMatrix.row2.z * m_vMatrix.row4.w -
+		m_vMatrix.row3.x * m_vMatrix.row2.w * m_vMatrix.row4.z -
+		m_vMatrix.row4.x * m_vMatrix.row2.z * m_vMatrix.row3.w +
+		m_vMatrix.row4.x * m_vMatrix.row2.w * m_vMatrix.row3.z;
+
+	//20 Done
+	inverseMatrix.row3.x =
+		m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row4.w -
+		m_vMatrix.row2.x * m_vMatrix.row3.w * m_vMatrix.row4.y -
+		m_vMatrix.row3.x * m_vMatrix.row2.y * m_vMatrix.row4.w +
+		m_vMatrix.row3.x * m_vMatrix.row2.w * m_vMatrix.row4.y +
+		m_vMatrix.row4.x * m_vMatrix.row2.y * m_vMatrix.row3.w -
+		m_vMatrix.row4.x * m_vMatrix.row2.w * m_vMatrix.row3.y;
+
+	//30 Done
+	inverseMatrix.row4.x =
+		-m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row4.z +
+		m_vMatrix.row2.x * m_vMatrix.row3.z * m_vMatrix.row4.y +
+		m_vMatrix.row3.x * m_vMatrix.row2.y * m_vMatrix.row4.z -
+		m_vMatrix.row3.x * m_vMatrix.row2.z * m_vMatrix.row4.y -
+		m_vMatrix.row4.x * m_vMatrix.row2.y * m_vMatrix.row3.z +
+		m_vMatrix.row4.x * m_vMatrix.row2.z * m_vMatrix.row3.y;
+
+	//Second column.
+	//01 Done
+	inverseMatrix.row1.y =
+		-m_vMatrix.row1.y * m_vMatrix.row3.z * m_vMatrix.row4.w +
+		m_vMatrix.row1.y * m_vMatrix.row3.w * m_vMatrix.row4.z +
+		m_vMatrix.row3.y * m_vMatrix.row1.z * m_vMatrix.row4.w -
+		m_vMatrix.row3.y * m_vMatrix.row1.w * m_vMatrix.row4.z -
+		m_vMatrix.row4.y * m_vMatrix.row1.z * m_vMatrix.row3.w +
+		m_vMatrix.row4.y * m_vMatrix.row1.w * m_vMatrix.row3.z;
+
+	//11 Done
+	inverseMatrix.row2.y =
+		m_vMatrix.row1.x * m_vMatrix.row3.z * m_vMatrix.row4.w -
+		m_vMatrix.row1.x * m_vMatrix.row3.w * m_vMatrix.row4.z -
+		m_vMatrix.row3.x * m_vMatrix.row1.z * m_vMatrix.row4.w +
+		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row4.z +
+		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row3.w -
+		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row3.z;
+
+	//21 Done
+	inverseMatrix.row3.y =
+		-m_vMatrix.row1.x * m_vMatrix.row3.y * m_vMatrix.row4.w +
+		m_vMatrix.row1.x * m_vMatrix.row3.w * m_vMatrix.row4.y +
+		m_vMatrix.row3.x * m_vMatrix.row1.y * m_vMatrix.row4.w -
+		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row4.y -
+		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row3.w +
+		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row3.y;
+
+	//31 Done
+	inverseMatrix.row4.y =
+		m_vMatrix.row1.x * m_vMatrix.row3.y * m_vMatrix.row4.z -
+		m_vMatrix.row1.x * m_vMatrix.row3.z * m_vMatrix.row4.y -
+		m_vMatrix.row3.x * m_vMatrix.row1.y * m_vMatrix.row4.z +
+		m_vMatrix.row3.x * m_vMatrix.row1.z * m_vMatrix.row4.y +
+		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row3.z -
+		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row3.y;
+
+	//Third column.
+	//02 Done
+	inverseMatrix.row1.z =
+		m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row4.w -
+		m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row4.z -
+		m_vMatrix.row2.y * m_vMatrix.row1.z * m_vMatrix.row4.w +
+		m_vMatrix.row2.y * m_vMatrix.row1.w * m_vMatrix.row4.z +
+		m_vMatrix.row4.y * m_vMatrix.row1.z * m_vMatrix.row2.w -
+		m_vMatrix.row4.y * m_vMatrix.row1.w * m_vMatrix.row2.z;
+
+	//12 Done
+	inverseMatrix.row2.z =
+		-m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row4.w +
+		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row4.z +
+		m_vMatrix.row2.x * m_vMatrix.row1.z * m_vMatrix.row4.w -
+		m_vMatrix.row2.x * m_vMatrix.row1.w * m_vMatrix.row4.z -
+		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row2.w +
+		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row2.z;
+
+	//22 Done
+	inverseMatrix.row3.z =
+		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row4.w -
+		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row4.y -
+		m_vMatrix.row2.x * m_vMatrix.row1.y * m_vMatrix.row4.w +
+		m_vMatrix.row2.x * m_vMatrix.row1.w * m_vMatrix.row4.y +
+		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row2.w -
+		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row2.y;
+
+	//32 Done
+	inverseMatrix.row4.z =
+		-m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row4.z +
+		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row4.y +
+		m_vMatrix.row2.x * m_vMatrix.row1.y * m_vMatrix.row4.z -
+		m_vMatrix.row2.x * m_vMatrix.row1.z * m_vMatrix.row4.y -
+		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row2.z +
+		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row2.y;
+
+	//Fourth column.
+	//03 Done
+	inverseMatrix.row1.w =
+		-m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.w +
+		m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.z +
+		m_vMatrix.row2.y * m_vMatrix.row1.z * m_vMatrix.row3.w -
+		m_vMatrix.row2.y * m_vMatrix.row1.w * m_vMatrix.row3.z -
+		m_vMatrix.row3.y * m_vMatrix.row1.z * m_vMatrix.row2.w +
+		m_vMatrix.row3.y * m_vMatrix.row1.w * m_vMatrix.row2.z;
+
+	//13 Done
+	inverseMatrix.row2.w =
+		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.w -
+		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.z -
+		m_vMatrix.row2.x * m_vMatrix.row1.z * m_vMatrix.row3.w +
+		m_vMatrix.row2.x * m_vMatrix.row1.w * m_vMatrix.row3.z +
+		m_vMatrix.row3.x * m_vMatrix.row1.z * m_vMatrix.row2.w -
+		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row2.z;
+
+	//23 Done
+	inverseMatrix.row3.w =
+		-m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.w +
+		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.y +
+		m_vMatrix.row2.x * m_vMatrix.row1.y * m_vMatrix.row3.w -
+		m_vMatrix.row2.x * m_vMatrix.row1.w * m_vMatrix.row3.y -
+		m_vMatrix.row3.x * m_vMatrix.row1.y * m_vMatrix.row2.w +
+		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row2.y;
+
+	//33 Done
+	inverseMatrix.row4.w =
+		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.z -
+		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.y -
+		m_vMatrix.row2.x * m_vMatrix.row1.y * m_vMatrix.row3.z +
+		m_vMatrix.row2.x * m_vMatrix.row1.z * m_vMatrix.row3.y +
+		m_vMatrix.row3.x * m_vMatrix.row1.y * m_vMatrix.row2.z -
+		m_vMatrix.row3.x * m_vMatrix.row1.z * m_vMatrix.row2.y;
 
 	float det =
-		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.z -
-		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.y +
-		m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.x +
-		m_vMatrix.row1.z * m_vMatrix.row2.x * m_vMatrix.row3.y -
-		m_vMatrix.row1.y * m_vMatrix.row2.x * m_vMatrix.row3.z -
-		m_vMatrix.row1.z * m_vMatrix.row2.y * m_vMatrix.row3.x;
+		m_vMatrix.row1.x * inverseMatrix.row1.x +
+		m_vMatrix.row1.y * inverseMatrix.row2.x +
+		m_vMatrix.row1.z * inverseMatrix.row3.x +
+		m_vMatrix.row1.w * inverseMatrix.row4.x;
 
-	InverseMatrix.row1.x = (m_vMatrix.row2.y * m_vMatrix.row3.z - m_vMatrix.row2.z * m_vMatrix.row3.y) / det;
-	InverseMatrix.row1.y = (m_vMatrix.row1.z * m_vMatrix.row3.y - m_vMatrix.row1.y * m_vMatrix.row3.z) / det;
-	InverseMatrix.row1.z = (m_vMatrix.row1.y * m_vMatrix.row2.z - m_vMatrix.row1.z * m_vMatrix.row2.y) / det;
+	if (det == 0.0f)
+	{
+		assert(false && "Determinant was 0 when inversing the view matrix.");
+	}
 
-	InverseMatrix.row2.x = (m_vMatrix.row2.z * m_vMatrix.row3.x - m_vMatrix.row2.x * m_vMatrix.row3.z) / det;
-	InverseMatrix.row2.y = -(m_vMatrix.row1.z * m_vMatrix.row3.x - m_vMatrix.row1.x * m_vMatrix.row3.z) / det;
-	InverseMatrix.row2.z = -(m_vMatrix.row1.x * m_vMatrix.row2.z - m_vMatrix.row1.z * m_vMatrix.row2.x) / det;
+	det = 1.0f / det;
+	inverseMatrix.row1.x *= det;
+	inverseMatrix.row1.y *= det;
+	inverseMatrix.row1.z *= det;
+	inverseMatrix.row1.w *= det;
 
-	InverseMatrix.row3.x = -(m_vMatrix.row2.y * m_vMatrix.row3.x - m_vMatrix.row2.x * m_vMatrix.row3.y) / det;
-	InverseMatrix.row3.y = (m_vMatrix.row1.y * m_vMatrix.row3.x - m_vMatrix.row1.x * m_vMatrix.row3.y) / det;
-	InverseMatrix.row3.z = (m_vMatrix.row1.x * m_vMatrix.row2.y - m_vMatrix.row1.y * m_vMatrix.row2.x) / det;
+	inverseMatrix.row2.x *= det;
+	inverseMatrix.row2.y *= det;
+	inverseMatrix.row2.z *= det;
+	inverseMatrix.row2.w *= det;
 
-	InverseMatrix.row4.x = 0.0f;
-	InverseMatrix.row4.y = 0.0f;
-	InverseMatrix.row4.z = 0.0f;
-	InverseMatrix.row4.w = 1.0f;
+	inverseMatrix.row3.x *= det;
+	inverseMatrix.row3.y *= det;
+	inverseMatrix.row3.z *= det;
+	inverseMatrix.row3.w *= det;
 
-	//Special w values.
-	float specialDet = m_vMatrix.row1.y * m_vMatrix.row3.x - m_vMatrix.row1.x * m_vMatrix.row3.y;
-	InverseMatrix.row1.w = (
-		m_vMatrix.row1.y * m_vMatrix.row1.w * m_vMatrix.row2.z * m_vMatrix.row3.x * m_vMatrix.row3.y -
-		m_vMatrix.row1.y * m_vMatrix.row1.z * m_vMatrix.row2.w * m_vMatrix.row3.x * m_vMatrix.row3.y +
-		m_vMatrix.row1.y * m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.x * m_vMatrix.row3.z -
-		m_vMatrix.row1.y * m_vMatrix.row1.w * m_vMatrix.row2.y * m_vMatrix.row3.x * m_vMatrix.row3.z -
-		m_vMatrix.row1.y * m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.x * m_vMatrix.row3.w +
-		m_vMatrix.row1.y * m_vMatrix.row1.z * m_vMatrix.row2.y * m_vMatrix.row3.x * m_vMatrix.row3.w -
-		m_vMatrix.row1.x * m_vMatrix.row1.w * m_vMatrix.row2.z * m_vMatrix.row3.y * m_vMatrix.row3.y +
-		m_vMatrix.row1.x * m_vMatrix.row1.z * m_vMatrix.row2.w * m_vMatrix.row3.y * m_vMatrix.row3.y -
-		m_vMatrix.row1.x * m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.y * m_vMatrix.row3.z +
-		m_vMatrix.row1.x * m_vMatrix.row1.w * m_vMatrix.row2.y * m_vMatrix.row3.y * m_vMatrix.row3.z +
-		m_vMatrix.row1.x * m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.y * m_vMatrix.row3.w -
-		m_vMatrix.row1.x * m_vMatrix.row1.z * m_vMatrix.row2.y * m_vMatrix.row3.y * m_vMatrix.row3.w
-		)
-		/ (specialDet * det);
+	inverseMatrix.row4.x *= det;
+	inverseMatrix.row4.y *= det;
+	inverseMatrix.row4.z *= det;
+	inverseMatrix.row4.w *= det;
 
-	InverseMatrix.row2.w = (
-		m_vMatrix.row1.x * m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.y * m_vMatrix.row3.z -
-		m_vMatrix.row1.x * m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.y * m_vMatrix.row3.w +
-		m_vMatrix.row1.x * m_vMatrix.row1.w * m_vMatrix.row2.z * m_vMatrix.row3.x * m_vMatrix.row3.y -
-		m_vMatrix.row1.x * m_vMatrix.row1.z * m_vMatrix.row2.w * m_vMatrix.row3.x * m_vMatrix.row3.y -
-		m_vMatrix.row1.x * m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.x * m_vMatrix.row3.z -
-		m_vMatrix.row1.x * m_vMatrix.row1.w * m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row3.z +
-		m_vMatrix.row1.x * m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.x * m_vMatrix.row3.w +
-		m_vMatrix.row1.x * m_vMatrix.row1.z * m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row3.w -
-		m_vMatrix.row1.y * m_vMatrix.row1.w * m_vMatrix.row2.z * m_vMatrix.row3.x * m_vMatrix.row3.x +
-		m_vMatrix.row1.y * m_vMatrix.row1.z * m_vMatrix.row2.w * m_vMatrix.row3.x * m_vMatrix.row3.x +
-		m_vMatrix.row1.y * m_vMatrix.row1.w * m_vMatrix.row2.x * m_vMatrix.row3.x * m_vMatrix.row3.z -
-		m_vMatrix.row1.y * m_vMatrix.row1.z * m_vMatrix.row2.x * m_vMatrix.row3.x * m_vMatrix.row3.w
-		)
-		/ (specialDet * det);
-
-	InverseMatrix.row3.w = -(
-		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.w -
-		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.y +
-		m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.x +
-		m_vMatrix.row1.w * m_vMatrix.row2.x * m_vMatrix.row3.y -
-		m_vMatrix.row1.y * m_vMatrix.row2.x * m_vMatrix.row3.w -
-		m_vMatrix.row1.w * m_vMatrix.row2.y * m_vMatrix.row3.x
-		) / det;
-
-	return InverseMatrix;
+	return inverseMatrix;
 }
 
 Matrix Camera3D::GetPMatrix()
