@@ -37,6 +37,7 @@ public:
 	static const bool Print();
 	static void UpdateFPS(int);
 
+	static char* GetDeviceBuffer();
 	static size_t GetWidth();
 	static size_t GetHeight();
 	static HANDLE GetConsoleHandle();
@@ -55,4 +56,5 @@ private:
 	static bool m_running;
 
 	static char* m_printBuffer;
+	static char* m_devicePrintBuffer;
 };

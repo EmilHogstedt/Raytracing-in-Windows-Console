@@ -3,11 +3,11 @@
 class Vector3
 {
 public:
-	Vector3(float x, float y, float z) :
+	__host__ __device__ Vector3(float x, float y, float z) :
 		x{ x }, y{ y }, z{ z }
 	{
 	}
-	Vector3()
+	__host__ __device__ Vector3()
 	{
 		x = 0.0f;
 		y = 0.0f;
@@ -19,13 +19,13 @@ public:
 	float y;
 	float z;
 
-	Vector3(const Vector3& other)
+	__host__ __device__ Vector3(const Vector3& other)
 	{
 		x = other.x;
 		y = other.y;
 		z = other.z;
 	}
-	Vector3& operator=(const Vector3& other)
+	__host__ __device__ Vector3& operator=(const Vector3& other)
 	{
 		if (this == &other)
 			return *this;
@@ -36,7 +36,7 @@ public:
 
 		return *this;
 	}
-	Vector3 operator-(const Vector3& other)
+	__host__ __device__ Vector3 operator-(const Vector3& other)
 	{
 		Vector3 temp = Vector3(x - other.x, y - other.y, z - other.z);
 
@@ -57,7 +57,7 @@ public:
 		Vector3 temp = Vector3(x * other, y * other, z * other);
 		return temp;
 	}
-	Vector3 Normalize()
+	__host__ __device__ Vector3 Normalize()
 	{
 		Vector3 result = Vector3();
 		float length = sqrt(x * x + y * y + z * z);
@@ -75,7 +75,7 @@ private:
 class Vector4 : public Vector3
 {
 public:
-	Vector4(float x, float y, float z, float w) :
+	__host__ __device__ Vector4(float x, float y, float z, float w) :
 		Vector3{ x, y, z }, w{ w }
 	{
 	}
@@ -92,7 +92,7 @@ public:
 
 	float w;
 
-	Vector4(const Vector4& other) :
+	__host__ __device__ Vector4(const Vector4& other) :
 		Vector3{other.x, other.y, other.z}
 	{
 		w = other.w;
@@ -145,7 +145,7 @@ public:
 	}
 	virtual ~Matrix() noexcept = default;
 
-	Vector4 Mult(Vector4 v)
+	__host__ __device__ Vector4 Mult(Vector4 v)
 	{
 		return Vector4(
 			row1.x * v.x + row1.y * v.y + row1.z * v.z + row1.w * v.w,
@@ -183,6 +183,6 @@ public:
 private:
 };
 
-float Dot(Vector3 v1, Vector3 v2);
-float Dot(Vector4 v1, Vector4 v2);
-Vector3 Cross(Vector3 v1, Vector3 v2);
+__host__ __device__ float Dot(Vector3 v1, Vector3 v2);
+__host__ __device__ float Dot(Vector4 v1, Vector4 v2);
+__host__ __device__ Vector3 Cross(Vector3 v1, Vector3 v2);

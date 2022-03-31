@@ -27,18 +27,6 @@
     <ClCompile Include="Scene3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MyMath.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Object3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Sphere.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Plane.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Engine3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -69,16 +57,36 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Object3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Sphere.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MyMath.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="Plane.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="Sphere.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracing.cuh">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MyMath.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="RayTracing.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Object3D.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Plane.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Sphere.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="MyMath.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

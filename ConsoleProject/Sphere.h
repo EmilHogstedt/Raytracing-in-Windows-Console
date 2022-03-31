@@ -5,14 +5,14 @@ class Sphere : public Object3D
 {
 public:
 	Sphere(Vector3 middle, float r) :
-		Object3D{ middle, "Sphere" }, m_radius{ r }, mover{ -1 }
+		Object3D{ middle, SphereType }, m_radius{ r }, mover{ -1 }
 	{
 		int temp = rand() % 300 + 100;
 		speed = ((float)temp) / 100.0f;
 	}
 	virtual ~Sphere() noexcept = default;
-	void Update(long double);
-	float GetRadius();
+	__device__ void Update(long double);
+	__host__ __device__ float GetRadius();
 private:
 	float m_radius;
 

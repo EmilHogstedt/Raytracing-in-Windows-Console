@@ -3,6 +3,7 @@
 #include "Camera3D.h"
 #include "Timer.h"
 #include "Scene3D.h"
+#include "RayTracing.cuh"
 
 //3D Singleton Engine.
 class Engine3D {
@@ -24,6 +25,7 @@ public:
 	static bool Run();
 	static void CleanUp();
 private:
+	/*
 	//Deque of mutex' used by the threads & AddJob.
 	static std::deque<std::mutex> queueMutex;
 	//Condition used by AddJob & Terminate to contact the threads.
@@ -38,7 +40,7 @@ private:
 	static void shutdownThreads();
 	//Thr funciton where the actual work is done by the thread to calculate what is seen.
 	static void CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos);
-
+	*/
 	static void Render();
 
 	static void CheckKeyboard(long double dt);
@@ -49,8 +51,10 @@ private:
 	static long double m_frameTimer;
 	static long double m_fpsTimer;
 	static int m_fps;
+	/*
 	static std::vector<std::thread> m_workers;
-	
+	*/
+	/*
 	struct JobHolder
 	{
 		JobHolder() = default;
@@ -71,8 +75,11 @@ private:
 
 	//This is where the jobs are placed.
 	static std::vector<std::deque<JobHolder*>> queues;
+	*/
 	static size_t m_num_threads;
-
+	
 	static bool m_lockMouse;
 	static bool m_mouseJustMoved;
+
+	static RayTracingParameters* m_deviceRayTracingParameters;
 };

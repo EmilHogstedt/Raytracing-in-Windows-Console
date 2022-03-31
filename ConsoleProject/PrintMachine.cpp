@@ -9,6 +9,7 @@ size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
 bool PrintMachine::m_running = true;
 char* PrintMachine::m_printBuffer = nullptr;
+char* PrintMachine::m_devicePrintBuffer = nullptr;
 HANDLE PrintMachine::m_handle;
 
 //Sets up the consolemode. Rename this.
@@ -75,6 +76,8 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	//+ heightlimit is for the line-ending characters.
 	//Needs to be remade if support for color is added.
 	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
+	cudaMalloc(&m_devicePrintBuffer, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+	cudaMemset(m_devicePrintBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
 }
 
 void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
@@ -103,8 +106,14 @@ PrintMachine* PrintMachine::GetInstance()
 
 void PrintMachine::CleanUp()
 {
+	cudaFree(m_devicePrintBuffer);
 	delete m_printBuffer;
 	delete pInstance;
+}
+
+char* PrintMachine::GetDeviceBuffer()
+{
+	return m_devicePrintBuffer;
 }
 
 size_t PrintMachine::GetWidth()
@@ -148,11 +157,11 @@ std::vector<std::vector<char>>* PrintMachine::Get2DArray()
 {
 	return &m_2DPrintArray;
 }
-
+/*
 void PrintMachine::SendData(size_t x, size_t y, char pixelData)
 {
 	m_2DPrintArray[y][x] = pixelData;
-}
+}*/
 
 void PrintMachine::Fill(char character)
 {
@@ -169,6 +178,8 @@ const bool PrintMachine::Print()
 	ClearConsole();
 
 	memset(m_printBuffer, 0, sizeof(m_printBuffer));
+	cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * currentWidth * currentHeight, cudaMemcpyDeviceToHost);
+	/*
 	for (size_t i = 0; i < currentHeight; i++)
 	{
 		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
@@ -177,8 +188,9 @@ const bool PrintMachine::Print()
 		}
 		m_printBuffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
 	}
-
+	*/
 	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
+	//fprintf(stdout, m_printBuffer);
 	std::cout << "FPS: " << m_fps << "         \n";
 	printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
 	printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
@@ -229,7 +241,7 @@ void PrintMachine::ClearConsole() {
 	COORD Position;
 
 	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
+	
 	Position.X = 0;
 	Position.Y = 0;
 	SetConsoleCursorPosition(hOut, Position);

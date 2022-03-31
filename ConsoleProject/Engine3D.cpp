@@ -10,16 +10,19 @@ Scene3D* Engine3D::m_scene{ nullptr };
 long double Engine3D::m_frameTimer = 0.0f;
 long double Engine3D::m_fpsTimer = 0.0f;
 int Engine3D::m_fps = 0;
+/*
 std::vector<std::thread> Engine3D::m_workers;
 std::deque<std::mutex> Engine3D::queueMutex;
 std::deque<std::condition_variable> Engine3D::condition;
 bool Engine3D::terminatePool = false;
 bool Engine3D::stopped = false;
 std::vector<std::deque<Engine3D::JobHolder*>> Engine3D::queues;
+*/
 size_t Engine3D::m_num_threads = 0;
 bool Engine3D::m_lockMouse = false;
 bool Engine3D::m_mouseJustMoved = false;
-
+RayTracingParameters* Engine3D::m_deviceRayTracingParameters = nullptr;
+/*
 //Used as a waiting area for the CPU threads until they get something to do. They then do that job.
 void Engine3D::WaitForJob(
 	float pElement1,
@@ -453,7 +456,7 @@ void Engine3D::CalculatePixel(Matrix inverseVMatrix, float pElement1, float pEle
 	}
 	PrintMachine::GetInstance()->SendData(threadWidthPos, threadHeightPos, data);
 }
-
+*/
 //Creates the singleton instance.
 void Engine3D::CreateEngine()
 {
@@ -471,20 +474,24 @@ Engine3D::Engine3D() {
 	m_timer = DBG_NEW Time();
 	m_camera = DBG_NEW Camera3D();
 	m_scene = DBG_NEW Scene3D();
+	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
 }
 
 Engine3D::~Engine3D()
 {
+	/*
 	if (!stopped)
 		shutdownThreads();
+		*/
 	delete m_timer;
 	delete m_camera;
 	delete m_scene;
+	cudaFree(m_deviceRayTracingParameters);
 }
 
 void Engine3D::Start()
 {
-	PrintMachine::CreatePrintMachine((size_t)std::ceil((150 * 16) / 9), 100);
+	PrintMachine::CreatePrintMachine(250, 100);
 	m_camera->Init();
 	m_camera->Update();
 	m_scene->Init();
@@ -492,11 +499,13 @@ void Engine3D::Start()
 	//Initialize the threads.
 	size_t x = PrintMachine::GetInstance()->GetWidth();
 	size_t y = PrintMachine::GetInstance()->GetHeight();
-	float element1 = m_camera->GetPMatrix().row1.x;
-	float element2 = m_camera->GetPMatrix().row2.y;
-	std::vector<Object3D*>* culledObjects = m_scene->SendCulledObjects();
+	
+	/*
+	std::vector<Object3D*>* culledObjects = m_scene->GetObjects();
 	size_t objectNr = (*culledObjects).size();
+	*/
 	m_num_threads = std::thread::hardware_concurrency();
+	/*
 	m_workers.reserve(m_num_threads);
 	//Reserve the mutex'
 	queueMutex.resize(m_num_threads);
@@ -522,6 +531,7 @@ void Engine3D::Start()
 			i
 		));
 	}
+	*/
 }
 
 bool Engine3D::Run()
@@ -549,11 +559,12 @@ bool Engine3D::Run()
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
 	{
+		m_scene->CreateSphere(rand() % 10, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50));
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
-
+	
 	//Here is the actual "painting"
 	PrintMachine::GetInstance()->Print();
 
@@ -564,7 +575,7 @@ bool Engine3D::Run()
 	std::cout << "Rot: " << rot.x << " " << rot.y << " " << rot.z << std::endl;
 	COORD coords = m_camera->GetMouseCoords();
 	std::cout << "Mousecoords: " << coords.X << " " << coords.Y << std::endl;
-
+	
 	return true;
 }
 
@@ -577,16 +588,26 @@ void Engine3D::Render()
 
 	//Update pixel shader variables.
 	//After update is complete we set the global variable
-	Matrix inverseVMatrix = m_camera->GetInverseVMatrix();
-	Vector3 camPos = m_camera->GetPos();
+	RayTracingParameters params;
+	params.inverseVMatrix = m_camera->GetInverseVMatrix();
+	params.camPos = m_camera->GetPos();
+	cudaMemset(m_deviceRayTracingParameters, 0, sizeof(RayTracingParameters));
+	cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice);
+
 	size_t x = PrintMachine::GetInstance()->GetWidth();
 	size_t y = PrintMachine::GetInstance()->GetHeight();
+	float element1 = m_camera->GetPMatrix().row1.x;
+	float element2 = m_camera->GetPMatrix().row2.y;
+	/*
 	for (size_t i = 0; i < y; i++)
 	{
 		size_t threadId = (size_t)std::floor((m_num_threads * i) / y);
 		//Send x and add all jobs on that line.
 		AddJob(&CalculatePixel, x, i, threadId, inverseVMatrix, camPos);
 	}
+	*/
+	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
+	RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBuffer(), m_timer->DeltaTime());
 }
 
 //Move this to an input handler.

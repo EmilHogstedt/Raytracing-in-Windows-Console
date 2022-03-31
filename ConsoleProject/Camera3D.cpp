@@ -133,13 +133,13 @@ void Camera3D::AddRot(short p, short y, short r, long double dt)
 	m_rot.x -= p * dt * speed;
 	m_rot.y += y * dt * speed;
 	m_rot.z += r * dt * speed;
-	if (m_rot.x > M_PI)
+	if (m_rot.x > M_PI / 2.0)
 	{
-		m_rot.x = M_PI - 0.0001f;
+		m_rot.x = (M_PI / 2.0) - 0.0001;
 	}
-	if (m_rot.x < -M_PI)
+	if (m_rot.x < -M_PI / 2.0)
 	{
-		m_rot.x = -M_PI + 0.0001f;
+		m_rot.x = (-M_PI / 2.0) + 0.0001;
 	}
 }
 
