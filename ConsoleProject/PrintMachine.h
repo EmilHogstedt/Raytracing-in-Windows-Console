@@ -19,7 +19,7 @@ public:
 public:
 	//Called at the beginning of the program to create the instance if it is not already created.
 	//This is done in this function instead of in GetInstance to reduce wait time for threads.
-	static void CreatePrintMachine(size_t, size_t, std::mutex* swapchainMutex1, std::mutex* swapchainMutex2);
+	static void CreatePrintMachine(size_t, size_t);
 	//Returns the instance if there is one.
 	static PrintMachine* GetInstance();
 	bool CheckIfRunning();
@@ -38,17 +38,12 @@ public:
 	static void UpdateFPS(int);
 
 	static char* GetDeviceBuffer();
-	static char* GetCurrentHostBuffer(bool current);
 	static size_t GetWidth();
 	static size_t GetHeight();
 	static HANDLE GetConsoleHandle();
 
 	static std::vector<std::vector<char>> m_2DPrintArray;
 private:
-	static std::mutex* m_swapchainMutex1;
-	static std::mutex* m_swapchainMutex2;
-	static bool m_swapchainBool;
-
 	static HANDLE m_handle;
 
 	static void ClearConsole();
@@ -60,7 +55,6 @@ private:
 
 	static bool m_running;
 
-	static char* m_printBuffer1;
-	static char* m_printBuffer2;
+	static char* m_printBuffer;
 	static char* m_devicePrintBuffer;
 };

@@ -426,7 +426,7 @@ __global__ void RT(
 	
 }
 
-void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt, char* hostResultArray)
+void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt)
 {
 	
 	//Update the objects. 1 thread per object.
@@ -439,11 +439,22 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 	dim3 gridDims(numberOfBlocks, 1, 1);
 	dim3 blockDims(threadsPerBlock, 1, 1);
 	
-	UpdateObjects<<<gridDims, blockDims>>>(
-		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
-		deviceObjects.count,
-		dt
-	);
+	if (deviceObjects.using1st)
+	{
+		UpdateObjects<<<gridDims, blockDims>>>(
+			deviceObjects.m_deviceArray1,
+			deviceObjects.count,
+			dt
+		);
+	}
+	else
+	{
+		UpdateObjects<<<gridDims, blockDims>>>(
+			deviceObjects.m_deviceArray2,
+			deviceObjects.count,
+			dt
+		);
+	}
 	
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
