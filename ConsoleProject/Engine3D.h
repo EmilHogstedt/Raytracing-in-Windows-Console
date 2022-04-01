@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "PrintMachine.h"
 #include "Camera3D.h"
-#include "Timer.h"
 #include "Scene3D.h"
 #include "RayTracing.cuh"
 
@@ -48,7 +47,7 @@ private:
 	static Time* m_timer;
 	static Camera3D* m_camera;
 	static Scene3D* m_scene;
-	static long double m_frameTimer;
+
 	static long double m_fpsTimer;
 	static int m_fps;
 	/*

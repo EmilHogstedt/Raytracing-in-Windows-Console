@@ -4,13 +4,27 @@
 PrintMachine* PrintMachine::pInstance{ nullptr };
 std::vector<std::vector<char>> PrintMachine::m_2DPrintArray;
 std::mutex PrintMachine::m_Lock;
-int PrintMachine::m_fps = 60;
+
+int PrintMachine::m_renderingFps = 60;
+int PrintMachine::m_printingFps = 60;
+Time* PrintMachine::m_timer{ nullptr };
+int PrintMachine::m_printingFpsCounter = 0;
+float PrintMachine::m_printingFpsTimer = 0.0f;
+
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
 bool PrintMachine::m_running = true;
+bool PrintMachine::m_terminateThread = false;
+
 char* PrintMachine::m_printBuffer = nullptr;
-char* PrintMachine::m_devicePrintBuffer = nullptr;
+char* PrintMachine::m_backBuffer = nullptr;
+char* PrintMachine::m_deviceBackBuffer = nullptr;
 HANDLE PrintMachine::m_handle;
+
+std::thread PrintMachine::m_printThread;
+std::mutex PrintMachine::m_backBufferMutex;
+size_t PrintMachine::m_backBufferSwap = 0;
+
 
 //Sets up the consolemode. Rename this.
 bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
@@ -47,21 +61,21 @@ BOOL WINAPI ConsoleHandler(DWORD CEvent)
 	switch (CEvent)
 	{
 	case CTRL_CLOSE_EVENT:
-		PrintMachine::GetInstance()->SetRunning(false);
+		PrintMachine::GetInstance()->TerminateThread();
 		break;
 	case CTRL_LOGOFF_EVENT:
-		PrintMachine::GetInstance()->SetRunning(false);
+		PrintMachine::GetInstance()->TerminateThread();
 		break;
 	case CTRL_SHUTDOWN_EVENT:
-		PrintMachine::GetInstance()->SetRunning(false);
+		PrintMachine::GetInstance()->TerminateThread();
 		break;
 	}
 	return TRUE;
 }
 
-void PrintMachine::SetRunning(bool state)
+void PrintMachine::TerminateThread()
 {
-	m_running = state;
+	m_terminateThread = true;
 }
 
 bool PrintMachine::CheckIfRunning()
@@ -80,8 +94,16 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	//+ heightlimit is for the line-ending characters.
 	//Needs to be remade if support for color is added.
 	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
-	cudaMalloc(&m_devicePrintBuffer, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
-	cudaMemset(m_devicePrintBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+	memset(m_printBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+	m_backBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
+	memset(m_backBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
+
+	m_timer = DBG_NEW Time();
+
+	m_printThread = std::thread(&Print);
+	m_printThread.detach();
 }
 
 void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
@@ -101,6 +123,7 @@ void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
 
 	if (!pInstance)
 		pInstance = DBG_NEW PrintMachine(sizeX, sizeY);
+
 }
 
 PrintMachine* PrintMachine::GetInstance()
@@ -110,14 +133,32 @@ PrintMachine* PrintMachine::GetInstance()
 
 void PrintMachine::CleanUp()
 {
-	cudaFree(m_devicePrintBuffer);
+	delete m_timer;
+	cudaFree(m_deviceBackBuffer);
+	delete m_backBuffer;
 	delete m_printBuffer;
 	delete pInstance;
 }
 
-char* PrintMachine::GetDeviceBuffer()
+size_t* PrintMachine::GetBackBufferSwap()
 {
-	return m_devicePrintBuffer;
+	return &m_backBufferSwap;
+}
+
+std::mutex* PrintMachine::GetBackBufferMutex()
+{
+	return &m_backBufferMutex;
+}
+
+//The backbuffer mutex NEEDS to be locked before calling this function.
+char* PrintMachine::GetBackBuffer()
+{
+	return m_backBuffer;
+}
+
+char* PrintMachine::GetDeviceBackBuffer()
+{
+	return m_deviceBackBuffer;
 }
 
 size_t PrintMachine::GetWidth()
@@ -154,7 +195,7 @@ const bool PrintMachine::ChangeSize(size_t x, size_t y)
 
 void PrintMachine::UpdateFPS(int fps)
 {
-	m_fps = fps;
+	m_renderingFps = fps;
 }
 
 std::vector<std::vector<char>>* PrintMachine::Get2DArray()
@@ -178,14 +219,52 @@ void PrintMachine::Fill(char character)
 
 const bool PrintMachine::Print()
 {
-	//Clear the console before printing.
-	ClearConsole();
+	while (!m_terminateThread)
+	{
+		long double dt = m_timer->DeltaTimePrinting();
 
-	memset(m_printBuffer, 0, sizeof(m_printBuffer));
-	cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * (currentWidth + 1) * currentHeight, cudaMemcpyDeviceToHost);
+		m_timer->UpdatePrinting();
+		m_printingFpsCounter++;
+
+		m_printingFpsTimer += m_timer->DeltaTimeRendering();
+
+		//Once every second we update the fps.
+		if (m_printingFpsTimer >= 1.0f)
+		{
+			m_printingFps = m_printingFpsCounter;
+			m_printingFpsTimer = 0.0f;
+			m_printingFpsCounter = 0;
+		}
+
+		//Check if we need to swap to the backbuffer.
+		m_backBufferMutex.lock();
+		if (m_backBufferSwap)
+		{
+			printf("TEST\n");
+			m_backBufferSwap = 0;
+			char* temp = m_printBuffer;
+			m_printBuffer = m_backBuffer;
+			m_backBuffer = m_printBuffer;
+		}
+		m_backBufferMutex.unlock();
+
+		//Clear the console and print the data.
+		ClearConsole();
+		fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
+		printf("Rendering FPS: %d    \n", m_renderingFps);
+		printf("Printing FPS: %d    \n", m_printingFps);
+	}
+	m_running = false;
+	//Clear the console before printing.
+	//ClearConsole();
+
+	//memset(m_printBuffer, 0, sizeof(m_printBuffer));
+	//gpuErrchk(cudaDeviceSynchronize());
+	//cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * (currentWidth + 1) * currentHeight, cudaMemcpyDeviceToHost);
 	
-	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
-	printf("FPS: %d    \n", m_fps);
+	//fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
+	//printf("FPS: %d    \n", m_fps);
+	// 
 	//printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
 	//printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
 

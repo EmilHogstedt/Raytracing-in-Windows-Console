@@ -7,7 +7,6 @@ Engine3D* Engine3D::pInstance{ nullptr };
 Time* Engine3D::m_timer{ nullptr };
 Camera3D* Engine3D::m_camera{ nullptr };
 Scene3D* Engine3D::m_scene{ nullptr };
-long double Engine3D::m_frameTimer = 0.0f;
 long double Engine3D::m_fpsTimer = 0.0f;
 int Engine3D::m_fps = 0;
 /*
@@ -130,6 +129,7 @@ Engine3D::~Engine3D()
 
 void Engine3D::Start()
 {
+	//When we create the print machine it also starts printing.
 	PrintMachine::CreatePrintMachine(250, 100);
 	m_camera->Init();
 	m_camera->Update();
@@ -182,16 +182,15 @@ bool Engine3D::Run()
 		return false;
 	}
 	
-	long double dt = m_timer->DeltaTime();
+	long double dt = m_timer->DeltaTimeRendering();
 	CheckKeyboard(dt);
 	//Move using the current input.
 	m_camera->Move(dt);
 
-	m_timer->Update();
+	m_timer->UpdateRendering();
 	m_fps++;
 
-	m_frameTimer += dt;
-	m_fpsTimer += m_timer->DeltaTime();
+	m_fpsTimer += m_timer->DeltaTimeRendering();
 
 	Render();
 
@@ -199,22 +198,24 @@ bool Engine3D::Run()
 	if (m_fpsTimer >= 1.0f)
 	{
 		m_scene->CreateSphere(rand() % 10, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50));
+		
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
 	
 	//Here is the actual "painting"
-	PrintMachine::GetInstance()->Print();
+	//PrintMachine::GetInstance()->Print();
 
 	//Some debugging text. Maybe add an information panel at the bottom that can get sent text? Should be done in PrintMachine though.
+	/*
 	Vector3 pos = m_camera->GetPos();
 	Vector3 rot = m_camera->GetRot();
 	std::cout << "Pos: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
 	std::cout << "Rot: " << rot.x << " " << rot.y << " " << rot.z << std::endl;
 	COORD coords = m_camera->GetMouseCoords();
 	std::cout << "Mousecoords: " << coords.X << " " << coords.Y << std::endl;
-	
+	*/
 	return true;
 }
 
@@ -223,7 +224,7 @@ void Engine3D::Render()
 	//Update the view matrix.
 	m_camera->Update();
 	//Update the objects in the scene.
-	m_scene->Update(m_timer->DeltaTime());
+	m_scene->Update(m_timer->DeltaTimeRendering());
 
 	//Update pixel shader variables.
 	//After update is complete we set the global variable
@@ -246,7 +247,7 @@ void Engine3D::Render()
 	}
 	*/
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
-	RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBuffer(), m_timer->DeltaTime());
+	RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
 }
 
 //Move this to an input handler.
@@ -311,7 +312,8 @@ void Engine3D::CheckKeyboard(long double dt)
 			m_lockMouse = false;
 		}
 	}
-	//Rewrite key presses. https://stackoverflow.com/questions/41600981/how-do-i-check-if-a-key-is-pressed-on-c
+
+	//Rewrite mouse input. Works very bad in windows terminal
 	GetNumberOfConsoleInputEvents(consoleHandle, &count);
 	if (count > 0)
 	{

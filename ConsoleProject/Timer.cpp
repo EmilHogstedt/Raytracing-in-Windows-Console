@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "Timer.h"
 
-Time::t_moment Time::m_loopBegin = Time::t_clock::now();
-Time::t_dSec Time::m_deltaTime = Time::m_loopBegin - Time::m_loopBegin;
+Time::t_moment Time::m_loopBeginRendering = Time::t_clock::now();
+Time::t_moment Time::m_loopBeginPrinting = Time::t_clock::now();
+Time::t_dSec Time::m_deltaTimeRendering = Time::m_loopBeginRendering - Time::m_loopBeginRendering;
+Time::t_dSec Time::m_deltaTimePrinting = Time::m_loopBeginPrinting - Time::m_loopBeginPrinting;
 
 Time::Time() : m_start{ t_clock::now() }
 {
@@ -15,13 +17,24 @@ long double Time::SinceStart()
 	return elapsed.count();
 }
 
-long double Time::DeltaTime()
+long double Time::DeltaTimeRendering()
 {
-	return m_deltaTime.count();
+	return m_deltaTimeRendering.count();
 }
 
-void Time::Update()
+long double Time::DeltaTimePrinting()
 {
-	m_deltaTime = t_clock::now() - m_loopBegin;
-	m_loopBegin = t_clock::now();
+	return m_deltaTimePrinting.count();
+}
+
+void Time::UpdateRendering()
+{
+	m_deltaTimeRendering = t_clock::now() - m_loopBeginRendering;
+	m_loopBeginRendering = t_clock::now();
+}
+
+void Time::UpdatePrinting()
+{
+	m_deltaTimePrinting = t_clock::now() - m_loopBeginPrinting;
+	m_loopBeginPrinting = t_clock::now();
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "Timer.h"
 
 #define WIDTHLIMIT 1000
 #define HEIGHTLIMIT 500
@@ -22,8 +23,8 @@ public:
 	static void CreatePrintMachine(size_t, size_t);
 	//Returns the instance if there is one.
 	static PrintMachine* GetInstance();
-	bool CheckIfRunning();
-	void SetRunning(bool);
+	static bool CheckIfRunning();
+	static void TerminateThread();
 
 	//Before closing program
 	static void CleanUp();
@@ -37,7 +38,10 @@ public:
 	static const bool Print();
 	static void UpdateFPS(int);
 
-	static char* GetDeviceBuffer();
+	static size_t* GetBackBufferSwap();
+	static std::mutex* GetBackBufferMutex();
+	static char* GetBackBuffer();
+	static char* GetDeviceBackBuffer();
 	static size_t GetWidth();
 	static size_t GetHeight();
 	static HANDLE GetConsoleHandle();
@@ -48,13 +52,23 @@ private:
 
 	static void ClearConsole();
 
-	static int m_fps;
+	static int m_renderingFps;
+	static int m_printingFps;
+	static Time* m_timer;
+	static int m_printingFpsCounter;
+	static float m_printingFpsTimer;
 
 	static size_t currentWidth;
 	static size_t currentHeight;
 
 	static bool m_running;
+	static bool m_terminateThread;
 
 	static char* m_printBuffer;
-	static char* m_devicePrintBuffer;
+	static char* m_backBuffer;
+	static char* m_deviceBackBuffer;
+	
+	static std::thread m_printThread;
+	static std::mutex m_backBufferMutex;
+	static size_t m_backBufferSwap;
 };

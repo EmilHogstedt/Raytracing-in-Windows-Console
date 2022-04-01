@@ -444,7 +444,7 @@ __global__ void RT(
 	
 }
 
-void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt)
+void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
 {
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
@@ -465,8 +465,8 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 	
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-	gridDims.x = std::ceil((x + 1) / 16.0);
-	gridDims.y = std::ceil(y / 16.0);
+	gridDims.x = std::ceil((float)(x + 1) / 16.0);
+	gridDims.y = std::ceil((float)y / 16.0);
 	blockDims.x = 16;
 	blockDims.y = 16;
 	
@@ -480,6 +480,14 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 		deviceParams,
 		deviceResultArray
 	);
+	//Make sure all the threads are done.
+	//Then we lock the mutex and copy the results from the GPU to the backbuffer.
+	//Then we signal to the print thread that the backbuffer is ready. 
 	gpuErrchk(cudaDeviceSynchronize());
+	backBufferMutex->lock();
+	PrintMachine* printMachine = PrintMachine::GetInstance();
+	cudaMemcpy(printMachine->GetBackBuffer(), deviceResultArray, (printMachine->GetWidth() + 1) * printMachine->GetHeight(), cudaMemcpyDeviceToHost);
+	memset(printMachine->GetBackBufferSwap(), 1, sizeof(int));
+	backBufferMutex->unlock();
 	return;
 }
