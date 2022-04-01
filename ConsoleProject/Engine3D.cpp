@@ -256,111 +256,67 @@ void Engine3D::CheckKeyboard(long double dt)
 	HANDLE consoleHandle = PrintMachine::GetInstance()->GetConsoleHandle();
 	DWORD count = 0;
 
+	if (GetKeyState('W') & 0x8000)
+	{
+		m_camera->m_Keys.W = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.W = 0;
+	}
+	if (GetKeyState('A') & 0x8000)
+	{
+		m_camera->m_Keys.A = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.A = 0;
+	}
+	if (GetKeyState('S') & 0x8000)
+	{
+		m_camera->m_Keys.S = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.S = 0;
+	}
+	if (GetKeyState('D') & 0x8000)
+	{
+		m_camera->m_Keys.D = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.D = 0;
+	}
+	if (GetKeyState(VK_SHIFT) & 0x8000)
+	{
+		m_camera->m_Keys.Shift = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.Shift = 0;
+	}
+	if (GetKeyState(VK_SPACE) & 0x8000)
+	{
+		m_camera->m_Keys.Space = 1;
+	}
+	else
+	{
+		m_camera->m_Keys.Space = 0;
+	}
+	if (GetKeyState(VK_ESCAPE) & 0x8000)
+	{
+		if (m_lockMouse)
+		{
+			m_lockMouse = false;
+		}
+	}
 	//Rewrite key presses. https://stackoverflow.com/questions/41600981/how-do-i-check-if-a-key-is-pressed-on-c
 	GetNumberOfConsoleInputEvents(consoleHandle, &count);
 	if (count > 0)
 	{
 		ReadConsoleInput(PrintMachine::GetInstance()->GetConsoleHandle(), &event, 1, &count);
-
-		if (event.EventType == KEY_EVENT)
-		{
-			switch (event.Event.KeyEvent.wVirtualKeyCode)
-			{
-			//W key
-			case 0x57:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.W = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.W = 0;
-				}
-				break;
-			}
-			//A key
-			case 0x41:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.A = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.A = 0;
-				}
-				break;
-			}
-			//S key
-			case 0x53:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.S = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.S = 0;
-				}
-				break;
-			}
-			//D key
-			case 0x44:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.D = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.D = 0;
-				}
-				break;
-			}
-			//Shift key
-			case VK_SHIFT:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.Shift = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.Shift = 0;
-				}
-				break;
-			}
-			//Spacebar key
-			case VK_SPACE:
-			{
-				if (event.Event.KeyEvent.bKeyDown)
-				{
-					m_camera->m_Keys.Space = 1;
-				}
-				else
-				{
-					m_camera->m_Keys.Space = 0;
-				}
-				break;
-			}
-			//Escape key
-			case VK_ESCAPE:
-			{
-				if (m_lockMouse)
-				{
-					m_lockMouse = false;
-				}
-				break;
-			}
-			default:
-			{
-				break;
-			}
-			}
-
-		}
-		else if (event.EventType == MOUSE_EVENT)
+		if (event.EventType == MOUSE_EVENT)
 		{
 			//Mouse moving.
 			if (event.Event.MouseEvent.dwEventFlags == MOUSE_MOVED)

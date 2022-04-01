@@ -16,6 +16,8 @@ HANDLE PrintMachine::m_handle;
 bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
 	std::ios_base::sync_with_stdio(false);
 	setlocale(LC_ALL, "C");
+	printf("\x1b[?25l");
+
 	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
 	//HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
 

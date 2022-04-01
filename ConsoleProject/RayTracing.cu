@@ -68,7 +68,7 @@ __global__ void RT(
 	Vector3 cameraPos = params->camPos;
 	
 	unsigned int localCount = count;
-	for (size_t i = 0; i < count; i++)
+	for (size_t i = 0; i < localCount; i++)
 	{
 		//Ray-Sphere intersection test.
 		ObjectType type = (objects[i])->GetType();
