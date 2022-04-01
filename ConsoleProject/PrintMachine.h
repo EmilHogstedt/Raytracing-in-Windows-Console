@@ -31,7 +31,6 @@ public:
 
 public:
 	static const bool ChangeSize(size_t, size_t);
-	static void SendData(size_t, size_t, char);
 	static std::vector<std::vector<char>>* Get2DArray();
 
 	static void Fill(char);

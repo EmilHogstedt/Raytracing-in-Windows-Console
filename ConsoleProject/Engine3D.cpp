@@ -4,97 +4,19 @@
 //A lot of this will be moved/removed when CUDA is added.
 //Move input stuff to an input handler.
 Engine3D* Engine3D::pInstance{ nullptr };
-Time* Engine3D::m_timer{ nullptr };
 Camera3D* Engine3D::m_camera{ nullptr };
 Scene3D* Engine3D::m_scene{ nullptr };
+
+Time* Engine3D::m_timer{ nullptr };
 long double Engine3D::m_fpsTimer = 0.0f;
 int Engine3D::m_fps = 0;
-/*
-std::vector<std::thread> Engine3D::m_workers;
-std::deque<std::mutex> Engine3D::queueMutex;
-std::deque<std::condition_variable> Engine3D::condition;
-bool Engine3D::terminatePool = false;
-bool Engine3D::stopped = false;
-std::vector<std::deque<Engine3D::JobHolder*>> Engine3D::queues;
-*/
+
 size_t Engine3D::m_num_threads = 0;
+
 bool Engine3D::m_lockMouse = false;
-bool Engine3D::m_mouseJustMoved = false;
+
 RayTracingParameters* Engine3D::m_deviceRayTracingParameters = nullptr;
-/*
-//Used as a waiting area for the CPU threads until they get something to do. They then do that job.
-void Engine3D::WaitForJob(
-	float pElement1,
-	float pElement2,
-	std::vector<Object3D*>* culledObjects,
-	size_t objectNr,
-	size_t currentWidth,
-	size_t currentHeight,
-	size_t threadId
-)
-{
-	Engine3D* myself = GetInstance();
-	JobHolder* Job;
-	while (!terminatePool)
-	{
-		{
-			std::unique_lock<std::mutex> lock(queueMutex[threadId]);
 
-			condition[threadId].wait(lock, [&, myself]()
-				{
-					return !queues[threadId].empty() || terminatePool;
-				});
-			if (terminatePool)
-			{
-				break;
-			}
-
-			Job = queues[threadId].front();
-			queues[threadId].pop_front();
-		}
-		Job->m_Job(Job->m_inverseVMatrix, pElement1, pElement2, Job->m_camPos, culledObjects, objectNr, currentWidth, currentHeight, Job->m_y, Job->m_x);
-		delete Job;
-	}
-}
-
-//Used by the main thread to add jobs into different queues for the worker threads to take from.
-void Engine3D::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId, Matrix inverseVMatrix, Vector3 camPos)
-{
-	{
-		std::unique_lock<std::mutex> lock(queueMutex[threadId]);
-		size_t current = queues[threadId].size();
-		queues[threadId].resize(current + x);
-		for (int i = 0; i < x; i++)
-		{
-			queues[threadId][current + i] = DBG_NEW JobHolder(newJob, i, y, inverseVMatrix, camPos);
-		}
-	}
-	condition[threadId].notify_one();
-}
-
-//Called at the end of the program to make sure the cpu threads get shut down correctly.
-void Engine3D::shutdownThreads()
-{
-	{
-		for (size_t i = 0; i < queueMutex.size(); i++)
-			std::unique_lock<std::mutex> lock(queueMutex[i]);
-		terminatePool = true;
-	}
-
-	for (size_t i = 0; i < condition.size(); i++)
-		condition[i].notify_all();
-
-	for (std::thread& th : m_workers)
-	{
-		th.join();
-	}
-
-	m_workers.clear();
-
-	stopped = true;
-}
-
-*/
 //Creates the singleton instance.
 void Engine3D::CreateEngine()
 {
@@ -117,10 +39,6 @@ Engine3D::Engine3D() {
 
 Engine3D::~Engine3D()
 {
-	/*
-	if (!stopped)
-		shutdownThreads();
-		*/
 	delete m_timer;
 	delete m_camera;
 	delete m_scene;
@@ -135,42 +53,8 @@ void Engine3D::Start()
 	m_camera->Update();
 	m_scene->Init();
 
-	//Initialize the threads.
-	size_t x = PrintMachine::GetInstance()->GetWidth();
-	size_t y = PrintMachine::GetInstance()->GetHeight();
-	
-	/*
-	std::vector<Object3D*>* culledObjects = m_scene->GetObjects();
-	size_t objectNr = (*culledObjects).size();
-	*/
+	//Not needed atm. Maybe later.
 	m_num_threads = std::thread::hardware_concurrency();
-	/*
-	m_workers.reserve(m_num_threads);
-	//Reserve the mutex'
-	queueMutex.resize(m_num_threads);
-	condition.resize(m_num_threads);
-
-	//Start the queues
-	queues.reserve(m_num_threads);
-	for (size_t i = 0; i < m_num_threads; i++)
-	{
-		queues.push_back(std::deque<Engine3D::JobHolder*>());
-	}
-	//Start the cpu threads.
-	for (size_t i = 0; i < m_num_threads; i++)
-	{
-		m_workers.push_back(std::thread(
-			WaitForJob,
-			element1,
-			element2,
-			culledObjects,
-			objectNr,
-			x,
-			y,
-			i
-		));
-	}
-	*/
 }
 
 bool Engine3D::Run()
@@ -204,9 +88,6 @@ bool Engine3D::Run()
 		m_fps = 0;
 	}
 	
-	//Here is the actual "painting"
-	//PrintMachine::GetInstance()->Print();
-
 	//Some debugging text. Maybe add an information panel at the bottom that can get sent text? Should be done in PrintMachine though.
 	/*
 	Vector3 pos = m_camera->GetPos();
@@ -227,7 +108,7 @@ void Engine3D::Render()
 	m_scene->Update(m_timer->DeltaTimeRendering());
 
 	//Update pixel shader variables.
-	//After update is complete we set the global variable
+	//After update is complete we set the device variable
 	RayTracingParameters params;
 	params.inverseVMatrix = m_camera->GetInverseVMatrix();
 	params.camPos = m_camera->GetPos();
@@ -238,14 +119,7 @@ void Engine3D::Render()
 	size_t y = PrintMachine::GetInstance()->GetHeight();
 	float element1 = m_camera->GetPMatrix().row1.x;
 	float element2 = m_camera->GetPMatrix().row2.y;
-	/*
-	for (size_t i = 0; i < y; i++)
-	{
-		size_t threadId = (size_t)std::floor((m_num_threads * i) / y);
-		//Send x and add all jobs on that line.
-		AddJob(&CalculatePixel, x, i, threadId, inverseVMatrix, camPos);
-	}
-	*/
+	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 	RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
 }
@@ -253,10 +127,6 @@ void Engine3D::Render()
 //Move this to an input handler.
 void Engine3D::CheckKeyboard(long double dt)
 {
-	INPUT_RECORD event;
-	HANDLE consoleHandle = PrintMachine::GetInstance()->GetConsoleHandle();
-	DWORD count = 0;
-
 	//Keyboard input.
 	if (GetKeyState('W') & 0x8000)
 	{

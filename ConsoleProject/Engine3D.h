@@ -23,23 +23,8 @@ public:
 	//Is called in our game loop.
 	static bool Run();
 	static void CleanUp();
+
 private:
-	/*
-	//Deque of mutex' used by the threads & AddJob.
-	static std::deque<std::mutex> queueMutex;
-	//Condition used by AddJob & Terminate to contact the threads.
-	static std::deque<std::condition_variable> condition;
-	//Bools to see if its time to close down.
-	static bool terminatePool;
-	static bool stopped;
-	//The function that the threads while-loop is in. Waits for work here.
-	static void WaitForJob(float pElement1, float pElement2, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadId);
-	//Called by the program to add a pixel as a job for threads to work on.
-	static void AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)>, size_t x, size_t y, size_t threadId, Matrix inverseVMatrix, Vector3 camPos);
-	static void shutdownThreads();
-	//Thr funciton where the actual work is done by the thread to calculate what is seen.
-	static void CalculatePixel(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos);
-	*/
 	static void Render();
 
 	static void CheckKeyboard(long double dt);
@@ -50,35 +35,10 @@ private:
 
 	static long double m_fpsTimer;
 	static int m_fps;
-	/*
-	static std::vector<std::thread> m_workers;
-	*/
-	/*
-	struct JobHolder
-	{
-		JobHolder() = default;
-		JobHolder(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, Matrix inverseVMatrix, Vector3 camPos)
-		{
-			m_Job = newJob;
-			m_x = x;
-			m_y = y;
-			m_inverseVMatrix = inverseVMatrix;
-			m_camPos = camPos;
-		}
-		std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> m_Job;
-		size_t m_x;
-		size_t m_y;
-		Matrix m_inverseVMatrix;
-		Vector3 m_camPos;
-	};
-
-	//This is where the jobs are placed.
-	static std::vector<std::deque<JobHolder*>> queues;
-	*/
+	
 	static size_t m_num_threads;
 	
 	static bool m_lockMouse;
-	static bool m_mouseJustMoved;
 
 	static RayTracingParameters* m_deviceRayTracingParameters;
 };

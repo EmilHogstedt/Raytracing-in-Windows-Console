@@ -1,0 +1,135 @@
+struct JobHolder
+	{
+		JobHolder() = default;
+		JobHolder(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, Matrix inverseVMatrix, Vector3 camPos)
+		{
+			m_Job = newJob;
+			m_x = x;
+			m_y = y;
+			m_inverseVMatrix = inverseVMatrix;
+			m_camPos = camPos;
+		}
+		std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> m_Job;
+		size_t m_x;
+		size_t m_y;
+		Matrix m_inverseVMatrix;
+		Vector3 m_camPos;
+	};
+
+void Engine3D::WaitForJob(
+	float pElement1,
+	float pElement2,
+	std::vector<Object3D*>* culledObjects,
+	size_t objectNr,
+	size_t currentWidth,
+	size_t currentHeight,
+	size_t threadId
+)
+{
+	Engine3D* myself = GetInstance();
+	JobHolder* Job;
+	while (!terminatePool)
+	{
+		{
+			std::unique_lock<std::mutex> lock(queueMutex[threadId]);
+
+			condition[threadId].wait(lock, [&, myself]()
+				{
+					return !queues[threadId].empty() || terminatePool;
+				});
+			if (terminatePool)
+			{
+				break;
+			}
+
+			Job = queues[threadId].front();
+			queues[threadId].pop_front();
+		}
+		Job->m_Job(Job->m_inverseVMatrix, pElement1, pElement2, Job->m_camPos, culledObjects, objectNr, currentWidth, currentHeight, Job->m_y, Job->m_x);
+		delete Job;
+	}
+}
+
+//Used by the main thread to add jobs into different queues for the worker threads to take from.
+void Engine3D::AddJob(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, size_t threadId, Matrix inverseVMatrix, Vector3 camPos)
+{
+	{
+		std::unique_lock<std::mutex> lock(queueMutex[threadId]);
+		size_t current = queues[threadId].size();
+		queues[threadId].resize(current + x);
+		for (int i = 0; i < x; i++)
+		{
+			queues[threadId][current + i] = DBG_NEW JobHolder(newJob, i, y, inverseVMatrix, camPos);
+		}
+	}
+	condition[threadId].notify_one();
+}
+
+//Called at the end of the program to make sure the cpu threads get shut down correctly.
+void Engine3D::shutdownThreads()
+{
+	{
+		for (size_t i = 0; i < queueMutex.size(); i++)
+			std::unique_lock<std::mutex> lock(queueMutex[i]);
+		terminatePool = true;
+	}
+
+	for (size_t i = 0; i < condition.size(); i++)
+		condition[i].notify_all();
+
+	for (std::thread& th : m_workers)
+	{
+		th.join();
+	}
+
+	m_workers.clear();
+
+	stopped = true;
+}
+//In destructor to stop the threads
+/*
+	if (!stopped)
+		shutdownThreads();
+		*/
+
+//Initialization of threads.
+/*
+	m_workers.reserve(m_num_threads);
+	//Reserve the mutex'
+	queueMutex.resize(m_num_threads);
+	condition.resize(m_num_threads);
+
+	//Start the queues
+	queues.reserve(m_num_threads);
+	for (size_t i = 0; i < m_num_threads; i++)
+	{
+		queues.push_back(std::deque<Engine3D::JobHolder*>());
+	}
+	//Start the cpu threads.
+	for (size_t i = 0; i < m_num_threads; i++)
+	{
+		m_workers.push_back(std::thread(
+			WaitForJob,
+			element1,
+			element2,
+			culledObjects,
+			objectNr,
+			x,
+			y,
+			i
+		));
+	}
+	*/
+
+
+
+
+//Adding a job to the queue
+/*
+	for (size_t i = 0; i < y; i++)
+	{
+		size_t threadId = (size_t)std::floor((m_num_threads * i) / y);
+		//Send x and add all jobs on that line.
+		AddJob(&CalculatePixel, x, i, threadId, inverseVMatrix, camPos);
+	}
+	*/

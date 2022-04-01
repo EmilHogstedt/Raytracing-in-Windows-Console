@@ -202,11 +202,6 @@ std::vector<std::vector<char>>* PrintMachine::Get2DArray()
 {
 	return &m_2DPrintArray;
 }
-/*
-void PrintMachine::SendData(size_t x, size_t y, char pixelData)
-{
-	m_2DPrintArray[y][x] = pixelData;
-}*/
 
 void PrintMachine::Fill(char character)
 {
@@ -252,19 +247,6 @@ const bool PrintMachine::Print()
 		printf("Printing FPS: %d    \n", m_printingFps);
 	}
 	m_running = false;
-	//Clear the console before printing.
-	//ClearConsole();
-
-	//memset(m_printBuffer, 0, sizeof(m_printBuffer));
-	//gpuErrchk(cudaDeviceSynchronize());
-	//cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * (currentWidth + 1) * currentHeight, cudaMemcpyDeviceToHost);
-	
-	//fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
-	//printf("FPS: %d    \n", m_fps);
-	// 
-	//printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
-	//printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
-
 	return true;
 }
 
