@@ -14,6 +14,8 @@ HANDLE PrintMachine::m_handle;
 
 //Sets up the consolemode. Rename this.
 bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
+	std::ios_base::sync_with_stdio(false);
+	setlocale(LC_ALL, "C");
 	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
 	//HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -178,22 +180,12 @@ const bool PrintMachine::Print()
 	ClearConsole();
 
 	memset(m_printBuffer, 0, sizeof(m_printBuffer));
-	cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * currentWidth * currentHeight, cudaMemcpyDeviceToHost);
-	/*
-	for (size_t i = 0; i < currentHeight; i++)
-	{
-		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
-		{
-			m_printBuffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
-		}
-		m_printBuffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
-	}
-	*/
+	cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * (currentWidth + 1) * currentHeight, cudaMemcpyDeviceToHost);
+	
 	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
-	//fprintf(stdout, m_printBuffer);
-	std::cout << "FPS: " << m_fps << "         \n";
-	printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
-	printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
+	printf("FPS: %d    \n", m_fps);
+	//printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");
+	//printf("\x1b[mThis text has returned to default colors using SGR.0 implicitly.\r\n");
 
 	return true;
 }
