@@ -257,6 +257,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	HANDLE consoleHandle = PrintMachine::GetInstance()->GetConsoleHandle();
 	DWORD count = 0;
 
+	//Keyboard input.
 	if (GetKeyState('W') & 0x8000)
 	{
 		m_camera->m_Keys.W = 1;
@@ -265,6 +266,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.W = 0;
 	}
+
 	if (GetKeyState('A') & 0x8000)
 	{
 		m_camera->m_Keys.A = 1;
@@ -273,6 +275,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.A = 0;
 	}
+
 	if (GetKeyState('S') & 0x8000)
 	{
 		m_camera->m_Keys.S = 1;
@@ -281,6 +284,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.S = 0;
 	}
+
 	if (GetKeyState('D') & 0x8000)
 	{
 		m_camera->m_Keys.D = 1;
@@ -289,6 +293,15 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.D = 0;
 	}
+
+	if (GetKeyState('P') & 0x8000)
+	{
+		if (!m_lockMouse)
+		{
+			m_lockMouse = true;
+		}
+	}
+
 	if (GetKeyState(VK_SHIFT) & 0x8000)
 	{
 		m_camera->m_Keys.Shift = 1;
@@ -297,6 +310,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.Shift = 0;
 	}
+
 	if (GetKeyState(VK_SPACE) & 0x8000)
 	{
 		m_camera->m_Keys.Space = 1;
@@ -305,66 +319,58 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		m_camera->m_Keys.Space = 0;
 	}
+
 	if (GetKeyState(VK_ESCAPE) & 0x8000)
 	{
+		
 		if (m_lockMouse)
 		{
 			m_lockMouse = false;
 		}
 	}
 
-	//Rewrite mouse input. Works very bad in windows terminal
-	GetNumberOfConsoleInputEvents(consoleHandle, &count);
-	if (count > 0)
+	//Mouse input.
+	if (GetKeyState(VK_LBUTTON) & 0x8000)
 	{
-		ReadConsoleInput(PrintMachine::GetInstance()->GetConsoleHandle(), &event, 1, &count);
-		if (event.EventType == MOUSE_EVENT)
+		/* Dont lock the mouse with left mouse button anymore.
+		if (!m_lockMouse)
 		{
-			//Mouse moving.
-			if (event.Event.MouseEvent.dwEventFlags == MOUSE_MOVED)
-			{
-				//COORD newCoords = event.Event.MouseEvent.dwMousePosition;
-				POINT newCoordsPoint;
-				GetCursorPos(&newCoordsPoint);
-				COORD newCoords;
-				newCoords.X = newCoordsPoint.x;
-				newCoords.Y = newCoordsPoint.y;
-				if (newCoords.X == 1000 && newCoords.Y == 500)
-				{
-					return;
-				}
-				COORD oldCoords = m_camera->GetMouseCoords();
-				if (oldCoords.X < 0.0f && oldCoords.Y < 0.0f)
-				{
-					oldCoords = newCoords;
-				}
-				
-				short diffX = oldCoords.X - newCoords.X;
-				short diffY = oldCoords.Y - newCoords.Y;
+			m_lockMouse = true;
+		}*/
+		//Do other stuff when left-clicking.
+	}
 
-				if (m_lockMouse)
-				{
-					SetCursorPos(1000, 500); //Just do this in SetMouseCoords lol.
-					newCoords.X = 1000;
-					newCoords.Y = 500;
-				}
-				
-				m_camera->AddRot(diffY, diffX, 0, dt);
-				m_camera->SetMouseCoords(newCoords);
-			}
+	//Mouse positioning.
+	POINT newCoordsPoint;
+	GetCursorPos(&newCoordsPoint);
+	COORD newCoords;
+	newCoords.X = newCoordsPoint.x;
+	newCoords.Y = newCoordsPoint.y;
+	if (newCoords.X == 1000 && newCoords.Y == 500)
+	{
+		return;
+	}
+	COORD oldCoords = m_camera->GetMouseCoords();
+	if (oldCoords.X < 0.0f && oldCoords.Y < 0.0f)
+	{
+		oldCoords = newCoords;
+	}
 
-			//Mouse buttons.
-			if (event.Event.MouseEvent.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED)
-			{
-				if (!m_lockMouse)
-				{
-					m_lockMouse = true;
-					return; //Maybe move this.
-				}
-				//Do other stuff when left-clicking.
-			}
+	short diffX = oldCoords.X - newCoords.X;
+	short diffY = oldCoords.Y - newCoords.Y;
+
+	if (m_lockMouse)
+	{
+		if (newCoords.X > 1300 || newCoords.X < 1100 || newCoords.Y > 600 || newCoords.Y < 400)
+		{
+			SetCursorPos(1200, 500);
+			newCoords.X = 1200;
+			newCoords.Y = 500;
 		}
 	}
+
+	m_camera->AddRot(diffY, diffX, 0);
+	m_camera->SetMouseCoords(newCoords);
 }
 
 void Engine3D::CleanUp()

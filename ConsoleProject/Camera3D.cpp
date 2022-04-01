@@ -126,13 +126,13 @@ void Camera3D::Move(long double dt)
 }
 
 //Used to add rotation to the already existing rotational position of the camera when moving the mouse for example.
-void Camera3D::AddRot(short p, short y, short r, long double dt)
+void Camera3D::AddRot(short p, short y, short r)
 {
-	float speed = 0.2f;
+	float speed = 0.002f;
 
-	m_rot.x -= p * dt * speed;
-	m_rot.y += y * dt * speed;
-	m_rot.z += r * dt * speed;
+	m_rot.x -= ((float)p * speed);
+	m_rot.y += ((float)y * speed);
+	m_rot.z += ((float)r * speed);
 	if (m_rot.x > M_PI / 2.0)
 	{
 		m_rot.x = (M_PI / 2.0) - 0.0001;

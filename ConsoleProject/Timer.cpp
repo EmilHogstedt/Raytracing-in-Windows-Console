@@ -1,14 +1,17 @@
 #include "pch.h"
 #include "Timer.h"
-
+/*
 Time::t_moment Time::m_loopBeginRendering = Time::t_clock::now();
 Time::t_moment Time::m_loopBeginPrinting = Time::t_clock::now();
 Time::t_dSec Time::m_deltaTimeRendering = Time::m_loopBeginRendering - Time::m_loopBeginRendering;
 Time::t_dSec Time::m_deltaTimePrinting = Time::m_loopBeginPrinting - Time::m_loopBeginPrinting;
-
+*/
 Time::Time() : m_start{ t_clock::now() }
 {
-
+	m_loopBeginRendering = Time::t_clock::now();
+	m_loopBeginPrinting = Time::t_clock::now();
+	m_deltaTimeRendering = Time::m_loopBeginRendering - Time::m_loopBeginRendering;
+	m_deltaTimePrinting = Time::m_loopBeginPrinting - Time::m_loopBeginPrinting;
 }
 
 long double Time::SinceStart()

@@ -221,12 +221,10 @@ const bool PrintMachine::Print()
 {
 	while (!m_terminateThread)
 	{
-		long double dt = m_timer->DeltaTimePrinting();
-
 		m_timer->UpdatePrinting();
 		m_printingFpsCounter++;
 
-		m_printingFpsTimer += m_timer->DeltaTimeRendering();
+		m_printingFpsTimer += m_timer->DeltaTimePrinting();
 
 		//Once every second we update the fps.
 		if (m_printingFpsTimer >= 1.0f)
@@ -240,7 +238,6 @@ const bool PrintMachine::Print()
 		m_backBufferMutex.lock();
 		if (m_backBufferSwap)
 		{
-			printf("TEST\n");
 			m_backBufferSwap = 0;
 			char* temp = m_printBuffer;
 			m_printBuffer = m_backBuffer;

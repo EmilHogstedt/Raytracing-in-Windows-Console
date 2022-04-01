@@ -8,10 +8,10 @@ class Time
 	using t_moment = std::chrono::time_point<t_clock, t_dNano>;
 private:
 	t_moment m_start;
-	static t_moment m_loopBeginRendering;
-	static t_moment m_loopBeginPrinting;
-	static t_dSec m_deltaTimeRendering;
-	static t_dSec m_deltaTimePrinting;
+	t_moment m_loopBeginRendering;
+	t_moment m_loopBeginPrinting;
+	t_dSec m_deltaTimeRendering;
+	t_dSec m_deltaTimePrinting;
 public:
 	Time();
 	virtual ~Time() = default;
