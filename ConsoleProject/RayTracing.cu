@@ -7,12 +7,16 @@ __global__ void UpdateObjects(
 	double dt
 )
 {
-	if (blockIdx.x * blockDim.x + threadIdx.x >= count)
+	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index >= count)
 	{
 		return;
 	}
-	
-	Object3D* object = objects[blockIdx.x * blockDim.x + threadIdx.x];
+	//Do culling, oct-tree, occlusion
+	//When this is implemented we have to make it its own kernel since all objects oct-tree node has to be updated before physics update starts.
+
+	//Do physics against objects in oct-tree nodes next to this object's node
+	Object3D* object = objects[index];
 	switch (object->GetType())
 	{
 	case SphereType:
@@ -44,51 +48,67 @@ __global__ void RT(
 	char* resultArray
 )
 {
-	if (blockIdx.x * blockDim.x + threadIdx.x >= x || blockIdx.y * blockDim.y + threadIdx.y >= y)
+	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+	size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	if (column >= x || row >= y)
 	{
 		return;
 	}
-	if (blockIdx.x * blockDim.x + threadIdx.x == (x - 1))
+	if (column == (x - 1))
 	{
-		resultArray[blockIdx.y * x * blockDim.y + threadIdx.y * x + blockIdx.x * blockDim.x + threadIdx.x] = '\n';
+		resultArray[row * x + column] = '\n';
 		return;
 	}
-	float convertedY = ((float)y - (float)(blockIdx.y * blockDim.y + threadIdx.y) * 2.0f) / (float)y;
-	float convertedX = 2.0f * (((float)(blockIdx.x * blockDim.x + threadIdx.x) - ((float)x * 0.5f)) / (float)x);
-	
+	//Convert pixel coordinates to (clip space? screen space?)
+	float convertedY = ((float)y - row * 2) / y;
+	float convertedX = (2 * column - (float)x) / x;
+
+	//Calculate the ray.
 	Vector4 pixelVSpace = Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
 	Vector4 tempDirectionWSpace = params->inverseVMatrix.Mult(pixelVSpace);
-	Vector3 directionWSpace = Vector3(tempDirectionWSpace.x, tempDirectionWSpace.y, tempDirectionWSpace.z);
-	directionWSpace = directionWSpace.Normalize();
+	Vector3 directionWSpace = Vector3(tempDirectionWSpace.x, tempDirectionWSpace.y, tempDirectionWSpace.z).Normalize();
+	
+	//Used during intersection tests with spheres.
+	float a = Dot(directionWSpace, directionWSpace);
+	float fourA = 4.0f * a;
+	float divTwoA = 1.0f / (2.0f * a);
 
 	char data = ' ';
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
 	
+	//Localizing variables.
 	Vector3 cameraPos = params->camPos;
+	size_t localCount = count;
 	
-	unsigned int localCount = count;
+	//Ray trace against every object.
 	for (size_t i = 0; i < localCount; i++)
 	{
+		//Localize the current object.
+		Object3D localObject = *objects[i];
+		//Here we need to check if the object is culled, if it is we continue on the next object.
+		
+
+		ObjectType type = localObject.GetType();
 		//Ray-Sphere intersection test.
-		ObjectType type = (objects[i])->GetType();
 		if (type == SphereType)
 		{
-			Sphere localSphere = *((Sphere*)(objects[i]));
+			Sphere localSphere = *(Sphere*)(objects[i]);
 			Vector3 objectToCam = cameraPos - localSphere.GetPos();
 			float radius = localSphere.GetRadius();
 
-			float a = Dot(directionWSpace, directionWSpace);
 			float b = 2.0f * Dot(directionWSpace, objectToCam);
 			float c = Dot(objectToCam, objectToCam) - (radius * radius);
 
-			float discriminant = b * b - 4.0f * a * c;
+			float discriminant = b * b - fourA * c;
 
 			//It hit
 			if (discriminant >= 0.0f)
 			{
-				float t1 = (-b + sqrt(discriminant)) / (2.0f * a);
-				float t2 = (-b - sqrt(discriminant)) / (2.0f * a);
+				float sqrtDiscriminant = sqrt(discriminant);
+				float minusB = -b;
+				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
+				float t2 = (minusB - sqrtDiscriminant) * divTwoA;
 
 				float closerPoint = 0.0f;
 				if (t1 <= t2)
@@ -105,7 +125,7 @@ __global__ void RT(
 					closest = closerPoint;
 
 					Vector3 normalSphere = (Vector3(cameraPos.x + directionWSpace.x * closerPoint, cameraPos.y + directionWSpace.y * closerPoint, cameraPos.z + directionWSpace.z * closerPoint) - localSphere.GetPos()).Normalize();
-					shadingValue = Dot(normalSphere, Vector3() - (directionWSpace.Normalize()));
+					shadingValue = abs(Dot(normalSphere, Vector3() - directionWSpace));
 				}
 			}
 		}
@@ -124,11 +144,13 @@ __global__ void RT(
 
 					if (t1 < closest)
 					{
-						Vector3 p = Vector3(cameraPos.x + directionWSpace.x * t1, cameraPos.y + directionWSpace.y * t1, cameraPos.z + directionWSpace.z * t1); //Overwrite * and + operator.
-						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f)
+						Vector3 p = cameraPos + (directionWSpace * t1);
+						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
 						{
+							shadingValue = abs(Dot(planeNormal, Vector3() - directionWSpace)); //Remove abs here and comment in the if-statement to get backface culling for planes.
+							//if (shadingValue > 0.0f) {
 							closest = t1;
-							shadingValue = Dot(planeNormal, Vector3() - directionWSpace);
+							//}
 						}
 					}
 				}
@@ -415,20 +437,15 @@ __global__ void RT(
 			data = '@';
 		}
 	}
-	//printf("%s\n", data);
-	//Myblock-y * width of whole screen * height of 1 block = the y-block we are on in terms of elements in a 1D array.
-	//my threadIdx.y within the correctblock * width of whole screen.
-	//my blockid.x * width of one block + this thread id.
-	//These 3 added gives the index within the 1D array.
-	resultArray[blockIdx.y * x * blockDim.y + threadIdx.y * x + blockIdx.x * blockDim.x + threadIdx.x] = data;
 	
+	//Write data to the deviceBackbuffer.
+	resultArray[row * x + column] = data;
 	return;
 	
 }
 
 void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt)
 {
-	
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
 	unsigned int numberOfBlocks = 1;
@@ -439,22 +456,12 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 	dim3 gridDims(numberOfBlocks, 1, 1);
 	dim3 blockDims(threadsPerBlock, 1, 1);
 	
-	if (deviceObjects.using1st)
-	{
-		UpdateObjects<<<gridDims, blockDims>>>(
-			deviceObjects.m_deviceArray1,
-			deviceObjects.count,
-			dt
-		);
-	}
-	else
-	{
-		UpdateObjects<<<gridDims, blockDims>>>(
-			deviceObjects.m_deviceArray2,
-			deviceObjects.count,
-			dt
-		);
-	}
+	UpdateObjects<<<gridDims, blockDims>>>(
+		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		deviceObjects.count,
+		dt
+	);
+	
 	
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.

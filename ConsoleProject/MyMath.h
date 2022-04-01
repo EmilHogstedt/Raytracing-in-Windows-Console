@@ -38,35 +38,22 @@ public:
 	}
 	__host__ __device__ Vector3 operator-(const Vector3& other)
 	{
-		Vector3 temp = Vector3(x - other.x, y - other.y, z - other.z);
-
-		return temp;
+		return Vector3(x - other.x, y - other.y, z - other.z);
 	}
-	Vector3 operator+(const Vector3& other)
+	__host__ __device__ Vector3 operator+(const Vector3& other)
 	{
-		Vector3 temp = Vector3(x + other.x, y + other.y, z + other.z);
-
-		return temp;
+		return Vector3(x + other.x, y + other.y, z + other.z);
 	}
-	Vector3 operator*(const float& other)
+	//Float operations
+	__host__ __device__ Vector3 operator*(float other)
 	{
-		//x = x * other;
-		//y = y * other;
-		//z = z * other;
-
-		Vector3 temp = Vector3(x * other, y * other, z * other);
-		return temp;
+		return Vector3(x * other, y * other, z * other);
 	}
 	__host__ __device__ Vector3 Normalize()
 	{
-		Vector3 result = Vector3();
-		float length = sqrt(x * x + y * y + z * z);
-		length = 1.0f / length;
-		result.x = x * length;
-		result.y = y * length;
-		result.z = z * length;
-
-		return result;
+		float length = 1.0f / sqrt(x * x + y * y + z * z);
+		
+		return Vector3(x * length, y * length, z * length);
 	}
 
 private:

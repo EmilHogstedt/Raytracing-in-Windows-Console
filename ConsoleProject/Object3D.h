@@ -28,7 +28,8 @@ public:
 	}
 	virtual ~Object3D() noexcept = default;
 
-	//__device__ virtual void Update(long double) = 0;
+	//__device__ virtual void Update(long double) = 0; NOT POSSIBLE TO HAVE PURE VIRTUAL FUNCTIONS IN CUDA!!!!
+
 	__host__ __device__ ObjectType GetType();
 	__host__ __device__ Vector3 GetPos();
 	void SetType(ObjectType);
