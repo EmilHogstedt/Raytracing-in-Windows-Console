@@ -8,9 +8,14 @@ int PrintMachine::m_fps = 60;
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
 bool PrintMachine::m_running = true;
-char* PrintMachine::m_printBuffer = nullptr;
+char* PrintMachine::m_printBuffer1 = nullptr;
+char* PrintMachine::m_printBuffer2 = nullptr;
 char* PrintMachine::m_devicePrintBuffer = nullptr;
 HANDLE PrintMachine::m_handle;
+
+std::mutex* PrintMachine::m_swapchainMutex1;
+std::mutex* PrintMachine::m_swapchainMutex2;
+bool PrintMachine::m_swapchainBool = true;
 
 //Sets up the consolemode. Rename this.
 bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
@@ -75,13 +80,17 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 
 	//+ heightlimit is for the line-ending characters.
 	//Needs to be remade if support for color is added.
-	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
+	m_printBuffer1 = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
+	m_printBuffer2 = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
 	cudaMalloc(&m_devicePrintBuffer, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
 	cudaMemset(m_devicePrintBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
 }
 
-void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
+void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0, std::mutex* swapchainMutex1, std::mutex* swapchainMutex2)
 {
+	m_swapchainMutex1 = swapchainMutex1;
+	m_swapchainMutex2 = swapchainMutex2;
+
 	m_handle = GetStdHandle(STD_INPUT_HANDLE);
 	//Console stuff
 	DisableConsoleQuickEdit(m_handle); //Disables being able to click in the console window.
@@ -107,8 +116,21 @@ PrintMachine* PrintMachine::GetInstance()
 void PrintMachine::CleanUp()
 {
 	cudaFree(m_devicePrintBuffer);
-	delete m_printBuffer;
+	delete m_printBuffer1;
+	delete m_printBuffer2;
 	delete pInstance;
+}
+
+char* PrintMachine::GetCurrentHostBuffer(bool current)
+{
+	if (current)
+	{
+		return m_printBuffer1;
+	}
+	else
+	{
+		return m_printBuffer2;
+	}
 }
 
 char* PrintMachine::GetDeviceBuffer()
@@ -177,19 +199,22 @@ const bool PrintMachine::Print()
 	//Clear the console before printing.
 	ClearConsole();
 
+	//Move this to GPU renderer.
 	memset(m_printBuffer, 0, sizeof(m_printBuffer));
 	cudaMemcpy(m_printBuffer, m_devicePrintBuffer, sizeof(char) * currentWidth * currentHeight, cudaMemcpyDeviceToHost);
-	/*
-	for (size_t i = 0; i < currentHeight; i++)
+
+	std::mutex* temp;
+	if (m_swapchainBool)
 	{
-		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
-		{
-			m_printBuffer[j + i * (m_2DPrintArray[i].size() + 1)] = m_2DPrintArray[i][j];
-		}
-		m_printBuffer[m_2DPrintArray[i].size() * (i + 1) + i] = '\n';
+		temp = m_swapchainMutex1;
 	}
-	*/
+	else
+	{
+		temp = m_swapchainMutex2;
+	}
+	temp->lock();
 	fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
+	temp->unlock();
 	//fprintf(stdout, m_printBuffer);
 	std::cout << "FPS: " << m_fps << "         \n";
 	printf("\x1b[31mThis text has a red foreground using SGR.31.\r\n");

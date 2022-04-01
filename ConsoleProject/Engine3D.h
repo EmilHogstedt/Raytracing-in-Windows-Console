@@ -25,6 +25,18 @@ public:
 	static bool Run();
 	static void CleanUp();
 private:
+	static std::mutex m_swapchainMutex1;
+	static std::mutex m_swapchainMutex2;
+
+	static std::mutex m_queueMutex;
+	static std::condition_variable m_renderingCondition;
+	static bool m_terminateRendering;
+	static bool m_stopped;
+
+	static void WaitForRenderingJob();
+	static void AddJob(std::function<void(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt, char* hostResultArray)> newJob,
+		size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt, char* hostResultArray);
+	static void ShutdownRenderingThread();
 	/*
 	//Deque of mutex' used by the threads & AddJob.
 	static std::deque<std::mutex> queueMutex;
@@ -51,33 +63,52 @@ private:
 	static long double m_frameTimer;
 	static long double m_fpsTimer;
 	static int m_fps;
-	/*
-	static std::vector<std::thread> m_workers;
-	*/
-	/*
+	
 	struct JobHolder
 	{
 		JobHolder() = default;
-		JobHolder(std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> newJob, size_t x, size_t y, Matrix inverseVMatrix, Vector3 camPos)
+		JobHolder(std::function<void(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt, char* hostResultArray)> newJob,
+			size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, double dt, char* hostResultArray)
 		{
 			m_Job = newJob;
 			m_x = x;
 			m_y = y;
-			m_inverseVMatrix = inverseVMatrix;
-			m_camPos = camPos;
+			m_element1 = element1;
+			m_element2 = element2;
+			m_deviceObjects = deviceObjects;
+			m_deviceParams = deviceParams;
+			m_deviceResultArray = deviceResultArray;
+			m_dt = dt;
+			m_hostResultArray = hostResultArray;
 		}
-		std::function<void(Matrix inverseVMatrix, float pElement1, float pElement2, Vector3 cameraPos, std::vector<Object3D*>* culledObjects, size_t objectNr, size_t currentWidth, size_t currentHeight, size_t threadHeightPos, size_t threadWidthPos)> m_Job;
+		std::function<void(
+			size_t x, size_t y,
+			float element1, float element2,
+			DeviceObjectArray<Object3D*> deviceObjects,
+			RayTracingParameters* deviceParams,
+			char* deviceResultArray,
+			double dt,
+			char* hostResultArray
+		)> m_Job;
 		size_t m_x;
 		size_t m_y;
-		Matrix m_inverseVMatrix;
-		Vector3 m_camPos;
+		float m_element1;
+		float m_element2;
+		DeviceObjectArray<Object3D*> m_deviceObjects;
+		RayTracingParameters* m_deviceParams;
+		char* m_deviceResultArray;
+		double m_dt;
+		char* m_hostResultArray;
 	};
 
 	//This is where the jobs are placed.
-	static std::vector<std::deque<JobHolder*>> queues;
-	*/
+	static std::deque<JobHolder*> m_renderingQueue;
+	
 	static size_t m_num_threads;
 	
+	static bool m_currentRenderingBuffer;
+	static std::thread m_gpuThread;
+
 	static bool m_lockMouse;
 	static bool m_mouseJustMoved;
 
