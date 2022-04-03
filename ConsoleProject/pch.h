@@ -9,6 +9,7 @@
 #include <vector>
 #include <deque>
 #include <string>
+#include <sstream>
 #include <limits>
 
 #include <thread>
@@ -20,6 +21,8 @@
 #include <memory>
 
 #include <cstdlib>
+#include <cstdarg>
+
 #include <time.h>
 
 #define _USE_MATH_DEFINES

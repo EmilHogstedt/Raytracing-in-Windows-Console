@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "RayTracing.cuh"
+#include "RayTracing.h"
 
 __global__ void UpdateObjects(
 	Object3D** objects,
@@ -35,6 +35,13 @@ __global__ void UpdateObjects(
 	}
 	}
 	return;
+}
+
+__global__ void Culling(
+
+)
+{
+
 }
 
 __global__ void RT(
@@ -456,13 +463,20 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 	dim3 gridDims(numberOfBlocks, 1, 1);
 	dim3 blockDims(threadsPerBlock, 1, 1);
 	
+	//If it is the first rendering loop we need to construct the octtree, so that we can access it in the physicsupdate. But otherwise it only has to be done after the physics update.
+	// 
+	//Physics update of the objects.
 	UpdateObjects<<<gridDims, blockDims>>>(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceObjects.count,
 		dt
 	);
-	
-	
+	/*
+	Culling<<<gridDims, blockDims>>>(
+		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+
+	);
+	*/
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
 	gridDims.x = std::ceil((float)(x + 1) / 16.0);

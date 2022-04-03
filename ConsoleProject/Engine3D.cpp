@@ -89,6 +89,10 @@ bool Engine3D::Run()
 	}
 	
 	//Some debugging text. Maybe add an information panel at the bottom that can get sent text? Should be done in PrintMachine though.
+	Vector3 forward = m_camera->GetForward();
+	std::ostringstream oss;
+	oss << "\x1b[36mForward: X: " << forward.x << " Y: " << forward.y << " Z: " << forward.z << "\x1b[m";
+	PrintMachine::GetInstance()->SetDebugInfo(oss.str());
 	/*
 	Vector3 pos = m_camera->GetPos();
 	Vector3 rot = m_camera->GetRot();

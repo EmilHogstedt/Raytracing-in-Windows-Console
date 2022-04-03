@@ -2,7 +2,7 @@
 #include "PrintMachine.h"
 #include "Camera3D.h"
 #include "Scene3D.h"
-#include "RayTracing.cuh"
+#include "RayTracing.h"
 
 //3D Singleton Engine.
 class Engine3D {

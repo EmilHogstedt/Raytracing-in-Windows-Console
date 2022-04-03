@@ -8,8 +8,14 @@ Camera3D::Camera3D() :
 	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
 	m_up{ Vector3(0.0f, 1.0f, 0.0f) },
 	m_forward{ Vector3(0.0f, 0.0f, 1.0f) },
+	m_staticForward{ Vector3(0.0f, 0.0f, 1.0f) },
+	m_staticRight{ Vector3(-1.0f, 0.0f, 0.0f)},
 	m_vMatrix{ Matrix() },
-	m_pMatrix{ Matrix() }
+	m_pMatrix{ Matrix() },
+	m_hNear{0.0f},
+	m_wNear{0.0f},
+	m_hFar{0.0f},
+	m_wFar{0.0f}
 {
 	m_mouseCoords.X = -1.0f;
 	m_mouseCoords.Y = -1.0f;
@@ -28,6 +34,12 @@ void Camera3D::Init()
 	float aspect = width / (2 * height);
 
 	float e = 1.0f / (std::tan(currentFOV / 2.0f));
+
+	m_hNear = 2.0f * tan(currentFOV / 2.0f) * m_screenNear;
+	m_wNear = m_hNear * aspect;
+
+	m_hFar = 2.0f * tan(currentFOV / 2.0f) * m_screenFar;
+	m_wFar = m_hFar * aspect;
 
 	//Maybe have to transpose?
 	//First row
@@ -63,9 +75,17 @@ void Camera3D::Update()
 	m_forward.y = -sin(p) * cos(y);
 	m_forward.z = -cos(p) * cos(y);
 
+	m_staticForward.x = -sin(y);
+	m_staticForward.y = -cos(y);
+	m_staticForward.z = -cos(y);
+
 	m_right.x = cos(y);
 	m_right.y = -sin(p) * sin(y);
 	m_right.z = -cos(p) * sin(y);
+
+	m_staticRight.x = cos(y);
+	m_staticRight.y = -sin(y);
+	m_staticRight.z = -sin(y);
 
 	m_up.x = 0.0f;
 	m_up.y = cos(p);
@@ -94,6 +114,26 @@ void Camera3D::Update()
 	m_vMatrix.row4.w = 1.0f;
 }
 
+Vector4 Camera3D::GetFrustum()
+{
+	return Vector4(m_wNear, m_hNear, m_wFar, m_hFar);
+}
+
+Vector3 Camera3D::GetRight()
+{
+	return m_right;
+}
+
+Vector3 Camera3D::GetUp()
+{
+	return m_up;
+}
+
+Vector3 Camera3D::GetForward()
+{
+	return m_forward;
+}
+
 //Set rot & pos to a specific value, when teleporting etc.
 void Camera3D::SetRot(float p, float y, float r)
 {
@@ -114,8 +154,8 @@ void Camera3D::Move(long double dt)
 	float speed = 10.0f;
 
 	//Use the current right & forward vectors to calculate movement in the x-z plane.
-	Vector3 moveX = m_right * (m_Keys.D - m_Keys.A);
-	Vector3 moveZ = m_forward * (m_Keys.W - m_Keys.S);
+	Vector3 moveX = m_staticRight * (m_Keys.D - m_Keys.A);
+	Vector3 moveZ = m_staticForward * (m_Keys.W - m_Keys.S);
 	//Then add those to the current posision.
 	m_pos.x = m_pos.x + (moveX.x * dt * speed) + (moveZ.x * dt * speed);
 	m_pos.z = m_pos.z + (moveX.z * dt * speed) + (moveZ.z * dt * speed);

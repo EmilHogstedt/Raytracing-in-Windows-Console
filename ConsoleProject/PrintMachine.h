@@ -24,6 +24,7 @@ public:
 	//Returns the instance if there is one.
 	static PrintMachine* GetInstance();
 	static bool CheckIfRunning();
+	static void SetDebugInfo(std::string);
 	static void TerminateThread();
 
 	//Before closing program
@@ -66,6 +67,7 @@ private:
 	static char* m_printBuffer;
 	static char* m_backBuffer;
 	static char* m_deviceBackBuffer;
+	static std::string m_debugInfo;
 	
 	static std::thread m_printThread;
 	static std::mutex m_backBufferMutex;

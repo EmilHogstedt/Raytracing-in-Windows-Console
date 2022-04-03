@@ -19,6 +19,8 @@ bool PrintMachine::m_terminateThread = false;
 char* PrintMachine::m_printBuffer = nullptr;
 char* PrintMachine::m_backBuffer = nullptr;
 char* PrintMachine::m_deviceBackBuffer = nullptr;
+std::string PrintMachine::m_debugInfo = "";
+
 HANDLE PrintMachine::m_handle;
 
 std::thread PrintMachine::m_printThread;
@@ -198,6 +200,12 @@ void PrintMachine::UpdateFPS(int fps)
 	m_renderingFps = fps;
 }
 
+void PrintMachine::SetDebugInfo(std::string debugString)
+{
+	m_debugInfo = debugString;
+
+}
+
 std::vector<std::vector<char>>* PrintMachine::Get2DArray()
 {
 	return &m_2DPrintArray;
@@ -245,6 +253,9 @@ const bool PrintMachine::Print()
 		fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
 		printf("Rendering FPS: %d    \n", m_renderingFps);
 		printf("Printing FPS: %d    \n", m_printingFps);
+		
+		//DEBUG ONLY
+		//std::cout << m_debugInfo << std::endl;
 	}
 	m_running = false;
 	return true;

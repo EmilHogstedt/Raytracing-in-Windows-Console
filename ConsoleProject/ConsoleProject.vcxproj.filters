@@ -65,7 +65,7 @@
     <ClInclude Include="Sphere.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracing.cuh">
+    <ClInclude Include="RayTracing.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="MyMath.h">
