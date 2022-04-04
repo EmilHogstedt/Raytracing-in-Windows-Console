@@ -32,7 +32,6 @@ public:
 
 public:
 	static const bool ChangeSize(size_t, size_t);
-	static std::vector<std::vector<char>>* Get2DArray();
 
 	static void Fill(char);
 	static const bool Print();
@@ -46,7 +45,6 @@ public:
 	static size_t GetHeight();
 	static HANDLE GetConsoleHandle();
 
-	static std::vector<std::vector<char>> m_2DPrintArray;
 private:
 	static HANDLE m_handle;
 
@@ -67,6 +65,7 @@ private:
 	static char* m_printBuffer;
 	static char* m_backBuffer;
 	static char* m_deviceBackBuffer;
+	static size_t m_nrOfElements;
 	static std::string m_debugInfo;
 	
 	static std::thread m_printThread;

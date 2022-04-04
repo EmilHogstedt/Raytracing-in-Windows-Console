@@ -19,11 +19,9 @@ enum ObjectType { None = 0, PlaneType, SphereType };
 class Object3D
 {
 public:
-	Object3D() : m_middlePos{ Vector3() }, m_type { None }
-	{
-	}
-	Object3D(Vector3 middle, ObjectType type) :
-		m_middlePos{ middle }, m_type{ type }
+	Object3D() = delete;
+	Object3D(Vector3 middle, ObjectType type, Vector3 color) :
+		m_middlePos{ middle }, m_type{ type }, m_color{ color }
 	{
 	}
 	virtual ~Object3D() noexcept = default;
@@ -32,10 +30,12 @@ public:
 
 	__host__ __device__ ObjectType GetType();
 	__host__ __device__ Vector3 GetPos();
+	__host__ __device__ Vector3 GetColor();
 	void SetType(ObjectType);
 	void SetMiddlePos(Vector3);
 protected:
 	Vector3 m_middlePos;
 private:
 	ObjectType m_type;
+	Vector3 m_color;
 };

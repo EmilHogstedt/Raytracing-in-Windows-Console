@@ -48,7 +48,7 @@ Engine3D::~Engine3D()
 void Engine3D::Start()
 {
 	//When we create the print machine it also starts printing.
-	PrintMachine::CreatePrintMachine(250, 100);
+	PrintMachine::CreatePrintMachine(400, 100);
 	m_camera->Init();
 	m_camera->Update();
 	m_scene->Init();
@@ -81,7 +81,7 @@ bool Engine3D::Run()
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
 	{
-		m_scene->CreateSphere(rand() % 10, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50));
+		//m_scene->CreateSphere(rand() % 10, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50));
 		
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;

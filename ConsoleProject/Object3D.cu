@@ -11,6 +11,11 @@ __host__ __device__ Vector3 Object3D::GetPos()
 	return m_middlePos;
 }
 
+__host__ __device__ Vector3 Object3D::GetColor()
+{
+	return m_color;
+}
+
 void Object3D::SetType(ObjectType type)
 {
 	m_type = type;

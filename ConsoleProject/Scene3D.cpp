@@ -23,15 +23,15 @@ void Scene3D::Init()
 	m_deviceSpheres.using1st = true;
 
 	//Temporary.
-	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f));
-	CreateSphere(6.0f, Vector3(-5.0f, 10.0f, 20.0f));
-	CreateSphere(10.0f, Vector3(5.0f, 10.0f, 40.0f));
-	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f));
-	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f));
-	CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
+	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
+	CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
+	CreateSphere(10.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
+	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
+	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
+	CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
 
-void Scene3D::CreateSphere(float radius, Vector3 middlePos)
+void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)
 {
 	//See so that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
@@ -112,7 +112,7 @@ void Scene3D::CreateSphere(float radius, Vector3 middlePos)
 		currentArray = m_deviceSpheres.m_deviceArray2;
 	}
 
-	Sphere newObject = Sphere(middlePos, radius);
+	Sphere newObject = Sphere(middlePos, radius, color);
 	gpuErrchk(cudaMemcpy(currentArray + m_deviceSpheres.count, &newObject, sizeof(Sphere), cudaMemcpyHostToDevice));
 	
 	//Now we have to copy the pointer of the object we just added to the objectPointer array on the GPU.
@@ -124,7 +124,7 @@ void Scene3D::CreateSphere(float radius, Vector3 middlePos)
 	m_deviceObjects.count++;
 }
 
-void Scene3D::CreatePlane(Vector3 middlePos, Vector3 normal)
+void Scene3D::CreatePlane(Vector3 middlePos, Vector3 normal, Vector3 color)
 {
 	//See so that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
@@ -205,7 +205,7 @@ void Scene3D::CreatePlane(Vector3 middlePos, Vector3 normal)
 		currentArray = m_devicePlanes.m_deviceArray2;
 	}
 
-	Plane newObject = Plane(middlePos, normal);
+	Plane newObject = Plane(middlePos, normal, color);
 	gpuErrchk(cudaMemcpy(currentArray + m_devicePlanes.count, &newObject, sizeof(Plane), cudaMemcpyHostToDevice));
 	
 	Object3D* temp[1];

@@ -4,8 +4,8 @@
 class Plane : public Object3D
 {
 public:
-	Plane(Vector3 point, Vector3 normal) :
-		Object3D{ point, PlaneType }, m_normal{ normal }
+	Plane(Vector3 point, Vector3 normal, Vector3 color) :
+		Object3D{ point, PlaneType, color }, m_normal{ normal }
 	{
 	}
 	Plane() = default;

@@ -2,7 +2,6 @@
 #include "PrintMachine.h"
 
 PrintMachine* PrintMachine::pInstance{ nullptr };
-std::vector<std::vector<char>> PrintMachine::m_2DPrintArray;
 std::mutex PrintMachine::m_Lock;
 
 int PrintMachine::m_renderingFps = 60;
@@ -19,6 +18,7 @@ bool PrintMachine::m_terminateThread = false;
 char* PrintMachine::m_printBuffer = nullptr;
 char* PrintMachine::m_backBuffer = nullptr;
 char* PrintMachine::m_deviceBackBuffer = nullptr;
+size_t PrintMachine::m_nrOfElements = 0;
 std::string PrintMachine::m_debugInfo = "";
 
 HANDLE PrintMachine::m_handle;
@@ -32,7 +32,8 @@ size_t PrintMachine::m_backBufferSwap = 0;
 bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
 	std::ios_base::sync_with_stdio(false);
 	setlocale(LC_ALL, "C");
-	printf("\x1b[?25l");
+	printf("\x1b[?25l"); // Disables blinking cursor.
+	printf("\x1b]0;Avero Console Rendering Engine\x1b\x5c"); //Set the title of the program.
 
 	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
 	//HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
@@ -89,19 +90,18 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 {
 	currentWidth = x;
 	currentHeight = y;
-	m_2DPrintArray.resize(y);
-	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
-		m_2DPrintArray[i].resize(x);
 
 	//+ heightlimit is for the line-ending characters.
-	//Needs to be remade if support for color is added.
-	m_printBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
-	memset(m_printBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
-	m_backBuffer = DBG_NEW char[WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT];
-	memset(m_backBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
-	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
-	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * WIDTHLIMIT * HEIGHTLIMIT + HEIGHTLIMIT);
-
+	//36 is the number of characters needed per character to change both background and foreground colors.
+	//The line-ending characters do not need colors.
+	size_t charsPerPixel = 12;
+	m_printBuffer = DBG_NEW char[(charsPerPixel * currentWidth * currentHeight) + currentHeight];
+	memset(m_printBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
+	m_backBuffer = DBG_NEW char[(charsPerPixel * currentWidth * currentHeight) + currentHeight];
+	memset(m_backBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
+	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
+	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
+	m_nrOfElements = charsPerPixel * currentHeight * currentWidth + currentHeight;
 	m_timer = DBG_NEW Time();
 
 	m_printThread = std::thread(&Print);
@@ -187,10 +187,6 @@ const bool PrintMachine::ChangeSize(size_t x, size_t y)
 
 	currentWidth = x;
 	currentHeight = y;
-	m_2DPrintArray = {};
-	m_2DPrintArray.resize(x);
-	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
-		m_2DPrintArray.resize(y);
 
 	return true;
 }
@@ -206,18 +202,8 @@ void PrintMachine::SetDebugInfo(std::string debugString)
 
 }
 
-std::vector<std::vector<char>>* PrintMachine::Get2DArray()
-{
-	return &m_2DPrintArray;
-}
-
 void PrintMachine::Fill(char character)
 {
-	for (size_t i = 0; i < m_2DPrintArray.size(); i++)
-	{
-		for (size_t j = 0; j < m_2DPrintArray[i].size(); j++)
-			m_2DPrintArray[i][j] = character;
-	}
 }
 
 const bool PrintMachine::Print()
@@ -250,7 +236,10 @@ const bool PrintMachine::Print()
 
 		//Clear the console and print the data.
 		ClearConsole();
-		fwrite(m_printBuffer, sizeof(char), currentHeight * (currentWidth + 1), stdout);
+		fwrite(m_printBuffer, 1, m_nrOfElements, stdout);
+		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
+		//printf("%.*s", (unsigned int)(37 * currentHeight * currentWidth + currentHeight), m_printBuffer);
+		printf("\x1b[m");
 		printf("Rendering FPS: %d    \n", m_renderingFps);
 		printf("Printing FPS: %d    \n", m_printingFps);
 		
