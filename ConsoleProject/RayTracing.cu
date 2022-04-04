@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "RayTracing.h"
 
+//Move all this to a different file.
+//Not allowed to change this code without making it GNU LGPL
 #define R(c) (((c) >> 16) & 0xff)
 #define G(c) (((c) >>  8) & 0xff)
 #define B(c) ( (c)        & 0xff)
@@ -129,8 +131,12 @@ __device__ static uint8_t luminance(uint32_t rgb) {
 	const uint32_t v = (UINT32_C(3567664) * R(rgb) +
 		UINT32_C(11998547) * G(rgb) +
 		UINT32_C(1211005) * B(rgb));
-	/* Round to nearest rather than truncating when dividing. */
-	return (v + (UINT32_C(1) << 23)) >> 24;
+	
+	//The first option out of these 2 is 5 times faster but less accurate.
+	//return (v + (UINT32_C(1) << 23)) >> 24;
+	return sqrtf((float)R(rgb) * (float)R(rgb) * 0.2126729f +
+		(float)G(rgb) * (float)G(rgb) * 0.7151521f +
+		(float)B(rgb) * (float)B(rgb) * 0.0721750);
 }
 
 __device__ uint8_t ansi256_from_rgb(uint32_t rgb) {
@@ -662,7 +668,7 @@ __global__ void RT(
 			'\x1b', '[',			//Escape character
 			'3', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
-			first, second, third,//charIndex[0], charIndex[1], charIndex[2],			//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			first, second, third,	//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
 			'm', data				//Character data.
 			};
 			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
@@ -673,7 +679,7 @@ __global__ void RT(
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
-			'0', '\0', '\0',			//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			'0', '\0', '\0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
 			'm', ' '				//Character data.
 			};
 			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
