@@ -18,7 +18,7 @@ public:
 	void operator=(const PrintMachine&) = delete;
 
 public:
-	enum PrintMode { ASCII = 0, Pixel, RGB };
+	enum PrintMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL };
 	//Called at the beginning of the program to create the instance if it is not already created.
 	//This is done in this function instead of in GetInstance to reduce wait time for threads.
 	static void CreatePrintMachine(size_t, size_t);
@@ -42,8 +42,10 @@ public:
 	static std::mutex* GetBackBufferMutex();
 	static char* GetBackBuffer();
 	static char* GetDeviceBackBuffer();
+	static void ResetDeviceBackBuffer();
 	static size_t GetWidth();
 	static size_t GetHeight();
+	static size_t GetMaxSize();
 	static HANDLE GetConsoleHandle();
 	static size_t GetPrintSize();
 	static PrintMode GetPrintMode();
@@ -67,6 +69,7 @@ private:
 
 	static size_t currentWidth;
 	static size_t currentHeight;
+	static size_t m_maxSize;
 
 	static bool m_running;
 	static bool m_terminateThread;

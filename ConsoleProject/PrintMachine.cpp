@@ -13,6 +13,8 @@ PrintMachine::PrintMode PrintMachine::m_printMode = PrintMachine::ASCII;
 
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
+size_t PrintMachine::m_maxSize = 0;
+
 bool PrintMachine::m_running = true;
 bool PrintMachine::m_terminateThread = false;
 
@@ -94,16 +96,15 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	currentHeight = y;
 
 	//+ heightlimit is for the line-ending characters.
-	//36 is the number of characters needed per character to change both background and foreground colors.
-	//The line-ending characters do not need colors.
-	size_t charsPerPixel = 12;
-	m_printBuffer = DBG_NEW char[(charsPerPixel * currentWidth * currentHeight) + currentHeight];
-	memset(m_printBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
-	m_backBuffer = DBG_NEW char[(charsPerPixel * currentWidth * currentHeight) + currentHeight];
-	memset(m_backBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
-	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
-	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
-	m_printSize = charsPerPixel * currentHeight * currentWidth + currentHeight;
+	size_t charsPerPixel = 20;
+	m_maxSize = (charsPerPixel * currentWidth * currentHeight) + currentHeight;
+	m_printBuffer = DBG_NEW char[m_maxSize];
+	memset(m_printBuffer, 0, sizeof(char) * m_maxSize);
+	m_backBuffer = DBG_NEW char[m_maxSize];
+	memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
+	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * m_maxSize);
+	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * m_maxSize);
+	m_printSize = m_maxSize;
 
 	m_timer = DBG_NEW Time();
 
@@ -166,6 +167,11 @@ char* PrintMachine::GetDeviceBackBuffer()
 	return m_deviceBackBuffer;
 }
 
+void PrintMachine::ResetDeviceBackBuffer()
+{
+	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * m_maxSize);
+}
+
 size_t PrintMachine::GetWidth()
 {
 	return currentWidth;
@@ -174,6 +180,11 @@ size_t PrintMachine::GetWidth()
 size_t PrintMachine::GetHeight()
 {
 	return currentHeight;
+}
+
+size_t PrintMachine::GetMaxSize()
+{
+	return m_maxSize;
 }
 
 HANDLE PrintMachine::GetConsoleHandle()
@@ -232,7 +243,7 @@ void PrintMachine::SetPrintSize(size_t newSize)
 
 void PrintMachine::ResetBackBuffer()
 {
-	memset(m_backBuffer, 0, sizeof(char) * ((12 * currentWidth * currentHeight) + currentHeight));
+	memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
 }
 
 void PrintMachine::Fill(char character)

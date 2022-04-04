@@ -50,7 +50,7 @@ Engine3D::~Engine3D()
 void Engine3D::Start()
 {
 	//When we create the print machine it also starts printing.
-	PrintMachine::CreatePrintMachine(400, 100);
+	PrintMachine::CreatePrintMachine(200, 80);
 	m_rayTracer = DBG_NEW RayTracer();
 	m_camera->Init();
 	m_camera->Update();
@@ -128,6 +128,7 @@ void Engine3D::Render()
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
+	PrintMachine::GetInstance()->ResetDeviceBackBuffer();
 	m_rayTracer->RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
 }
 
@@ -213,7 +214,15 @@ void Engine3D::CheckKeyboard(long double dt)
 	}
 	if (GetKeyState(VK_F2) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::Pixel);
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::PIXEL);
+	}
+	if (GetKeyState(VK_F3) & 0x8000)
+	{
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_ASCII);
+	}
+	if (GetKeyState(VK_F4) & 0x8000)
+	{
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_PIXEL);
 	}
 
 	//Mouse input.

@@ -246,13 +246,19 @@ __global__ void RT(
 {
 	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	size_t size = 12; //if the mode is pixel or ascii
+	if (mode == PrintMachine::RGB_ASCII || mode == PrintMachine::RGB_PIXEL)
+	{
+		size = 20; //if the mode is rgb we need more characters.
+	}
+
 	if (column >= x || row >= y)
 	{
 		return;
 	}
 	if (column == (x - 1))
 	{
-		resultArray[row * (x * 12) + column * 12] = '\n';
+		resultArray[row * (x * size) + column * size] = '\n';
 		return;
 	}
 	//Convert pixel coordinates to (clip space? screen space?)
@@ -637,69 +643,187 @@ __global__ void RT(
 		}
 	}
 	
-	
-	if (data != ' ')
+	//If the mode is not RGB we need to convert the colors to 8bit.
+	if (mode != PrintMachine::RGB_PIXEL && mode != PrintMachine::RGB_ASCII)
 	{
-		//Apply shading.
-		bestColor.x *= shadingValue;
-		bestColor.y *= shadingValue;
-		bestColor.z *= shadingValue;
-		
-		//Convert the 24bit RGB color to ANSI 8 bit color.
-		uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
-		//Now we need to convert this number (0-255) to 3 chars.
-		uint8_t tens = index % 100;
-		uint8_t singles = tens % 10;
-		char first = '\0';
-		char second = '\0';
-		char third = '\0';
-
-		if (index >= 100)
+		if (data != ' ')
 		{
-			index = (uint8_t)((index - tens) / 100);
-			first = index + '0';
-		}
-		if (tens >= 10 || index >= 100)
-		{
-			tens = (uint8_t)((tens - singles) / 10);
-			second = tens + '0';
-		}
-		third = singles + '0';
+			//Apply shading.
+			bestColor.x *= shadingValue;
+			bestColor.y *= shadingValue;
+			bestColor.z *= shadingValue;
 
-		//If in ASCII mode we change foreground color and also print the value in data.
-		if (mode == PrintMachine::ASCII)
+			//Convert the 24bit RGB color to ANSI 8 bit color.
+			uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
+			//Now we need to convert this number (0-255) to 3 chars.
+			uint8_t tens = index % 100;
+			uint8_t singles = tens % 10;
+			char first = '\0';
+			char second = '\0';
+			char third = '\0';
+
+			if (index >= 100)
+			{
+				index = (uint8_t)((index - tens) / 100);
+				first = index + '0';
+			}
+			if (tens >= 10 || index >= 100)
+			{
+				tens = (uint8_t)((tens - singles) / 10);
+				second = tens + '0';
+			}
+			third = singles + '0';
+
+			//If in ASCII mode we change foreground color and also print the value in data.
+			if (mode == PrintMachine::ASCII)
+			{
+				char finalData[12] = {
+					'\x1b', '[',			//Escape character
+					'3', '8', ';',			//Keycode for foreground
+					'5', ';',				//Keycode for foreground
+					first, second, third,	//Index
+					'm', data				//Character data.
+				};
+				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+			}
+			else //If in pixel mode we only print the color.
+			{
+				char finalData[12] = {
+					'\x1b', '[',			//Escape character
+					'4', '8', ';',			//Keycode for background
+					'5', ';',				//Keycode for background
+					first, second, third,	//Index
+					'm', ' '				//Character data.
+				};
+				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+			}
+		}
+		else //If it is an empty space we can not use a background color.
 		{
 			char finalData[12] = {
-			'\x1b', '[',			//Escape character
-			'3', '8', ';',			//Keycode for foreground
-			'5', ';',				//Keycode for foreground
-			first, second, third,	//Index
-			'm', data				//Character data.
+				'\x1b', '[',			//Escape character
+				'4', '8', ';',			//Keycode for background
+				'5', ';',				//Keycode for background
+				'\0', '\0', '0',		//Index
+				'm', ' '				//Character data.
 			};
-			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
-		}
-		else //If in pixel mode we only print the color.
-		{
-			char finalData[12] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'5', ';',				//Keycode for background
-			first, second, third,	//Index
-			'm', ' '				//Character data.
-			};
-			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
+			memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
 		}
 	}
-	else //If it is an empty space we can not use a background color.
+	else
 	{
-		char finalData[12] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'5', ';',				//Keycode for background
-			'\0', '\0', '0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
-			'm', ' '				//Character data.
-		};
-		memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
+		if (data != ' ')
+		{
+			//Apply shading.
+			bestColor.x *= shadingValue;
+			bestColor.y *= shadingValue;
+			bestColor.z *= shadingValue;
+
+			//Needed to print the rgb values to final data.
+			char firstR = '\0';
+			char secondR = '\0';
+			char thirdR = '\0';
+
+			char firstG = '\0';
+			char secondG = '\0';
+			char thirdG = '\0';
+
+			char firstB = '\0';
+			char secondB = '\0';
+			char thirdB = '\0';
+
+			//R
+			uint8_t index = bestColor.x;
+			uint8_t tens = index % 100;
+			uint8_t singles = tens % 10;
+
+			if (index >= 100)
+			{
+				index = (uint8_t)((index - tens) / 100);
+				firstR = index + '0';
+			}
+			if (tens >= 10 || index >= 100)
+			{
+				tens = (uint8_t)((tens - singles) / 10);
+				secondR = tens + '0';
+			}
+			thirdR = singles + '0';
+
+			//G
+			index = bestColor.y;
+			tens = index % 100;
+			singles = tens % 10;
+
+			if (index >= 100)
+			{
+				index = (uint8_t)((index - tens) / 100);
+				firstG = index + '0';
+			}
+			if (tens >= 10 || index >= 100)
+			{
+				tens = (uint8_t)((tens - singles) / 10);
+				secondG = tens + '0';
+			}
+			thirdG = singles + '0';
+
+			//B
+			index = bestColor.z;
+			tens = index % 100;
+			singles = tens % 10;
+
+			if (index >= 100)
+			{
+				index = (uint8_t)((index - tens) / 100);
+				firstB = index + '0';
+			}
+			if (tens >= 10 || index >= 100)
+			{
+				tens = (uint8_t)((tens - singles) / 10);
+				secondB = tens + '0';
+			}
+			thirdB = singles + '0';
+
+			//If in ASCII mode we change foreground color and also print the value in data.
+			if (mode == PrintMachine::RGB_ASCII)
+			{
+				char finalData[20] = {
+					'\x1b', '[',					//Escape character
+					'3', '8', ';',					//Keycode for foreground
+					'2', ';',						//Keycode for foreground
+					firstR, secondR, thirdR, ';',	//R
+					firstG, secondG, thirdG, ';',	//G
+					firstB, secondB, thirdB,		//B
+					'm', data						//Character data.
+				};
+				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
+			}
+			else
+			{
+				char finalData[20] = {
+					'\x1b', '[',					//Escape character
+					'4', '8', ';',					//Keycode for foreground
+					'2', ';',						//Keycode for foreground
+					firstR, secondR, thirdR, ';',	//R
+					firstG, secondG, thirdG, ';',	//G
+					firstB, secondB, thirdB,		//B
+					'm', ' '						//Character data.
+				};
+				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
+			}
+		}
+		else
+		{
+			char finalData[20] = {
+				'\x1b', '[',			//Escape character
+				'4', '8', ';',			//Keycode for background
+				'2', ';',				//Keycode for background
+				'\0', '\0', '0', ';',	//R
+				'\0', '\0', '0', ';',	//G
+				'\0', '\0', '0',		//B
+				'm', ' '				//Character data.
+			};
+			memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
+		}
 	}
 	return;
 	
@@ -756,9 +880,9 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 
 	PrintMachine* printMachine = PrintMachine::GetInstance();
 	//Make a function to get the original "max size".
-	size_t size = (12 * printMachine->GetWidth() * printMachine->GetHeight()) + printMachine->GetHeight();
-	memset(m_hostResultArray, '0', size); //Might now be needed.
-	memset(m_minimizedResultArray, '0', size); //Might now be needed.
+	size_t size = printMachine->GetMaxSize();
+	memset(m_hostResultArray, '0', size); //Might not be needed.
+	memset(m_minimizedResultArray, '0', size); //Might not be needed.
 	gpuErrchk(cudaMemcpy(m_hostResultArray, deviceResultArray, size, cudaMemcpyDeviceToHost));
 	size_t newSize = MinimizeResults(size);
 
@@ -775,52 +899,110 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 
 size_t RayTracer::MinimizeResults(size_t size)
 {
-	size_t addedChars = 0;
-	size_t newlines = 0;
-	char latestColor[3] = { 'x', 'x', 'x' };
+	PrintMachine::PrintMode mode = PrintMachine::GetInstance()->GetPrintMode();
 
-	for (size_t i = 0; i < size;)
+	size_t newlines = 0;
+	size_t addedChars = 0;
+	if (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL)
 	{
-		char current = m_hostResultArray[i];
-		if (current == '\x1b')
+		char latestColor[3] = { 'x', 'x', 'x' };
+
+		for (size_t i = 0; i < size;)
 		{
-			//If its the same color only add the data and not the escape sequence.
-			if (latestColor[0] == m_hostResultArray[i + 7] && latestColor[1] == m_hostResultArray[i + 8] && latestColor[2] == m_hostResultArray[i + 9])
+			char current = m_hostResultArray[i];
+			if (current == '\x1b')
 			{
-				memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i + 11, 1);
-				i += 12;
-				addedChars += 1;
+				//If its the same color only add the data and not the escape sequence.
+				if (latestColor[0] == m_hostResultArray[i + 7] && latestColor[1] == m_hostResultArray[i + 8] && latestColor[2] == m_hostResultArray[i + 9])
+				{
+					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i + 11, 1);
+					i += 12;
+					addedChars += 1;
+				}
+				//Update latest color.
+				else
+				{
+					memcpy(latestColor, m_hostResultArray + i + 7, 3);
+
+					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 12);
+					i += 12;
+					addedChars += 12;
+				}
+
 			}
-			//Update latest color.
+			else if (current == '\n')
+			{
+				newlines++;
+
+				m_minimizedResultArray[addedChars] = m_hostResultArray[i];
+				addedChars++;
+				i++;
+			}
+			//For \0.
 			else
 			{
-				memcpy(latestColor, m_hostResultArray + i + 7, 3);
-
-				memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 12);
-				i += 12;
-				addedChars += 12;
+				i++;
 			}
-			
-		}
-		else if (current == '\n')
-		{
-			newlines++;
 
-			m_minimizedResultArray[addedChars] = m_hostResultArray[i];
-			addedChars++;
-			i++;
-		}
-		//For \0.
-		else
-		{
-			i++;
-		}
-		
-		if (newlines == PrintMachine::GetInstance()->GetHeight())
-		{
-			break;
+			if (newlines == PrintMachine::GetInstance()->GetHeight())
+			{
+				break;
+			}
 		}
 	}
+	//Else it is rgb.
+	else
+	{
+		char latestColor[9] = { 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x' };
+
+		for (size_t i = 0; i < size;)
+		{
+			char current = m_hostResultArray[i];
+			if (current == '\x1b')
+			{
+				//If its the same color only add the data and not the escape sequence.
+				if (latestColor[0] == m_hostResultArray[i + 7] && latestColor[1] == m_hostResultArray[i + 8] && latestColor[2] == m_hostResultArray[i + 9] &&
+					latestColor[3] == m_hostResultArray[i + 11] && latestColor[4] == m_hostResultArray[i + 12] && latestColor[5] == m_hostResultArray[i + 13] &&
+					latestColor[6] == m_hostResultArray[i + 15] && latestColor[7] == m_hostResultArray[i + 16] && latestColor[8] == m_hostResultArray[i + 17])
+				{
+					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i + 19, 1);
+					i += 20;
+					addedChars += 1;
+				}
+				//Update latest color.
+				else
+				{
+					memcpy(latestColor, m_hostResultArray + i + 7, 3);
+					memcpy(latestColor + 3, m_hostResultArray + i + 11, 3);
+					memcpy(latestColor + 6, m_hostResultArray + i + 15, 3);
+
+					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 20);
+					i += 20;
+					addedChars += 20;
+				}
+
+			}
+			else if (current == '\n')
+			{
+				newlines++;
+
+				m_minimizedResultArray[addedChars] = m_hostResultArray[i];
+				addedChars++;
+				i++;
+			}
+			//For \0.
+			else
+			{
+				i++;
+			}
+
+			if (newlines == PrintMachine::GetInstance()->GetHeight())
+			{
+				break;
+			}
+		}
+	}
+	
 
 	return addedChars;
 }
