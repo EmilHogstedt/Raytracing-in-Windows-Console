@@ -38,6 +38,7 @@ private:
 	
 	static size_t m_num_threads;
 	
+	//Move these to input handler.
 	static bool m_lockMouse;
 
 	static RayTracer* m_rayTracer;

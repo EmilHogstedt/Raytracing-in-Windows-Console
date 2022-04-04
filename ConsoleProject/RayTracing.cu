@@ -240,7 +240,8 @@ __global__ void RT(
 	float element1,
 	float element2,
 	RayTracingParameters* params,
-	char* resultArray
+	char* resultArray,
+	PrintMachine::PrintMode mode
 )
 {
 	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -666,7 +667,7 @@ __global__ void RT(
 		third = singles + '0';
 
 		//If in ASCII mode we change foreground color and also print the value in data.
-		if (false)
+		if (mode == PrintMachine::ASCII)
 		{
 			char finalData[12] = {
 			'\x1b', '[',			//Escape character
@@ -737,7 +738,7 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	blockDims.x = 16;
 	blockDims.y = 16;
 	
-	RT<<<gridDims, blockDims>>>(
+	RT << <gridDims, blockDims >> > (
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceObjects.count,
 		x,
@@ -745,21 +746,24 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 		element1,
 		element2,
 		deviceParams,
-		deviceResultArray
+		deviceResultArray,
+		PrintMachine::GetInstance()->GetPrintMode()
 	);
 	//Make sure all the threads are done.
 	//Then we lock the mutex and copy the results from the GPU to the backbuffer.
 	//Then we signal to the print thread that the backbuffer is ready. 
 	gpuErrchk(cudaDeviceSynchronize());
+
 	PrintMachine* printMachine = PrintMachine::GetInstance();
+	//Make a function to get the original "max size".
 	size_t size = (12 * printMachine->GetWidth() * printMachine->GetHeight()) + printMachine->GetHeight();
-	memset(m_hostResultArray, '0', size);
-	memset(m_minimizedResultArray, '0', size);
+	memset(m_hostResultArray, '0', size); //Might now be needed.
+	memset(m_minimizedResultArray, '0', size); //Might now be needed.
 	gpuErrchk(cudaMemcpy(m_hostResultArray, deviceResultArray, size, cudaMemcpyDeviceToHost));
 	size_t newSize = MinimizeResults(size);
 
 	printMachine->GetBackBufferMutex()->lock();
-	printMachine->ResetBackBuffer();
+	printMachine->ResetBackBuffer(); //Might not be needed.
 	char* backBuffer = printMachine->GetBackBuffer();
 	memcpy(backBuffer, m_minimizedResultArray, newSize);
 	

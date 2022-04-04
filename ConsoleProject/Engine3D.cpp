@@ -206,6 +206,16 @@ void Engine3D::CheckKeyboard(long double dt)
 		}
 	}
 
+	//Change printing mode.
+	if (GetKeyState(VK_F1) & 0x8000)
+	{
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::ASCII);
+	}
+	if (GetKeyState(VK_F2) & 0x8000)
+	{
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::Pixel);
+	}
+
 	//Mouse input.
 	if (GetKeyState(VK_LBUTTON) & 0x8000)
 	{

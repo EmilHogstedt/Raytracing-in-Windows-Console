@@ -9,6 +9,7 @@ int PrintMachine::m_printingFps = 60;
 Time* PrintMachine::m_timer{ nullptr };
 int PrintMachine::m_printingFpsCounter = 0;
 float PrintMachine::m_printingFpsTimer = 0.0f;
+PrintMachine::PrintMode PrintMachine::m_printMode = PrintMachine::ASCII;
 
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
@@ -183,6 +184,16 @@ HANDLE PrintMachine::GetConsoleHandle()
 size_t PrintMachine::GetPrintSize()
 {
 	return m_printSize;
+}
+
+PrintMachine::PrintMode PrintMachine::GetPrintMode()
+{
+	return m_printMode;
+}
+
+void PrintMachine::SetPrintMode(PrintMachine::PrintMode mode)
+{
+	m_printMode = mode;
 }
 
 const bool PrintMachine::ChangeSize(size_t x, size_t y)
