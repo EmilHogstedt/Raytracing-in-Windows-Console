@@ -15,6 +15,7 @@ size_t Engine3D::m_num_threads = 0;
 
 bool Engine3D::m_lockMouse = false;
 
+RayTracer* Engine3D::m_rayTracer = nullptr;
 RayTracingParameters* Engine3D::m_deviceRayTracingParameters = nullptr;
 
 //Creates the singleton instance.
@@ -42,6 +43,7 @@ Engine3D::~Engine3D()
 	delete m_timer;
 	delete m_camera;
 	delete m_scene;
+	delete m_rayTracer;
 	cudaFree(m_deviceRayTracingParameters);
 }
 
@@ -49,6 +51,7 @@ void Engine3D::Start()
 {
 	//When we create the print machine it also starts printing.
 	PrintMachine::CreatePrintMachine(400, 100);
+	m_rayTracer = DBG_NEW RayTracer();
 	m_camera->Init();
 	m_camera->Update();
 	m_scene->Init();
@@ -125,7 +128,7 @@ void Engine3D::Render()
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
-	RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
+	m_rayTracer->RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
 }
 
 //Move this to an input handler.

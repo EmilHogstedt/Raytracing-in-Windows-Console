@@ -44,6 +44,11 @@ public:
 	static size_t GetWidth();
 	static size_t GetHeight();
 	static HANDLE GetConsoleHandle();
+	static size_t GetPrintSize();
+
+	static void ResetBackBuffer();
+	static void SetBufferSwap(size_t);
+	static void SetPrintSize(size_t);
 
 private:
 	static HANDLE m_handle;
@@ -65,9 +70,10 @@ private:
 	static char* m_printBuffer;
 	static char* m_backBuffer;
 	static char* m_deviceBackBuffer;
-	static size_t m_nrOfElements;
+	static size_t m_printSize;
+	static size_t m_backBufferPrintSize;
 	static std::string m_debugInfo;
-	
+
 	static std::thread m_printThread;
 	static std::mutex m_backBufferMutex;
 	static size_t m_backBufferSwap;

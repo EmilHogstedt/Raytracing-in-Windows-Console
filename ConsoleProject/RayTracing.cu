@@ -695,7 +695,7 @@ __global__ void RT(
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
-			'0', '\0', '\0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			'\0', '\0', '0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
 			'm', ' '				//Character data.
 		};
 		memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
@@ -704,7 +704,7 @@ __global__ void RT(
 	
 }
 
-void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
+void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
 {
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
@@ -751,11 +751,72 @@ void RayTracingWrapper(size_t x, size_t y, float element1, float element2, Devic
 	//Then we lock the mutex and copy the results from the GPU to the backbuffer.
 	//Then we signal to the print thread that the backbuffer is ready. 
 	gpuErrchk(cudaDeviceSynchronize());
-	backBufferMutex->lock();
 	PrintMachine* printMachine = PrintMachine::GetInstance();
+	size_t size = (12 * printMachine->GetWidth() * printMachine->GetHeight()) + printMachine->GetHeight();
+	memset(m_hostResultArray, '0', size);
+	memset(m_minimizedResultArray, '0', size);
+	gpuErrchk(cudaMemcpy(m_hostResultArray, deviceResultArray, size, cudaMemcpyDeviceToHost));
+	size_t newSize = MinimizeResults(size);
+
+	printMachine->GetBackBufferMutex()->lock();
+	printMachine->ResetBackBuffer();
 	char* backBuffer = printMachine->GetBackBuffer();
-	cudaMemcpy(backBuffer, deviceResultArray, (12 * printMachine->GetWidth() * printMachine->GetHeight()) + printMachine->GetHeight(), cudaMemcpyDeviceToHost);
-	memset(printMachine->GetBackBufferSwap(), 1, sizeof(int));
-	backBufferMutex->unlock();
+	memcpy(backBuffer, m_minimizedResultArray, newSize);
+	
+	printMachine->SetBufferSwap(1);
+	printMachine->SetPrintSize(newSize);
+	printMachine->GetBackBufferMutex()->unlock();
 	return;
+}
+
+size_t RayTracer::MinimizeResults(size_t size)
+{
+	size_t addedChars = 0;
+	size_t newlines = 0;
+	char latestColor[3] = { 'x', 'x', 'x' };
+
+	for (size_t i = 0; i < size;)
+	{
+		char current = m_hostResultArray[i];
+		if (current == '\x1b')
+		{
+			//If its the same color only add the data and not the escape sequence.
+			if (latestColor[0] == m_hostResultArray[i + 7] && latestColor[1] == m_hostResultArray[i + 8] && latestColor[2] == m_hostResultArray[i + 9])
+			{
+				memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i + 11, 1);
+				i += 12;
+				addedChars += 1;
+			}
+			//Update latest color.
+			else
+			{
+				memcpy(latestColor, m_hostResultArray + i + 7, 3);
+
+				memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 12);
+				i += 12;
+				addedChars += 12;
+			}
+			
+		}
+		else if (current == '\n')
+		{
+			newlines++;
+
+			m_minimizedResultArray[addedChars] = m_hostResultArray[i];
+			addedChars++;
+			i++;
+		}
+		//For \0.
+		else
+		{
+			i++;
+		}
+		
+		if (newlines == PrintMachine::GetInstance()->GetHeight())
+		{
+			break;
+		}
+	}
+
+	return addedChars;
 }

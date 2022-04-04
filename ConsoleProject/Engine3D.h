@@ -40,5 +40,6 @@ private:
 	
 	static bool m_lockMouse;
 
+	static RayTracer* m_rayTracer;
 	static RayTracingParameters* m_deviceRayTracingParameters;
 };

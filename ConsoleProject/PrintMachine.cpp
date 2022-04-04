@@ -18,7 +18,8 @@ bool PrintMachine::m_terminateThread = false;
 char* PrintMachine::m_printBuffer = nullptr;
 char* PrintMachine::m_backBuffer = nullptr;
 char* PrintMachine::m_deviceBackBuffer = nullptr;
-size_t PrintMachine::m_nrOfElements = 0;
+size_t PrintMachine::m_printSize = 0;
+size_t PrintMachine::m_backBufferPrintSize = 0;
 std::string PrintMachine::m_debugInfo = "";
 
 HANDLE PrintMachine::m_handle;
@@ -101,7 +102,8 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 	memset(m_backBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
 	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
 	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * ((charsPerPixel * currentWidth * currentHeight) + currentHeight));
-	m_nrOfElements = charsPerPixel * currentHeight * currentWidth + currentHeight;
+	m_printSize = charsPerPixel * currentHeight * currentWidth + currentHeight;
+
 	m_timer = DBG_NEW Time();
 
 	m_printThread = std::thread(&Print);
@@ -178,6 +180,11 @@ HANDLE PrintMachine::GetConsoleHandle()
 	return m_handle;
 }
 
+size_t PrintMachine::GetPrintSize()
+{
+	return m_printSize;
+}
+
 const bool PrintMachine::ChangeSize(size_t x, size_t y)
 {
 	if (x > WIDTHLIMIT)
@@ -200,6 +207,21 @@ void PrintMachine::SetDebugInfo(std::string debugString)
 {
 	m_debugInfo = debugString;
 
+}
+
+void PrintMachine::SetBufferSwap(size_t swap)
+{
+	m_backBufferSwap = swap;
+}
+
+void PrintMachine::SetPrintSize(size_t newSize)
+{
+	m_backBufferPrintSize = newSize;
+}
+
+void PrintMachine::ResetBackBuffer()
+{
+	memset(m_backBuffer, 0, sizeof(char) * ((12 * currentWidth * currentHeight) + currentHeight));
 }
 
 void PrintMachine::Fill(char character)
@@ -228,15 +250,19 @@ const bool PrintMachine::Print()
 		if (m_backBufferSwap)
 		{
 			m_backBufferSwap = 0;
-			char* temp = m_printBuffer;
-			m_printBuffer = m_backBuffer;
-			m_backBuffer = m_printBuffer;
+			m_printSize = m_backBufferPrintSize;
+
+			memcpy(m_printBuffer, m_backBuffer, m_printSize);
+			//char* temp = m_printBuffer;
+			//m_printBuffer = m_backBuffer;
+			//m_backBuffer = m_printBuffer;
 		}
 		m_backBufferMutex.unlock();
 
 		//Clear the console and print the data.
+		//system("cls");
 		ClearConsole();
-		fwrite(m_printBuffer, 1, m_nrOfElements, stdout);
+		fwrite(m_printBuffer, 1, m_printSize, stdout);
 		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
 		//printf("%.*s", (unsigned int)(37 * currentHeight * currentWidth + currentHeight), m_printBuffer);
 		printf("\x1b[m");

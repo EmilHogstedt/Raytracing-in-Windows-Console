@@ -7,4 +7,37 @@ struct RayTracingParameters
 	Vector3 camPos;
 };
 
-void RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> objects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt);
+class RayTracer
+{
+public:
+	RayTracer()
+	{
+		size_t size = sizeof(char) * PrintMachine::GetInstance()->GetPrintSize();
+		m_hostResultArray = (char*)malloc(size);
+		memset(m_hostResultArray, 0, size);
+
+		m_minimizedResultArray = (char*)malloc(size);
+		memset(m_minimizedResultArray, 0, size);
+	};
+
+	~RayTracer()
+	{
+		free(m_hostResultArray);
+	};
+
+	void RayTracingWrapper(
+		size_t x, size_t y,
+		float element1, float element2,
+		DeviceObjectArray<Object3D*> objects,
+		RayTracingParameters* deviceParams,
+		char* deviceResultArray,
+		std::mutex* backBufferMutex,
+		double dt
+	);
+private:
+	size_t MinimizeResults(size_t);
+
+	char* m_hostResultArray;
+	char* m_minimizedResultArray;
+};
+
