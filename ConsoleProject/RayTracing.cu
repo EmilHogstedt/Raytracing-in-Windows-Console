@@ -636,68 +636,70 @@ __global__ void RT(
 		}
 	}
 	
-	//Allow different printing modes.
-	if (true) //Pixels only.
+	
+	if (data != ' ')
 	{
-		if (data != ' ')
-		{
-			bestColor.x *= shadingValue;
-			bestColor.y *= shadingValue;
-			bestColor.z *= shadingValue;
-			//int index = (bestColor.x * 6 / 256) * 36 + (bestColor.y * 6 / 256) * 6 + (bestColor.z * 6 / 256);
-			//int index = (int)(bestColor.x * 7 / 255) << 5 + (int)(bestColor.y * 7 / 255) << 2 + (int)(bestColor.z * 3 / 255);
-			uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
-			uint8_t tens = index % 100;
-			uint8_t singles = tens % 10;
-			char first = '\0';
-			char second = '\0';
-			char third = '\0';
+		//Apply shading.
+		bestColor.x *= shadingValue;
+		bestColor.y *= shadingValue;
+		bestColor.z *= shadingValue;
+		
+		//Convert the 24bit RGB color to ANSI 8 bit color.
+		uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
+		//Now we need to convert this number (0-255) to 3 chars.
+		uint8_t tens = index % 100;
+		uint8_t singles = tens % 10;
+		char first = '\0';
+		char second = '\0';
+		char third = '\0';
 
-			if (index >= 100)
-			{
-				index = (uint8_t)((index - tens) / 100);
-				first = index + '0';
-			}
-			if (tens >= 10 || index >= 100)
-			{
-				tens = (uint8_t)((tens - singles) / 10);
-				second = tens + '0';
-			}
-			third = singles + '0';
+		if (index >= 100)
+		{
+			index = (uint8_t)((index - tens) / 100);
+			first = index + '0';
+		}
+		if (tens >= 10 || index >= 100)
+		{
+			tens = (uint8_t)((tens - singles) / 10);
+			second = tens + '0';
+		}
+		third = singles + '0';
+
+		//If in ASCII mode we change foreground color and also print the value in data.
+		if (false)
+		{
 			char finalData[12] = {
 			'\x1b', '[',			//Escape character
-			'3', '8', ';',			//Keycode for background
-			'5', ';',				//Keycode for background
-			first, second, third,	//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			'3', '8', ';',			//Keycode for foreground
+			'5', ';',				//Keycode for foreground
+			first, second, third,	//Index
 			'm', data				//Character data.
 			};
 			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
 		}
-		else
+		else //If in pixel mode we only print the color.
 		{
 			char finalData[12] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
-			'0', '\0', '\0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			first, second, third,	//Index
 			'm', ' '				//Character data.
 			};
 			memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
 		}
 	}
-	else //Ascii signs with color.
+	else //If it is an empty space we can not use a background color.
 	{
 		char finalData[12] = {
 			'\x1b', '[',			//Escape character
-			'3', '8', ';',			//Keycode for foreground
-			'5', ';',				//Keycode for foreground
-			'2', '5', '5',			//Index 
-			'm', data				//Character data.
+			'4', '8', ';',			//Keycode for background
+			'5', ';',				//Keycode for background
+			'0', '\0', '\0',		//Index - convert RGB to 8bit = encodedData = (Math.floor((red / 32)) << 5) + (Math.floor((green / 32)) << 2) + Math.floor((blue / 64));
+			'm', ' '				//Character data.
 		};
 		memcpy(resultArray + (row * (x * 12) + column * 12), finalData, sizeof(char) * 12);
 	}
-	//memcpy(resultArray + (row * (x * 37) + column * 37), finalData, sizeof(char) * 37);
-	//resultArray[row * (x * 37) + column * 37] = data;
 	return;
 	
 }
