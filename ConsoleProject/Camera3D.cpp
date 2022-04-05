@@ -114,6 +114,11 @@ void Camera3D::Update()
 	m_vMatrix.row4.w = 1.0f;
 }
 
+float Camera3D::GetFarPlaneDistance()
+{
+	return m_screenFar;
+}
+
 Vector4 Camera3D::GetFrustum()
 {
 	return Vector4(m_wNear, m_hNear, m_wFar, m_hFar);

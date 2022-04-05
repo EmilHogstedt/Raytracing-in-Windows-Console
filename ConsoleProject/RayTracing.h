@@ -28,6 +28,7 @@ public:
 	void RayTracingWrapper(
 		size_t x, size_t y,
 		float element1, float element2,
+		float camFarDist,
 		DeviceObjectArray<Object3D*> objects,
 		RayTracingParameters* deviceParams,
 		char* deviceResultArray,

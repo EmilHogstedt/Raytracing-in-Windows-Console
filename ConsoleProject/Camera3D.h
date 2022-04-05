@@ -26,6 +26,7 @@ public:
 	Vector3 GetUp();
 	Vector3 GetForward();
 
+	float GetFarPlaneDistance();
 	Vector4 GetFrustum();
 
 	COORD GetMouseCoords();
@@ -62,7 +63,7 @@ private:
 	Vector3 m_rot;
 	
 	float m_screenNear = 0.1f;
-	float m_screenFar = 10000.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. 
+	float m_screenFar = 250.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
 	float m_hNear;
 	float m_wNear;
 	float m_hFar;

@@ -239,6 +239,7 @@ __global__ void RT(
 	size_t y,
 	float element1,
 	float element2,
+	float camFarDist,
 	RayTracingParameters* params,
 	char* resultArray,
 	PrintMachine::PrintMode mode
@@ -328,7 +329,8 @@ __global__ void RT(
 					closest = closerPoint;
 
 					Vector3 normalSphere = (Vector3(cameraPos.x + directionWSpace.x * closerPoint, cameraPos.y + directionWSpace.y * closerPoint, cameraPos.z + directionWSpace.z * closerPoint) - localSphere.GetPos()).Normalize();
-					shadingValue = abs(Dot(normalSphere, Vector3() - directionWSpace));
+					//shadingValue = abs(Dot(normalSphere, Vector3() - directionWSpace));
+					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
 					bestColor = localSphere.GetColor();
 				}
 			}
@@ -351,7 +353,9 @@ __global__ void RT(
 						Vector3 p = cameraPos + (directionWSpace * t1);
 						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
 						{
-							shadingValue = abs(Dot(planeNormal, Vector3() - directionWSpace)); //Remove abs here and comment in the if-statement to get backface culling for planes.
+							//shadingValue = abs(Dot(planeNormal, Vector3() - directionWSpace)); //Remove abs here and comment in the if-statement to get backface culling for planes.
+							shadingValue = Dot(planeNormal, Vector3(1.0f, 0.0f, 0.0f));
+
 							//if (shadingValue > 0.0f) {
 							closest = t1;
 							//}
@@ -369,7 +373,8 @@ __global__ void RT(
 		//I warned u
 	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
 		float t = 0.01492537f;
-		if (shadingValue < 0.00001f)
+		//If we miss or its outside the frustum we dont print anything.
+		if (closest > camFarDist)
 		{
 			data = ' ';
 		}
@@ -648,13 +653,19 @@ __global__ void RT(
 	{
 		if (data != ' ')
 		{
+			float ambient = 0.01492537f * 19;
+			if (shadingValue < ambient)
+			{
+				shadingValue = ambient;
+			}
 			//Apply shading.
 			bestColor.x *= shadingValue;
 			bestColor.y *= shadingValue;
 			bestColor.z *= shadingValue;
 
 			//Convert the 24bit RGB color to ANSI 8 bit color.
-			uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
+			uint8_t index = ansi256_from_rgb(((uint8_t)round(bestColor.x) << 16) + ((uint8_t)round(bestColor.y) << 8) + (uint8_t)round(bestColor.z));
+			uint8_t originalIndex = index;
 			//Now we need to convert this number (0-255) to 3 chars.
 			uint8_t tens = index % 100;
 			uint8_t singles = tens % 10;
@@ -667,7 +678,7 @@ __global__ void RT(
 				index = (uint8_t)((index - tens) / 100);
 				first = index + '0';
 			}
-			if (tens >= 10 || index >= 100)
+			if (tens >= 10 || originalIndex >= 100)
 			{
 				tens = (uint8_t)((tens - singles) / 10);
 				second = tens + '0';
@@ -704,7 +715,7 @@ __global__ void RT(
 				'\x1b', '[',			//Escape character
 				'4', '8', ';',			//Keycode for background
 				'5', ';',				//Keycode for background
-				'\0', '\0', '0',		//Index
+				'\0', '1', '6',		//Index
 				'm', ' '				//Character data.
 			};
 			memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
@@ -714,11 +725,23 @@ __global__ void RT(
 	{
 		if (data != ' ')
 		{
+			//Increase the 7 to increase the ambient light.
+			float ambient = 0.01492537f * 7;
+			if (shadingValue < ambient)
+			{
+				shadingValue = ambient;
+			}
 			//Apply shading.
 			bestColor.x *= shadingValue;
 			bestColor.y *= shadingValue;
 			bestColor.z *= shadingValue;
 
+			if (bestColor.x == 0.0f && bestColor.y == 0.0f && bestColor.y == 0.0f)
+			{
+				bestColor.x = 255.0f;
+				bestColor.y = 255.0f;
+				bestColor.z = 255.0f;
+			}
 			//Needed to print the rgb values to final data.
 			char firstR = '\0';
 			char secondR = '\0';
@@ -733,7 +756,8 @@ __global__ void RT(
 			char thirdB = '\0';
 
 			//R
-			uint8_t index = bestColor.x;
+			uint8_t originalIndex = (uint8_t)bestColor.x;
+			uint8_t index = (uint8_t)bestColor.x;
 			uint8_t tens = index % 100;
 			uint8_t singles = tens % 10;
 
@@ -742,7 +766,7 @@ __global__ void RT(
 				index = (uint8_t)((index - tens) / 100);
 				firstR = index + '0';
 			}
-			if (tens >= 10 || index >= 100)
+			if (tens >= 10 || originalIndex >= 100)
 			{
 				tens = (uint8_t)((tens - singles) / 10);
 				secondR = tens + '0';
@@ -750,7 +774,8 @@ __global__ void RT(
 			thirdR = singles + '0';
 
 			//G
-			index = bestColor.y;
+			originalIndex = (uint8_t)bestColor.y;
+			index = (uint8_t)bestColor.y;
 			tens = index % 100;
 			singles = tens % 10;
 
@@ -759,7 +784,7 @@ __global__ void RT(
 				index = (uint8_t)((index - tens) / 100);
 				firstG = index + '0';
 			}
-			if (tens >= 10 || index >= 100)
+			if (tens >= 10 || originalIndex >= 100)
 			{
 				tens = (uint8_t)((tens - singles) / 10);
 				secondG = tens + '0';
@@ -767,7 +792,8 @@ __global__ void RT(
 			thirdG = singles + '0';
 
 			//B
-			index = bestColor.z;
+			originalIndex = (uint8_t)bestColor.z;
+			index = (uint8_t)bestColor.z;
 			tens = index % 100;
 			singles = tens % 10;
 
@@ -776,7 +802,7 @@ __global__ void RT(
 				index = (uint8_t)((index - tens) / 100);
 				firstB = index + '0';
 			}
-			if (tens >= 10 || index >= 100)
+			if (tens >= 10 || originalIndex >= 100)
 			{
 				tens = (uint8_t)((tens - singles) / 10);
 				secondB = tens + '0';
@@ -829,7 +855,7 @@ __global__ void RT(
 	
 }
 
-void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
+void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, float camFarDist, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
 {
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
@@ -869,6 +895,7 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 		y,
 		element1,
 		element2,
+		camFarDist,
 		deviceParams,
 		deviceResultArray,
 		PrintMachine::GetInstance()->GetPrintMode()

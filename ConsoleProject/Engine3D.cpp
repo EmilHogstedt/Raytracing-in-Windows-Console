@@ -50,7 +50,7 @@ Engine3D::~Engine3D()
 void Engine3D::Start()
 {
 	//When we create the print machine it also starts printing.
-	PrintMachine::CreatePrintMachine(200, 80);
+	PrintMachine::CreatePrintMachine(400, 100);
 	m_rayTracer = DBG_NEW RayTracer();
 	m_camera->Init();
 	m_camera->Update();
@@ -129,7 +129,7 @@ void Engine3D::Render()
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 	PrintMachine::GetInstance()->ResetDeviceBackBuffer();
-	m_rayTracer->RayTracingWrapper(x, y, element1, element2, objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
+	m_rayTracer->RayTracingWrapper(x, y, element1, element2, m_camera->GetFarPlaneDistance(), objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
 }
 
 //Move this to an input handler.
