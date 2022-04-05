@@ -921,12 +921,18 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 		deviceObjects.count,
 		dt
 	);
+
+	//Classify the objects into the octtree.
+	//Mark objects within the frustum
 	/*
 	Culling<<<gridDims, blockDims>>>(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 
 	);
 	*/
+	//After we do the culling we check the remaining objects within the octtree and update their closest position to the camera.
+
+
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
 	gridDims.x = std::ceil((float)(x + 1) / 16.0);
