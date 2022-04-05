@@ -18,7 +18,7 @@ public:
 	void operator=(const PrintMachine&) = delete;
 
 public:
-	enum PrintMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL };
+	enum PrintMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS };
 	//Called at the beginning of the program to create the instance if it is not already created.
 	//This is done in this function instead of in GetInstance to reduce wait time for threads.
 	static void CreatePrintMachine(size_t, size_t);

@@ -248,7 +248,7 @@ __global__ void RT(
 	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t size = 12; //if the mode is pixel or ascii
-	if (mode == PrintMachine::RGB_ASCII || mode == PrintMachine::RGB_PIXEL)
+	if (mode == PrintMachine::RGB_ASCII || mode == PrintMachine::RGB_PIXEL || mode == PrintMachine::RGB_NORMALS)
 	{
 		size = 20; //if the mode is rgb we need more characters.
 	}
@@ -280,6 +280,7 @@ __global__ void RT(
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
 	Vector3 bestColor = Vector3();
+	Vector3 bestNormal = Vector3();
 
 	//Localizing variables.
 	Vector3 cameraPos = params->camPos;
@@ -329,6 +330,7 @@ __global__ void RT(
 					closest = closerPoint;
 
 					Vector3 normalSphere = (Vector3(cameraPos.x + directionWSpace.x * closerPoint, cameraPos.y + directionWSpace.y * closerPoint, cameraPos.z + directionWSpace.z * closerPoint) - localSphere.GetPos()).Normalize();
+					bestNormal = Vector3(normalSphere);
 					//shadingValue = abs(Dot(normalSphere, Vector3() - directionWSpace));
 					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
 					bestColor = localSphere.GetColor();
@@ -360,6 +362,13 @@ __global__ void RT(
 							closest = t1;
 							//}
 							bestColor = localPlane.GetColor();
+							bestNormal = Vector3(planeNormal);
+							if (dotLineAndPlaneNormal > 0.0f)
+							{
+								bestNormal.x *= -1;
+								bestNormal.y *= -1;
+								bestNormal.z *= -1;
+							}
 						}
 					}
 				}
@@ -368,7 +377,7 @@ __global__ void RT(
 		}
 	}
 
-	//Dont open this. Here be dragons.
+	//Dont open this. Here be dragons. Print characters for ASCII mode.
 	{
 		//I warned u
 	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
@@ -649,7 +658,7 @@ __global__ void RT(
 	}
 	
 	//If the mode is not RGB we need to convert the colors to 8bit.
-	if (mode != PrintMachine::RGB_PIXEL && mode != PrintMachine::RGB_ASCII)
+	if (mode != PrintMachine::RGB_PIXEL && mode != PrintMachine::RGB_ASCII && mode != PrintMachine::RGB_NORMALS)
 	{
 		if (data != ' ')
 		{
@@ -736,12 +745,6 @@ __global__ void RT(
 			bestColor.y *= shadingValue;
 			bestColor.z *= shadingValue;
 
-			if (bestColor.x == 0.0f && bestColor.y == 0.0f && bestColor.y == 0.0f)
-			{
-				bestColor.x = 255.0f;
-				bestColor.y = 255.0f;
-				bestColor.z = 255.0f;
-			}
 			//Needed to print the rgb values to final data.
 			char firstR = '\0';
 			char secondR = '\0';
@@ -756,8 +759,19 @@ __global__ void RT(
 			char thirdB = '\0';
 
 			//R
-			uint8_t originalIndex = (uint8_t)bestColor.x;
-			uint8_t index = (uint8_t)bestColor.x;
+			uint8_t originalIndex;
+			uint8_t index;
+			if (mode == PrintMachine::RGB_NORMALS)
+			{
+				originalIndex = (uint8_t)(bestNormal.x * 255);
+				index = (uint8_t)(bestNormal.x * 255);
+			}
+			else
+			{
+				originalIndex = (uint8_t)bestColor.x;
+				index = (uint8_t)bestColor.x;
+			}
+			
 			uint8_t tens = index % 100;
 			uint8_t singles = tens % 10;
 
@@ -774,8 +788,17 @@ __global__ void RT(
 			thirdR = singles + '0';
 
 			//G
-			originalIndex = (uint8_t)bestColor.y;
-			index = (uint8_t)bestColor.y;
+			if (mode == PrintMachine::RGB_NORMALS)
+			{
+				originalIndex = (uint8_t)(bestNormal.y * 255);
+				index = (uint8_t)(bestNormal.y * 255);
+			}
+			else
+			{
+				originalIndex = (uint8_t)bestColor.y;
+				index = (uint8_t)bestColor.y;
+			}
+
 			tens = index % 100;
 			singles = tens % 10;
 
@@ -792,8 +815,17 @@ __global__ void RT(
 			thirdG = singles + '0';
 
 			//B
-			originalIndex = (uint8_t)bestColor.z;
-			index = (uint8_t)bestColor.z;
+			if (mode == PrintMachine::RGB_NORMALS)
+			{
+				originalIndex = (uint8_t)(bestNormal.z * 255);
+				index = (uint8_t)(bestNormal.z * 255);
+			}
+			else
+			{
+				originalIndex = (uint8_t)bestColor.z;
+				index = (uint8_t)bestColor.z;
+			}
+
 			tens = index % 100;
 			singles = tens % 10;
 
@@ -823,7 +855,7 @@ __global__ void RT(
 				};
 				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
 			}
-			else
+			else if (mode == PrintMachine::RGB_PIXEL)
 			{
 				char finalData[20] = {
 					'\x1b', '[',					//Escape character
@@ -835,6 +867,20 @@ __global__ void RT(
 					'm', ' '						//Character data.
 				};
 				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
+			}
+			//Normals.
+			else
+			{
+				char finalData[20] = {
+					'\x1b', '[',					//Escape character
+					'4', '8', ';',					//Keycode for foreground
+					'2', ';',						//Keycode for foreground
+					firstR, secondR, thirdR, ';',	//R
+					firstG, secondG, thirdG, ';',	//G
+					firstB, secondB, thirdB,		//B
+					'm', ' '						//Character data.
+				};
+				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
 			}
 		}
 		else

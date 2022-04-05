@@ -224,6 +224,10 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_PIXEL);
 	}
+	if (GetKeyState(VK_F5) & 0x8000)
+	{
+		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_NORMALS);
+	}
 
 	//Mouse input.
 	if (GetKeyState(VK_LBUTTON) & 0x8000)
