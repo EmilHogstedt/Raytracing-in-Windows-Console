@@ -6,7 +6,7 @@ __host__ __device__ ObjectType Object3D::GetType()
 	return m_type;
 }
 
-__host__ __device__ Vector3 Object3D::GetPos()
+__host__ __device__ Vector3 Object3D::GetPos() const
 {
 	return m_middlePos;
 }

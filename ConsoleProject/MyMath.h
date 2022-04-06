@@ -49,6 +49,12 @@ public:
 	{
 		return Vector3(x * other, y * other, z * other);
 	}
+	__host__ __device__ void operator*=(float other)
+	{
+		x *= other;
+		y *= other;
+		z *= other;
+	}
 	__host__ __device__ Vector3 Normalize()
 	{
 		float length = 1.0f / sqrt(x * x + y * y + z * z);

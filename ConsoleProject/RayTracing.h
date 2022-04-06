@@ -36,7 +36,7 @@ public:
 		double dt
 	);
 private:
-	size_t MinimizeResults(size_t);
+	size_t MinimizeResults(size_t, size_t);
 
 	char* m_hostResultArray;
 	char* m_minimizedResultArray;

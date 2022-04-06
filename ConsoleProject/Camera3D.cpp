@@ -31,6 +31,8 @@ void Camera3D::Init()
 	float currentFOV = (float)(M_PI) / m_FOV;
 	float width = (float)(PrintMachine::GetInstance()->GetWidth());
 	float height = (float)(PrintMachine::GetInstance()->GetHeight());
+
+	//Increase the value to to squish x, decrease to drag out x
 	float aspect = width / (0.01f * width * height);
 
 	float e = 1.0f / (std::tan(currentFOV / 2.0f));
