@@ -72,7 +72,7 @@ bool Engine3D::Run()
 	long double dt = m_timer->DeltaTimeRendering();
 	CheckKeyboard(dt);
 	//Move using the current input.
-	m_camera->Move(dt);
+	m_camera->Move(static_cast<float>(dt));
 
 	m_timer->UpdateRendering();
 	m_fps++;
@@ -84,7 +84,7 @@ bool Engine3D::Run()
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
 	{
-		m_scene->CreateSphere(rand() % 10, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
+		m_scene->CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
 		
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;
@@ -244,8 +244,8 @@ void Engine3D::CheckKeyboard(long double dt)
 	POINT newCoordsPoint;
 	GetCursorPos(&newCoordsPoint);
 	COORD newCoords;
-	newCoords.X = newCoordsPoint.x;
-	newCoords.Y = newCoordsPoint.y;
+	newCoords.X = static_cast<SHORT>(newCoordsPoint.x);
+	newCoords.Y = static_cast<SHORT>(newCoordsPoint.y);
 	if (newCoords.X == 1000 && newCoords.Y == 500)
 	{
 		return;

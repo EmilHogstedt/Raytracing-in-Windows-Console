@@ -32,10 +32,10 @@ public:
 	static void CleanUp();
 
 public:
-	static const bool ChangeSize(size_t, size_t);
+	static bool ChangeSize(size_t, size_t);
 
 	static void Fill(char);
-	static const bool Print();
+	static bool Print();
 	static void UpdateFPS(int);
 
 	static size_t* GetBackBufferSwap();

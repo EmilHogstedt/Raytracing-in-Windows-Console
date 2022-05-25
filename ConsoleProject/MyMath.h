@@ -7,6 +7,10 @@ public:
 		x{ x }, y{ y }, z{ z }
 	{
 	}
+	__host__ __device__ Vector3(int x, int y, int z) :
+		x{ static_cast<float>(x) }, y{ static_cast<float>(y) }, z{ static_cast<float>(z) }
+	{
+	}
 	__host__ __device__ Vector3()
 	{
 		x = 0.0f;

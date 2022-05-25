@@ -12,7 +12,7 @@ public:
 	void Update();
 	void SetRot(float, float, float);
 	void SetPos(float, float, float);
-	void Move(long double dt);
+	void Move(float dt);
 	void AddRot(short, short, short);
 
 	Matrix GetVMatrix();

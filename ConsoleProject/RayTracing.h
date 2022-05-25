@@ -14,10 +14,24 @@ public:
 	{
 		size_t size = sizeof(char) * PrintMachine::GetInstance()->GetMaxSize();
 		m_hostResultArray = (char*)malloc(size);
-		memset(m_hostResultArray, 0, size);
-
+		if (m_hostResultArray)
+		{
+			memset(m_hostResultArray, 0, size);
+		}
+		else
+		{
+			assert(false && "Could not malloc m_hostResultArray.");
+		}
+		
 		m_minimizedResultArray = (char*)malloc(size);
-		memset(m_minimizedResultArray, 0, size);
+		if (m_minimizedResultArray)
+		{
+			memset(m_minimizedResultArray, 0, size);
+		}
+		else
+		{
+			assert(false && "Could not malloc m_minimizedResultArray.");
+		}
 	};
 
 	~RayTracer()

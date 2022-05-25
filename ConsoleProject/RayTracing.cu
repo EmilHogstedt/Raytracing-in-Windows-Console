@@ -208,12 +208,12 @@ __global__ void UpdateObjects(
 	Object3D* object = objects[index];
 	switch (object->GetType())
 	{
-	case SphereType:
+	case ObjectType::SphereType:
 	{
 		((Sphere*)object)->Update(dt);
 		break;
 	}
-	case PlaneType:
+	case ObjectType::PlaneType:
 	{
 		((Plane*)object)->Update(dt);
 		break;
@@ -297,7 +297,7 @@ __global__ void RT(
 
 		ObjectType type = localObject.GetType();
 		//Ray-Sphere intersection test.
-		if (type == SphereType)
+		if (type == ObjectType::SphereType)
 		{
 			Sphere localSphere = *(Sphere*)(objects[i]);
 			Vector3 spherePos = localSphere.GetPos();
@@ -336,7 +336,7 @@ __global__ void RT(
 				}
 			}
 		}
-		else if (type == PlaneType)
+		else if (type == ObjectType::PlaneType)
 		{
 			Plane localPlane = *((Plane*)(objects[i]));
 			Vector3 planeNormal = localPlane.GetNormal();
@@ -907,7 +907,7 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	unsigned int numberOfBlocks = 1;
 	if (deviceObjects.count > 1024)
 	{
-		numberOfBlocks = std::ceil(deviceObjects.count / 1024.0);
+		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
 	}
 	dim3 gridDims(numberOfBlocks, 1, 1);
 	dim3 blockDims(threadsPerBlock, 1, 1);
@@ -934,10 +934,10 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-	gridDims.x = std::ceil((float)(x + 1) / 16.0);
-	gridDims.y = std::ceil((float)y / 16.0);
-	blockDims.x = 16;
-	blockDims.y = 16;
+	gridDims.x = static_cast<unsigned int>(std::ceil((float)(x + 1) / 16.0));
+	gridDims.y = static_cast<unsigned int>(std::ceil((float)y / 16.0));
+	blockDims.x = 16u;
+	blockDims.y = 16u;
 	
 	RT << <gridDims, blockDims >> > (
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,

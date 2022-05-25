@@ -5,7 +5,7 @@ class Sphere : public Object3D
 {
 public:
 	Sphere(Vector3 middle, float r, Vector3 color) :
-		Object3D{ middle, SphereType, color }, m_radius{ r }, mover{ -1 }
+		Object3D{ middle, ObjectType::SphereType, color }, m_radius{ r }, mover{ -1 }
 	{
 		int temp = rand() % 300 + 100;
 		speed = ((float)temp) / 100.0f;
@@ -18,6 +18,8 @@ private:
 
 	int mover;
 	float speed;
+	/*
 	double padding[6];
 	float padding2;
+	*/
 };

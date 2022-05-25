@@ -207,7 +207,7 @@ void PrintMachine::SetPrintMode(PrintMachine::PrintMode mode)
 	m_printMode = mode;
 }
 
-const bool PrintMachine::ChangeSize(size_t x, size_t y)
+bool PrintMachine::ChangeSize(size_t x, size_t y)
 {
 	if (x > WIDTHLIMIT)
 		return false;
@@ -250,7 +250,7 @@ void PrintMachine::Fill(char character)
 {
 }
 
-const bool PrintMachine::Print()
+bool PrintMachine::Print()
 {
 	while (!m_terminateThread)
 	{

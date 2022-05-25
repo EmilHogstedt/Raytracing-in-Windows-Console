@@ -4,7 +4,7 @@
 
 Camera3D::Camera3D() :
 	m_pos{ Vector3() },
-	m_rot{ Vector3(0.0f, M_PI, 0.0f) },
+	m_rot{ Vector3(0.0f, static_cast<float>(M_PI), 0.0f) },
 	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
 	m_up{ Vector3(0.0f, 1.0f, 0.0f) },
 	m_forward{ Vector3(0.0f, 0.0f, 1.0f) },
@@ -17,8 +17,8 @@ Camera3D::Camera3D() :
 	m_hFar{0.0f},
 	m_wFar{0.0f}
 {
-	m_mouseCoords.X = -1.0f;
-	m_mouseCoords.Y = -1.0f;
+	m_mouseCoords.X = static_cast<SHORT>(-1.0f);
+	m_mouseCoords.Y = static_cast<SHORT>(-1.0f);
 }
 
 Camera3D::~Camera3D()
@@ -156,13 +156,13 @@ void Camera3D::SetPos(float x, float y, float z)
 }
 
 //Moves using the keymap.
-void Camera3D::Move(long double dt)
+void Camera3D::Move(float dt)
 {
 	float speed = 10.0f;
 
 	//Use the current right & forward vectors to calculate movement in the x-z plane.
-	Vector3 moveX = m_staticRight * (m_Keys.D - m_Keys.A);
-	Vector3 moveZ = m_staticForward * (m_Keys.W - m_Keys.S);
+	Vector3 moveX = m_staticRight * static_cast<float>(m_Keys.D - m_Keys.A);
+	Vector3 moveZ = m_staticForward * static_cast<float>(m_Keys.W - m_Keys.S);
 	//Then add those to the current posision.
 	m_pos.x = m_pos.x + (moveX.x * dt * speed) + (moveZ.x * dt * speed);
 	m_pos.z = m_pos.z + (moveX.z * dt * speed) + (moveZ.z * dt * speed);
@@ -180,13 +180,13 @@ void Camera3D::AddRot(short p, short y, short r)
 	m_rot.x -= ((float)p * speed);
 	m_rot.y += ((float)y * speed);
 	m_rot.z += ((float)r * speed);
-	if (m_rot.x > M_PI / 2.0)
+	if (m_rot.x > static_cast<float>(M_PI / 2.0))
 	{
-		m_rot.x = (M_PI / 2.0) - 0.0001;
+		m_rot.x = static_cast<float>((M_PI / 2.0) - 0.0001);
 	}
-	if (m_rot.x < -M_PI / 2.0)
+	if (m_rot.x < static_cast<float>(-M_PI / 2.0))
 	{
-		m_rot.x = (-M_PI / 2.0) + 0.0001;
+		m_rot.x = static_cast<float>((-M_PI / 2.0) + 0.0001);
 	}
 }
 
