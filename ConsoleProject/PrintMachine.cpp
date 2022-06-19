@@ -257,7 +257,7 @@ bool PrintMachine::Print()
 		m_timer->UpdatePrinting();
 		m_printingFpsCounter++;
 
-		m_printingFpsTimer += m_timer->DeltaTimePrinting();
+		m_printingFpsTimer += (float)m_timer->DeltaTimePrinting();
 
 		//Once every second we update the fps.
 		if (m_printingFpsTimer >= 1.0f)

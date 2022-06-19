@@ -201,8 +201,6 @@ __global__ void UpdateObjects(
 	{
 		return;
 	}
-	//Do culling, oct-tree, occlusion
-	//When this is implemented we have to make it its own kernel since all objects oct-tree node has to be updated before physics update starts.
 
 	//Do physics against objects in oct-tree nodes next to this object's node
 	Object3D* object = objects[index];
@@ -902,24 +900,6 @@ __global__ void RT(
 
 void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, float camFarDist, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
 {
-	//Update the objects. 1 thread per object.
-	unsigned int threadsPerBlock = deviceObjects.count;
-	unsigned int numberOfBlocks = 1;
-	if (deviceObjects.count > 1024)
-	{
-		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
-	}
-	dim3 gridDims(numberOfBlocks, 1, 1);
-	dim3 blockDims(threadsPerBlock, 1, 1);
-	
-	//If it is the first rendering loop we need to construct the octtree, so that we can access it in the physicsupdate. But otherwise it only has to be done after the physics update.
-	// 
-	//Physics update of the objects.
-	UpdateObjects<<<gridDims, blockDims>>>(
-		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
-		deviceObjects.count,
-		dt
-	);
 
 	//Classify the objects into the octtree.
 	//Mark objects within the frustum
@@ -934,6 +914,8 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
+	dim3 gridDims(1, 1, 1);
+	dim3 blockDims(1, 1, 1);
 	gridDims.x = static_cast<unsigned int>(std::ceil((float)(x + 1) / 16.0));
 	gridDims.y = static_cast<unsigned int>(std::ceil((float)y / 16.0));
 	blockDims.x = 16u;
@@ -972,6 +954,25 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	printMachine->SetBufferSwap(1);
 	printMachine->SetPrintSize(newSize);
 	printMachine->GetBackBufferMutex()->unlock();
+
+	//Update the objects. 1 thread per object.
+	unsigned int threadsPerBlock = deviceObjects.count;
+	unsigned int numberOfBlocks = 1;
+	if (deviceObjects.count > 1024)
+	{
+		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
+	}
+	gridDims.x = numberOfBlocks;
+	gridDims.y = 1;
+	blockDims.x = threadsPerBlock;
+	blockDims.y = 1;
+
+	//Physics update of the objects.
+	UpdateObjects << <gridDims, blockDims >> > (
+		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		deviceObjects.count,
+		dt
+		);
 	return;
 }
 
