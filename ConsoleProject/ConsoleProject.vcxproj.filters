@@ -71,6 +71,9 @@
     <ClInclude Include="MyMath.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="GridCell.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="RayTracing.cu">
@@ -86,6 +89,9 @@
       <Filter>Resource Files</Filter>
     </CudaCompile>
     <CudaCompile Include="MyMath.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="GridCell.cu">
       <Filter>Resource Files</Filter>
     </CudaCompile>
   </ItemGroup>

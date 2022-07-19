@@ -1,6 +1,7 @@
 #pragma once
 #include "Sphere.h"
 #include "Plane.h"
+#include "GridCell.h"
 
 #define FIVE_MEGABYTES 5000000
 #define HUNDRED_MEGABYTES 100000000
@@ -21,12 +22,19 @@ public:
 	void CreateSphere(float radius, Vector3 middlePos, Vector3 color);
 
 	DeviceObjectArray<Object3D*> GetObjects();
+	GridCell* GetGrid();
 private:
+	void CreateGrid(unsigned int size);
+
+
 	//Are these hostarrays even needed?
-	Sphere* m_hostSpheres;
-	Plane* m_hostPlanes;
+	//Sphere* m_hostSpheres;
+	//Plane* m_hostPlanes;
 
 	DeviceObjectArray<Object3D*> m_deviceObjects;
 	DeviceObjectArray<Plane> m_devicePlanes;
 	DeviceObjectArray<Sphere> m_deviceSpheres;
+	
+	const unsigned int m_gridSize = 50;
+	GridCell* m_deviceGrid = { 0 };
 };

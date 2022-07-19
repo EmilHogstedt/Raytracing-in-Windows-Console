@@ -4,6 +4,12 @@
 //Here the starter objects are created.
 void Scene3D::Init()
 {
+	//Allocate memory for the grid.
+	gpuErrchk(cudaMalloc(&(m_deviceGrid), HUNDRED_MEGABYTES));
+	gpuErrchk(cudaMemset(m_deviceGrid, 0, FIVE_MEGABYTES));
+	CreateGrid(m_gridSize);
+
+	//Allocating Objectarrays.
 	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray1), FIVE_MEGABYTES));
 	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray1, 0, FIVE_MEGABYTES));
 	m_deviceObjects.allocatedBytes = FIVE_MEGABYTES;
@@ -29,6 +35,21 @@ void Scene3D::Init()
 	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
 	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
 	CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
+}
+
+void Scene3D::CreateGrid(unsigned int size)
+{
+	for (unsigned int x = 0; x < size; x++)
+	{
+		for (unsigned int y = 0; x < size; x++)
+		{
+			for (unsigned int z = 0; x < size; x++)
+			{
+				GridCell newObject = GridCell(x, y, z);
+				gpuErrchk(cudaMemcpy(m_deviceGrid + x + y + z, &newObject, sizeof(GridCell), cudaMemcpyHostToDevice));
+			}
+		}
+	}
 }
 
 void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)
@@ -257,4 +278,9 @@ void Scene3D::CleanUp()
 DeviceObjectArray<Object3D*> Scene3D::GetObjects()
 {
 	return m_deviceObjects;
+}
+
+GridCell* Scene3D::GetGrid()
+{
+	return m_deviceGrid;
 }

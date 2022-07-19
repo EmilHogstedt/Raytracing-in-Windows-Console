@@ -127,9 +127,17 @@ void Engine3D::Render()
 	float element1 = m_camera->GetPMatrix().row1.x;
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
-	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 	PrintMachine::GetInstance()->ResetDeviceBackBuffer();
-	m_rayTracer->RayTracingWrapper(x, y, element1, element2, m_camera->GetFarPlaneDistance(), objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
+	m_rayTracer->RayTracingWrapper(
+		x, y,
+		element1, element2,
+		m_camera->GetFarPlaneDistance(),
+		m_scene->GetGrid(),
+		m_scene->GetObjects(),
+		m_deviceRayTracingParameters,
+		PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(),
+		m_timer->DeltaTimeRendering()
+	);
 }
 
 //Move this to an input handler.

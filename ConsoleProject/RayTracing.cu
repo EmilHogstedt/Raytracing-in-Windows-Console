@@ -226,7 +226,8 @@ __global__ void UpdateObjects(
 
 __global__ void AssignToGrid(
 	Object3D** objects,
-
+	unsigned int count,
+	GridCell* grid
 )
 {
 	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -240,12 +241,11 @@ __global__ void AssignToGrid(
 	{
 	case ObjectType::SphereType:
 	{
-		((Sphere*)object)->Update(dt);
 		break;
 	}
 	case ObjectType::PlaneType:
 	{
-		((Plane*)object)->Update(dt);
+		//((Plane*)object)->Update(dt);
 		break;
 	}
 	default:
@@ -923,7 +923,16 @@ __global__ void RT(
 	return;
 }
 
-void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, float camFarDist, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
+void RayTracer::RayTracingWrapper(
+	size_t x, size_t y,
+	float element1, float element2,
+	float camFarDist,
+	GridCell* deviceGrid,
+	DeviceObjectArray<Object3D*> deviceObjects,
+	RayTracingParameters* deviceParams,
+	char* deviceResultArray, std::mutex* backBufferMutex,
+	double dt
+)
 {
 	unsigned int threadsPerBlock = deviceObjects.count;
 	unsigned int numberOfBlocks = 1;
@@ -937,7 +946,8 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	//Classify the objects into the grid.
 	AssignToGrid<<<gridDims, blockDims>>>(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
-
+		deviceObjects.count,
+		deviceGrid
 	);
 	
 	//After we do the culling we check the remaining objects within the octtree and update their closest position to the camera.
