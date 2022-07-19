@@ -28,6 +28,7 @@ public:
 
 	//__device__ virtual void Update(long double) = 0; NOT POSSIBLE TO HAVE PURE VIRTUAL FUNCTIONS IN CUDA!!!!
 
+	__device__ void AddGridCell(Vector3 id);
 	__host__ __device__ ObjectType GetType();
 	__host__ __device__ Vector3 GetPos() const;
 	__host__ __device__ Vector3 GetColor();
@@ -38,4 +39,5 @@ protected:
 private:
 	ObjectType m_type;
 	Vector3 m_color;
+	std::vector<Vector3> m_GridCells;
 };

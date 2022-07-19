@@ -224,11 +224,36 @@ __global__ void UpdateObjects(
 	return;
 }
 
-__global__ void Culling(
+__global__ void AssignToGrid(
+	Object3D** objects,
 
 )
 {
+	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+	if (index >= count)
+	{
+		return;
+	}
 
+	Object3D* object = objects[index];
+	switch (object->GetType())
+	{
+	case ObjectType::SphereType:
+	{
+		((Sphere*)object)->Update(dt);
+		break;
+	}
+	case ObjectType::PlaneType:
+	{
+		((Plane*)object)->Update(dt);
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+	return;
 }
 
 __global__ void RT(
@@ -900,22 +925,27 @@ __global__ void RT(
 
 void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, float camFarDist, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
 {
+	unsigned int threadsPerBlock = deviceObjects.count;
+	unsigned int numberOfBlocks = 1;
+	if (deviceObjects.count > 1024)
+	{
+		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
+	}
+	dim3 gridDims(numberOfBlocks, 1, 1);
+	dim3 blockDims(threadsPerBlock, 1, 1);
 
-	//Classify the objects into the octtree.
-	//Mark objects within the frustum
-	/*
-	Culling<<<gridDims, blockDims>>>(
+	//Classify the objects into the grid.
+	AssignToGrid<<<gridDims, blockDims>>>(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 
 	);
-	*/
+	
 	//After we do the culling we check the remaining objects within the octtree and update their closest position to the camera.
 
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-	dim3 gridDims(1, 1, 1);
-	dim3 blockDims(1, 1, 1);
+
 	gridDims.x = static_cast<unsigned int>(std::ceil((float)(x + 1) / 16.0));
 	gridDims.y = static_cast<unsigned int>(std::ceil((float)y / 16.0));
 	blockDims.x = 16u;
@@ -956,12 +986,7 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	printMachine->GetBackBufferMutex()->unlock();
 
 	//Update the objects. 1 thread per object.
-	unsigned int threadsPerBlock = deviceObjects.count;
-	unsigned int numberOfBlocks = 1;
-	if (deviceObjects.count > 1024)
-	{
-		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
-	}
+	
 	gridDims.x = numberOfBlocks;
 	gridDims.y = 1;
 	blockDims.x = threadsPerBlock;
@@ -972,7 +997,8 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceObjects.count,
 		dt
-		);
+	);
+
 	return;
 }
 

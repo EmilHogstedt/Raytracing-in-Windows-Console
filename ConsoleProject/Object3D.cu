@@ -25,3 +25,8 @@ void Object3D::SetMiddlePos(Vector3 middlePos)
 {
 	m_middlePos = middlePos;
 }
+
+__device__ void AddGridCell(Vector3 id)
+{
+	m_GridCells.push_back(id);
+}
