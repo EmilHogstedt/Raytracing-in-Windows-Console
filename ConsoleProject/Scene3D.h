@@ -3,8 +3,6 @@
 #include "Plane.h"
 #include "GridCell.h"
 
-#define FIVE_MEGABYTES 5000000
-#define HUNDRED_MEGABYTES 100000000
 
 class Scene3D
 {
@@ -35,6 +33,6 @@ private:
 	DeviceObjectArray<Plane> m_devicePlanes;
 	DeviceObjectArray<Sphere> m_deviceSpheres;
 	
-	const unsigned int m_gridSize = 50;
+	const unsigned int m_gridSize = GRID_DIMENSIONS;
 	GridCell* m_deviceGrid = { 0 };
 };

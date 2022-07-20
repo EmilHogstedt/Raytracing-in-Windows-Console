@@ -34,7 +34,7 @@ void Scene3D::Init()
 	CreateSphere(10.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
 	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
 	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
-	CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
+	//CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
 
 void Scene3D::CreateGrid(unsigned int size)

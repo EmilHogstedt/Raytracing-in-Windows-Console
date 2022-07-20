@@ -277,6 +277,7 @@
     <ClCompile Include="Engine3D.cpp" />
     <ClCompile Include="Entrypoint.cpp" />
     <CudaCompile Include="GridCell.cu" />
+    <CudaCompile Include="Intersections.cu" />
     <CudaCompile Include="MyMath.cu">
       <FileType>Document</FileType>
     </CudaCompile>
@@ -309,6 +310,7 @@
     <ClInclude Include="Camera3D.h" />
     <ClInclude Include="Engine3D.h" />
     <ClInclude Include="GridCell.h" />
+    <ClInclude Include="Intersections.h" />
     <ClInclude Include="MyMath.h" />
     <ClInclude Include="Object3D.h" />
     <ClInclude Include="pch.h" />

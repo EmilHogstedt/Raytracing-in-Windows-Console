@@ -63,7 +63,7 @@ private:
 	Vector3 m_rot;
 	
 	float m_screenNear = 0.1f;
-	float m_screenFar = 250.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
+	float m_screenFar = 255.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
 	float m_hNear;
 	float m_wNear;
 	float m_hFar;

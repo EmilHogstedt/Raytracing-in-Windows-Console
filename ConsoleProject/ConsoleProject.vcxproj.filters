@@ -74,6 +74,9 @@
     <ClInclude Include="GridCell.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
+    <ClInclude Include="Intersections.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="RayTracing.cu">
@@ -92,6 +95,9 @@
       <Filter>Resource Files</Filter>
     </CudaCompile>
     <CudaCompile Include="GridCell.cu">
+      <Filter>Resource Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Intersections.cu">
       <Filter>Resource Files</Filter>
     </CudaCompile>
   </ItemGroup>

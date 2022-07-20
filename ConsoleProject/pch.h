@@ -34,6 +34,12 @@
 #define DBG_NEW new 
 #endif
 
+
+#define FIVE_MEGABYTES 5000000
+#define HUNDRED_MEGABYTES 100000000
+
+#define GRID_DIMENSIONS 51 //NEEDS TO BE UNEVEN
+
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include <string.h>

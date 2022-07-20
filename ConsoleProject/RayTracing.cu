@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "RayTracing.h"
+#include "Intersections.h"
 
 //Move all this to a different file.
 //Not allowed to change this code without making it GNU LGPL
@@ -224,10 +225,41 @@ __global__ void UpdateObjects(
 	return;
 }
 
+__device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsigned int idz, float gridCellWidth, float halfCellWidth, unsigned int offset, GridCell* grid, Object3D* object, Vector3 spherePos, float r2, bool* searched)
+{
+	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
+
+	if (searched[id]) //If we already searched this gridcell we return.
+	{
+		return;
+	}
+
+	//Calculate bMin & bMax
+	Vector3 bMin = Vector3(idx * gridCellWidth - halfCellWidth, idy * gridCellWidth - halfCellWidth, idz * gridCellWidth - halfCellWidth);
+	Vector3 bMax = bMin + gridCellWidth;
+
+	searched[id] = true;
+	if (SphereAABBIntersect(spherePos, r2, bMin, bMax))
+	{
+		grid[(idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset)].AddObjectToGridCell(object);
+
+		//Recursively call this function. But only if the sphereintersected with the AABB.
+		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+	}
+	return;
+}
+
 __global__ void AssignToGrid(
 	Object3D** objects,
 	unsigned int count,
-	GridCell* grid
+	GridCell* grid,
+	RayTracingParameters* params,
+	float gridCellWidth
 )
 {
 	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -241,6 +273,31 @@ __global__ void AssignToGrid(
 	{
 	case ObjectType::SphereType:
 	{
+		Vector3 spherePos = ((Sphere*)object)->GetPos();
+		float r2 = ((Sphere*)object)->GetRadius();
+		r2 *= r2;
+		Vector3 diff = spherePos - params->camPos;
+		unsigned int offset = (GRID_DIMENSIONS * 0.5f);
+
+		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS] = { false };
+
+		//Calculate ID for the gridcell where the center of the sphere is.
+		unsigned int idx = floorf(diff.x / gridCellWidth);
+		unsigned int idy = floorf(diff.y / gridCellWidth);
+		unsigned int idz = floorf(diff.z / gridCellWidth);
+
+		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
+		grid[id].AddObjectToGridCell(object);
+		searched[id] = true;
+
+		float halfCellWidth = (gridCellWidth * 0.5f);
+		//Go all 6 directions.
+		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
 		break;
 	}
 	case ObjectType::PlaneType:
@@ -258,6 +315,7 @@ __global__ void AssignToGrid(
 
 __global__ void RT(
 	Object3D** objects,
+	GridCell* grid,
 	unsigned int count,
 	size_t x,
 	size_t y,
@@ -947,7 +1005,9 @@ void RayTracer::RayTracingWrapper(
 	AssignToGrid<<<gridDims, blockDims>>>(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceObjects.count,
-		deviceGrid
+		deviceGrid,
+		deviceParams,
+		camFarDist / (GRID_DIMENSIONS / 2.0f)
 	);
 	
 	//After we do the culling we check the remaining objects within the octtree and update their closest position to the camera.
@@ -963,6 +1023,7 @@ void RayTracer::RayTracingWrapper(
 	
 	RT << <gridDims, blockDims >> > (
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		deviceGrid,
 		deviceObjects.count,
 		x,
 		y,

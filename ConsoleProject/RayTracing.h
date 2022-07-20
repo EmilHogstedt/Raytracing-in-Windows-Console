@@ -1,6 +1,8 @@
 #include "Sphere.h"
 #include "Plane.h"
 #include "PrintMachine.h"
+#include "GridCell.h"
+
 
 struct RayTracingParameters
 {
