@@ -225,7 +225,7 @@ __global__ void UpdateObjects(
 	return;
 }
 
-__device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsigned int idz, float gridCellWidth, float halfCellWidth, unsigned int offset, GridCell* grid, Object3D* object, Vector3 spherePos, float r2, bool* searched)
+__device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsigned int idz, float gridCellWidth, unsigned int offset, GridCell* grid, Object3D* object, Vector3 spherePos, float r2, bool* searched, Vector3 camPos)
 {
 	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 
@@ -235,7 +235,7 @@ __device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsi
 	}
 
 	//Calculate bMin & bMax
-	Vector3 bMin = Vector3(idx * gridCellWidth - halfCellWidth, idy * gridCellWidth - halfCellWidth, idz * gridCellWidth - halfCellWidth);
+	Vector3 bMin = Vector3(camPos.x + (idx * gridCellWidth) - (gridCellWidth * 0.5f), camPos.y + (idy * gridCellWidth) - (gridCellWidth * 0.5f), camPos.z + (idz * gridCellWidth) - (gridCellWidth * 0.5f));
 	Vector3 bMax = bMin + gridCellWidth;
 
 	searched[id] = true;
@@ -244,12 +244,12 @@ __device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsi
 		grid[(idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset)].AddObjectToGridCell(object);
 
 		//Recursively call this function. But only if the sphereintersected with the AABB.
-		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
 		return;
 	}
 	return;
@@ -274,19 +274,51 @@ __global__ void AssignToGrid(
 	{
 	case ObjectType::SphereType:
 	{
-		
+		float halfCellWidth = (gridCellWidth * 0.5f);
+
 		Vector3 spherePos = ((Sphere*)object)->GetPos();
 		float r2 = ((Sphere*)object)->GetRadius();
 		r2 *= r2;
-		Vector3 diff = spherePos - params->camPos;
+		Vector3 camPos = params->camPos;
+		Vector3 diff = spherePos - camPos;
 		unsigned int offset = ((GRID_DIMENSIONS - 1) * 0.5f);
 		
 		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS + 21] = { false };
 
 		//Calculate ID for the gridcell where the center of the sphere is.
-		unsigned int idx = floorf(diff.x / gridCellWidth);
-		unsigned int idy = floorf(diff.y / gridCellWidth);
-		unsigned int idz = floorf(diff.z / gridCellWidth);
+		unsigned int idx;
+		if (diff.x > 0)
+		{
+			diff.x += halfCellWidth;
+			idx = floorf(diff.x / gridCellWidth);
+		}
+		else
+		{
+			diff.x -= halfCellWidth;
+			idx = ceilf(diff.x / gridCellWidth);
+		}
+		unsigned int idy;
+		if (diff.y > 0)
+		{
+			diff.y += halfCellWidth;
+			idy = floorf(diff.y / gridCellWidth);
+		}
+		else
+		{
+			diff.y -= halfCellWidth;
+			idy = ceilf(diff.y / gridCellWidth);
+		}
+		unsigned int idz;
+		if (diff.z > 0)
+		{
+			diff.z += halfCellWidth;
+			idz = floorf(diff.z / gridCellWidth);
+		}
+		else
+		{
+			diff.z -= halfCellWidth;
+			idx = ceilf(diff.z / gridCellWidth);
+		}
 
 		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 		grid[id].AddObjectToGridCell(object);
@@ -295,15 +327,15 @@ __global__ void AssignToGrid(
 		
 		searched[id] = true;
 
-		float halfCellWidth = (gridCellWidth * 0.5f);
+		
 		
 		//Go all 6 directions.
-		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
-		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
 		break;
 	}
 	case ObjectType::PlaneType:
@@ -544,9 +576,12 @@ __global__ void RT(
 		}
 
 		
-		Vector3 bMin = Vector3((gridOffset + currentX + tempX) * gridCellWidth - halfCellWidth + cameraPos.x, (gridOffset + currentY + tempY) * gridCellWidth - halfCellWidth + cameraPos.y, (gridOffset + currentZ + tempZ) * gridCellWidth - halfCellWidth + cameraPos.z);
+		Vector3 bMin = Vector3(
+			cameraPos.x + (currentX + tempX) * gridCellWidth - halfCellWidth,
+			cameraPos.y + (currentY + tempY) * gridCellWidth - halfCellWidth,
+			cameraPos.z + (currentZ + tempZ) * gridCellWidth - halfCellWidth);
 		Vector3 bMax = bMin + gridCellWidth;
-		/*if (row == 50 && column == 200 && currentX == 0 && currentY == 0 && currentZ == 0)
+		/*if (row == 30 && column == 170 && currentX == 0 && currentY == 0 && currentZ == 0)
 		{
 			printf("\nBMIN: %f, %f, %f\n", bMin.x, bMin.y, bMin.z);
 			printf("BMAX: %f, %f, %f\n", bMax.x, bMax.y, bMax.z);
@@ -594,7 +629,10 @@ __global__ void RT(
 				tempY = 0;
 			}
 
-			bMin = Vector3((gridOffset + currentX + tempX) * gridCellWidth - halfCellWidth + cameraPos.x, (gridOffset + currentY + tempY) * gridCellWidth - halfCellWidth + cameraPos.y, (gridOffset + currentZ + tempZ) * gridCellWidth - halfCellWidth + cameraPos.z);
+			bMin = Vector3(
+				cameraPos.x + (currentX + tempX) * gridCellWidth - halfCellWidth,
+				cameraPos.y + (currentY + tempY) * gridCellWidth - halfCellWidth,
+				cameraPos.z + (currentZ + tempZ) * gridCellWidth - halfCellWidth);
 			bMax = bMin + gridCellWidth;
 
 			if (!RayAABBIntersect(bMin, bMax, cameraPos, directionWSpace))
@@ -660,15 +698,20 @@ __global__ void RT(
 				float closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
 				if (closestPoint != -1.0f)
 				{
-					closest = closestPoint;
-					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
-					bestNormal = normalSphere;
+					Vector3 point = cameraPos + directionWSpace * closest;
+					//Make sure the point is in the box we are checking atm.
+					if (point.x >= bMin.x && point.x <= bMax.x && point.y >= bMin.y && point.y <= bMax.y && point.z >= bMin.z && point.z <= bMax.z)
+					{
+						closest = closestPoint;
+						Vector3 normalSphere = (point - spherePos).Normalize();
+						bestNormal = normalSphere;
 
-					//The vector 3 here is just to make the spheres not "follow" the player.
-					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = localSphere.GetColor();
+						//The vector 3 here is just to make the spheres not "follow" the player.
+						shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+						bestColor = localSphere.GetColor();
 
-					hitSomething = true;
+						hitSomething = true;
+					}
 				}
 			}
 			else if (type == ObjectType::PlaneType)
@@ -1077,7 +1120,7 @@ __global__ void RT(
 		}
 	}
 	
-	if (row == 50 && column == 200)
+	if (row == 30 && column == 170)
 	{
 		data = 'x';
 		bestColor = Vector3(255, 255, 255);
