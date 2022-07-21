@@ -366,8 +366,12 @@ __global__ void RT(
 	char data = ' ';
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
+	bool hitSomething = false;
 	Vector3 bestColor = Vector3(255, 255, 255);
 	Vector3 bestNormal = Vector3(1.0f, 0.0f, 0.0f);
+
+	float gridCellWidth = camFarDist / (GRID_DIMENSIONS * 0.5f);
+	float halfCellWidth = gridCellWidth * 0.5f;
 
 	//Localizing variables.
 	Vector3 cameraPos = params->camPos;
@@ -387,37 +391,19 @@ __global__ void RT(
 		{
 			Sphere localSphere = *((Sphere*)(grid[id].GetCellObject(i)));
 			Vector3 spherePos = localSphere.GetPos();
-			Vector3 objectToCam = cameraPos - spherePos;
-			float radius = localSphere.GetRadius();
-			float b = 2.0f * Dot(directionWSpace, objectToCam);
-			float c = Dot(objectToCam, objectToCam) - (radius * radius);
 
-			float discriminant = b * b - fourA * c;
-
-			//It hit
-			if (discriminant >= 0.0f)
+			float closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
+			if (closestPoint != -1.0f)
 			{
-				float sqrtDiscriminant = sqrt(discriminant);
-				float minusB = -b;
-				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
-				float t2 = (minusB - sqrtDiscriminant) * divTwoA;
+				closest = closestPoint;
+				Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+				bestNormal = normalSphere;
 
-				//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
-				if (t1 > t2 && t2 >= 0.0f)
-				{
-					t1 = t2;
-				}
+				//The vector 3 here is just to make the spheres not "follow" the player.
+				shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+				bestColor = localSphere.GetColor();
 
-				if (t1 < closest && t1 > 0.0f)
-				{
-					closest = t1;
-					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
-					bestNormal = normalSphere;
-
-					//The vector 3 here is just to make the spheres not "follow" the player.
-					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = localSphere.GetColor();
-				}
+				hitSomething = true;
 			}
 		}
 		else if (type == ObjectType::PlaneType)
@@ -456,7 +442,272 @@ __global__ void RT(
 		}
 	}
 
+	int first = 0;
+	int second = 0;
+	int third = 0;
+	//In here we calculate the most likely direction for the next box.
+	{
+		if (abs(directionWSpace.x) > abs(directionWSpace.y))
+		{
+			if (abs(directionWSpace.x) > abs(directionWSpace.z))
+			{
+				first = 1;
+				if (abs(directionWSpace.y) > abs(directionWSpace.z))
+				{
+					second = 2;
+					third = 3;
+				}
+				else
+				{
+					second = 3;
+					third = 2;
+				}
+			}
+			else
+			{
+				first = 3;
+				second = 1;
+				third = 2;
+			}
+		}
+		else
+		{
+			if (abs(directionWSpace.y) > abs(directionWSpace.z))
+			{
+				first = 2;
+				if (abs(directionWSpace.x) > abs(directionWSpace.z))
+				{
+					second = 1;
+					third = 3;
+				}
+				else
+				{
+					second = 3;
+					third = 1;
+				}
+			}
+			else
+			{
+				first = 3;
+				second = 2;
+				third = 1;
+			}
+		}
+	}
+	
+	int currentX = 0;
+	int currentY = 0;
+	int currentZ = 0;
+	while (!hitSomething)
+	{
+		int tempX = 0;
+		int tempY = 0;
+		int tempZ = 0;
+		if (first == 1)
+		{
+			if (directionWSpace.x < 0)
+			{
+				tempX = -1;
+			}
+			else
+			{
+				tempX = 1;
+			}
+			tempY = 0;
+			tempZ = 0;
+		}
+		else if (first == 2)
+		{
+			if (directionWSpace.y < 0)
+			{
+				tempY = -1;
+			}
+			else
+			{
+				tempY = 1;
+			}
+			tempX = 0;
+			tempZ = 0;
+		}
+		else
+		{
+			if (directionWSpace.z < 0)
+			{
+				tempZ = -1;
+			}
+			else
+			{
+				tempZ = 1;
+			}
+			tempX = 0;
+			tempY = 0;
+		}
 
+		
+		Vector3 bMin = Vector3((gridOffset + currentX + tempX) * gridCellWidth - halfCellWidth + cameraPos.x, (gridOffset + currentY + tempY) * gridCellWidth - halfCellWidth + cameraPos.y, (gridOffset + currentZ + tempZ) * gridCellWidth - halfCellWidth + cameraPos.z);
+		Vector3 bMax = bMin + gridCellWidth;
+		/*if (row == 50 && column == 200 && currentX == 0 && currentY == 0 && currentZ == 0)
+		{
+			printf("\nBMIN: %f, %f, %f\n", bMin.x, bMin.y, bMin.z);
+			printf("BMAX: %f, %f, %f\n", bMax.x, bMax.y, bMax.z);
+		}*/
+
+		if (!RayAABBIntersect(bMin, bMax, cameraPos, directionWSpace))
+		{
+			if (second == 1)
+			{
+				if (directionWSpace.x < 0)
+				{
+					tempX = -1;
+				}
+				else
+				{
+					tempX = 1;
+				}
+				tempY = 0;
+				tempZ = 0;
+			}
+			else if (second == 2)
+			{
+				if (directionWSpace.y < 0)
+				{
+					tempY = -1;
+				}
+				else
+				{
+					tempY = 1;
+				}
+				tempX = 0;
+				tempZ = 0;
+			}
+			else
+			{
+				if (directionWSpace.z < 0)
+				{
+					tempZ = -1;
+				}
+				else
+				{
+					tempZ = 1;
+				}
+				tempX = 0;
+				tempY = 0;
+			}
+
+			bMin = Vector3((gridOffset + currentX + tempX) * gridCellWidth - halfCellWidth + cameraPos.x, (gridOffset + currentY + tempY) * gridCellWidth - halfCellWidth + cameraPos.y, (gridOffset + currentZ + tempZ) * gridCellWidth - halfCellWidth + cameraPos.z);
+			bMax = bMin + gridCellWidth;
+
+			if (!RayAABBIntersect(bMin, bMax, cameraPos, directionWSpace))
+			{
+				if (third == 1)
+				{
+					if (directionWSpace.x < 0)
+					{
+						tempX = -1;
+					}
+					else
+					{
+						tempX = 1;
+					}
+				}
+				else if (third == 2)
+				{
+					if (directionWSpace.y < 0)
+					{
+						tempY = -1;
+					}
+					else
+					{
+						tempY = 1;
+					}
+				}
+				else
+				{
+					if (directionWSpace.z < 0)
+					{
+						tempZ = -1;
+					}
+					else
+					{
+						tempZ = 1;
+					}
+				}
+			}
+		}
+		currentX += tempX;
+		currentY += tempY;
+		currentZ += tempZ;
+
+		if (abs(currentX) > gridOffset || abs(currentY) > gridOffset || abs(currentZ) > gridOffset)
+		{
+			break;
+		}
+
+		id = gridOffset + currentX + GRID_DIMENSIONS * (gridOffset + currentY) + GRID_DIMENSIONS * GRID_DIMENSIONS * (gridOffset + currentZ);
+
+		
+		for (size_t i = 0; i < grid[id].GetObjectCount(); i++)
+		{
+			Object3D localObject = *(grid[id].GetCellObject(i));
+
+			ObjectType type = localObject.GetType();
+			//Ray-Sphere intersection test.
+			if (type == ObjectType::SphereType)
+			{
+				Sphere localSphere = *((Sphere*)(grid[id].GetCellObject(i)));
+				Vector3 spherePos = localSphere.GetPos();
+
+				float closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
+				if (closestPoint != -1.0f)
+				{
+					closest = closestPoint;
+					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+					bestNormal = normalSphere;
+
+					//The vector 3 here is just to make the spheres not "follow" the player.
+					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+					bestColor = localSphere.GetColor();
+
+					hitSomething = true;
+				}
+			}
+			else if (type == ObjectType::PlaneType)
+			{
+				Plane localPlane = *((Plane*)(grid[id].GetCellObject(i)));
+				Vector3 planeNormal = localPlane.GetNormal();
+				//Check if they are paralell, if not it hit.
+				float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
+				if (dotLineAndPlaneNormal != 0.0f)
+				{
+					float t1 = Dot((localPlane.GetPos() - cameraPos), planeNormal) / dotLineAndPlaneNormal;
+
+					if (t1 > 0.0f)
+					{
+						if (t1 < closest)
+						{
+							Vector3 p = cameraPos + (directionWSpace * t1);
+							if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
+							{
+								shadingValue = Dot(planeNormal, Vector3(1.0f, 0.0f, 0.0f));
+
+								//Comment in this if statement to get "backface" culling for planes.
+								//if (shadingValue > 0.0f) {
+								closest = t1;
+								//}
+								bestColor = localPlane.GetColor();
+								bestNormal = planeNormal;
+								if (dotLineAndPlaneNormal > 0.0f)
+								{
+									bestNormal *= -1;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	/*
 	//Ray trace against every object.
 	for (size_t i = 0; i < localCount; i++)
@@ -826,6 +1077,12 @@ __global__ void RT(
 		}
 	}
 	
+	if (row == 50 && column == 200)
+	{
+		data = 'x';
+		bestColor = Vector3(255, 255, 255);
+		bestNormal = Vector3(1.0f, 0.0f, 0.0f);
+	}
 	//Now we need to take the raytraced information and output it to our result array of chars.
 	//If the mode is not RGB we need to convert the colors to 8bit.
 	if (mode == PrintMachine::PIXEL || mode == PrintMachine::ASCII)
