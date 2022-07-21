@@ -5,8 +5,8 @@
 void Scene3D::Init()
 {
 	//Allocate memory for the grid.
-	gpuErrchk(cudaMalloc(&(m_deviceGrid), HUNDRED_MEGABYTES));
-	gpuErrchk(cudaMemset(m_deviceGrid, 0, FIVE_MEGABYTES));
+	gpuErrchk(cudaMalloc(&(m_deviceGrid), 2 * HUNDRED_MEGABYTES));
+	gpuErrchk(cudaMemset(m_deviceGrid, 0, 2 * HUNDRED_MEGABYTES));
 	CreateGrid(m_gridSize);
 
 	//Allocating Objectarrays.
@@ -29,11 +29,11 @@ void Scene3D::Init()
 	m_deviceSpheres.using1st = true;
 
 	//Temporary.
-	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
-	CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
-	CreateSphere(10.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
-	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
-	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
+	//CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
+	//CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
+	CreateSphere(1.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
+	//CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
+	//CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
 	//CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
 
@@ -41,15 +41,16 @@ void Scene3D::CreateGrid(unsigned int size)
 {
 	for (unsigned int x = 0; x < size; x++)
 	{
-		for (unsigned int y = 0; x < size; x++)
+		for (unsigned int y = 0; y < size; y++)
 		{
-			for (unsigned int z = 0; x < size; x++)
+			for (unsigned int z = 0; z < size; z++)
 			{
 				GridCell newObject = GridCell(x, y, z);
-				gpuErrchk(cudaMemcpy(m_deviceGrid + x + y + z, &newObject, sizeof(GridCell), cudaMemcpyHostToDevice));
+				gpuErrchk(cudaMemcpy(m_deviceGrid + ((x * size * size) + (y * size) + z), &newObject, sizeof(GridCell), cudaMemcpyHostToDevice));
 			}
 		}
 	}
+	return;
 }
 
 void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)

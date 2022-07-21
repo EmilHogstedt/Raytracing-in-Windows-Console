@@ -1,7 +1,7 @@
 #pragma once
 #include "Object3D.h"
 
-class Sphere : public Object3D
+class __align__(16) Sphere : public Object3D
 {
 public:
 	Sphere(Vector3 middle, float r, Vector3 color) :
@@ -18,8 +18,4 @@ private:
 
 	int mover;
 	float speed;
-	/*
-	double padding[6];
-	float padding2;
-	*/
 };

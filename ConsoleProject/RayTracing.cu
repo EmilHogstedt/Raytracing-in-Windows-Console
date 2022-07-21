@@ -209,7 +209,7 @@ __global__ void UpdateObjects(
 	{
 	case ObjectType::SphereType:
 	{
-		((Sphere*)object)->Update(dt);
+		//((Sphere*)object)->Update(dt);
 		break;
 	}
 	case ObjectType::PlaneType:
@@ -250,6 +250,7 @@ __device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsi
 		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
 		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
 		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
+		return;
 	}
 	return;
 }
@@ -273,13 +274,14 @@ __global__ void AssignToGrid(
 	{
 	case ObjectType::SphereType:
 	{
+		
 		Vector3 spherePos = ((Sphere*)object)->GetPos();
 		float r2 = ((Sphere*)object)->GetRadius();
 		r2 *= r2;
 		Vector3 diff = spherePos - params->camPos;
-		unsigned int offset = (GRID_DIMENSIONS * 0.5f);
-
-		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS] = { false };
+		unsigned int offset = ((GRID_DIMENSIONS - 1) * 0.5f);
+		
+		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS + 21] = { false };
 
 		//Calculate ID for the gridcell where the center of the sphere is.
 		unsigned int idx = floorf(diff.x / gridCellWidth);
@@ -288,9 +290,13 @@ __global__ void AssignToGrid(
 
 		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 		grid[id].AddObjectToGridCell(object);
+
+		//object->AddGridCell(grid + id); //Will be needed later for object physicsupdate.
+		
 		searched[id] = true;
 
 		float halfCellWidth = (gridCellWidth * 0.5f);
+		
 		//Go all 6 directions.
 		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
 		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, halfCellWidth, offset, grid, object, spherePos, r2, searched);
@@ -314,7 +320,6 @@ __global__ void AssignToGrid(
 }
 
 __global__ void RT(
-	Object3D** objects,
 	GridCell* grid,
 	unsigned int count,
 	size_t x,
@@ -361,13 +366,98 @@ __global__ void RT(
 	char data = ' ';
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
-	Vector3 bestColor;
-	Vector3 bestNormal;
+	Vector3 bestColor = Vector3(255, 255, 255);
+	Vector3 bestNormal = Vector3(1.0f, 0.0f, 0.0f);
 
 	//Localizing variables.
 	Vector3 cameraPos = params->camPos;
 	size_t localCount = count;
 	
+	unsigned int gridOffset = ((GRID_DIMENSIONS - 1) * 0.5f); //index of player's position.
+	unsigned int id = gridOffset + GRID_DIMENSIONS * gridOffset + GRID_DIMENSIONS * GRID_DIMENSIONS * gridOffset;
+
+	//First check if any objects exist in the player's gridcell.
+	for (size_t i = 0; i < grid[id].GetObjectCount(); i++)
+	{
+		Object3D localObject = *(grid[id].GetCellObject(i));
+
+		ObjectType type = localObject.GetType();
+		//Ray-Sphere intersection test.
+		if (type == ObjectType::SphereType)
+		{
+			Sphere localSphere = *((Sphere*)(grid[id].GetCellObject(i)));
+			Vector3 spherePos = localSphere.GetPos();
+			Vector3 objectToCam = cameraPos - spherePos;
+			float radius = localSphere.GetRadius();
+			float b = 2.0f * Dot(directionWSpace, objectToCam);
+			float c = Dot(objectToCam, objectToCam) - (radius * radius);
+
+			float discriminant = b * b - fourA * c;
+
+			//It hit
+			if (discriminant >= 0.0f)
+			{
+				float sqrtDiscriminant = sqrt(discriminant);
+				float minusB = -b;
+				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
+				float t2 = (minusB - sqrtDiscriminant) * divTwoA;
+
+				//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
+				if (t1 > t2 && t2 >= 0.0f)
+				{
+					t1 = t2;
+				}
+
+				if (t1 < closest && t1 > 0.0f)
+				{
+					closest = t1;
+					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+					bestNormal = normalSphere;
+
+					//The vector 3 here is just to make the spheres not "follow" the player.
+					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+					bestColor = localSphere.GetColor();
+				}
+			}
+		}
+		else if (type == ObjectType::PlaneType)
+		{
+			Plane localPlane = *((Plane*)(grid[id].GetCellObject(i)));
+			Vector3 planeNormal = localPlane.GetNormal();
+			//Check if they are paralell, if not it hit.
+			float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
+			if (dotLineAndPlaneNormal != 0.0f)
+			{
+				float t1 = Dot((localPlane.GetPos() - cameraPos), planeNormal) / dotLineAndPlaneNormal;
+
+				if (t1 > 0.0f)
+				{
+					if (t1 < closest)
+					{
+						Vector3 p = cameraPos + (directionWSpace * t1);
+						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
+						{
+							shadingValue = Dot(planeNormal, Vector3(1.0f, 0.0f, 0.0f));
+
+							//Comment in this if statement to get "backface" culling for planes.
+							//if (shadingValue > 0.0f) {
+							closest = t1;
+							//}
+							bestColor = localPlane.GetColor();
+							bestNormal = planeNormal;
+							if (dotLineAndPlaneNormal > 0.0f)
+							{
+								bestNormal *= -1;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+	/*
 	//Ray trace against every object.
 	for (size_t i = 0; i < localCount; i++)
 	{
@@ -453,8 +543,10 @@ __global__ void RT(
 			
 		}
 	}
+	*/
 
 	//Dont open this. Here be dragons. Print characters for ASCII mode.
+	{}
 	{
 		//I warned u
 	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
@@ -981,6 +1073,13 @@ __global__ void RT(
 	return;
 }
 
+__global__ void ResetGrid(GridCell* grid)
+{
+	unsigned int id = threadIdx.x * GRID_DIMENSIONS * GRID_DIMENSIONS + blockIdx.x * GRID_DIMENSIONS + blockIdx.y;
+	grid[id].Reset();
+	return;
+}
+
 void RayTracer::RayTracingWrapper(
 	size_t x, size_t y,
 	float element1, float element2,
@@ -1010,19 +1109,17 @@ void RayTracer::RayTracingWrapper(
 		camFarDist / (GRID_DIMENSIONS / 2.0f)
 	);
 	
-	//After we do the culling we check the remaining objects within the octtree and update their closest position to the camera.
+	gpuErrchk(cudaDeviceSynchronize());
 
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-
 	gridDims.x = static_cast<unsigned int>(std::ceil((float)(x + 1) / 16.0));
 	gridDims.y = static_cast<unsigned int>(std::ceil((float)y / 16.0));
 	blockDims.x = 16u;
 	blockDims.y = 16u;
 	
 	RT << <gridDims, blockDims >> > (
-		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceGrid,
 		deviceObjects.count,
 		x,
@@ -1069,7 +1166,19 @@ void RayTracer::RayTracingWrapper(
 		deviceObjects.count,
 		dt
 	);
+	gpuErrchk(cudaDeviceSynchronize());
 
+	
+	gridDims.x = GRID_DIMENSIONS;
+	gridDims.y = GRID_DIMENSIONS;
+	blockDims.x = GRID_DIMENSIONS;
+	blockDims.y = 1;
+	blockDims.z = 1;
+	
+	ResetGrid << <gridDims, blockDims>> > (
+		deviceGrid
+	);
+	gpuErrchk(cudaDeviceSynchronize());
 	return;
 }
 

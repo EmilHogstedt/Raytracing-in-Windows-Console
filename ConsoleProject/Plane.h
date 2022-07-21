@@ -1,7 +1,7 @@
 #pragma once
 #include "Object3D.h"
 
-class Plane : public Object3D
+class __align__(16) Plane : public Object3D
 {
 public:
 	Plane(Vector3 point, Vector3 normal, Vector3 color) :
@@ -21,7 +21,4 @@ public:
 	__host__ __device__ Vector3 GetNormal();
 private:
 	Vector3 m_normal;
-	/*
-	double padding[4];
-	float padding2;*/
 };

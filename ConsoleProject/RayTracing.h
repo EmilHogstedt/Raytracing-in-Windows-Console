@@ -15,6 +15,8 @@ class RayTracer
 public:
 	RayTracer()
 	{
+		cudaDeviceSetLimit(cudaLimitStackSize, 10000);
+
 		size_t size = sizeof(char) * PrintMachine::GetInstance()->GetMaxSize();
 		m_hostResultArray = (char*)malloc(size);
 		if (m_hostResultArray)

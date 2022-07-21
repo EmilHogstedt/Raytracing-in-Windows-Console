@@ -283,6 +283,7 @@ bool PrintMachine::Print()
 
 		//Clear the console and print the data.
 		//system("cls");
+		
 		ClearConsole();
 		fwrite(m_printBuffer, 1, m_printSize, stdout);
 		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
