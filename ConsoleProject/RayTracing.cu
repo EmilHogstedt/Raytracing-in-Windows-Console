@@ -286,7 +286,7 @@ __global__ void AssignToGrid(
 		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS + 21] = { false };
 
 		//Calculate ID for the gridcell where the center of the sphere is.
-		unsigned int idx;
+		int idx;
 		if (diff.x > 0)
 		{
 			diff.x += halfCellWidth;
@@ -297,7 +297,7 @@ __global__ void AssignToGrid(
 			diff.x -= halfCellWidth;
 			idx = ceilf(diff.x / gridCellWidth);
 		}
-		unsigned int idy;
+		int idy;
 		if (diff.y > 0)
 		{
 			diff.y += halfCellWidth;
@@ -308,7 +308,7 @@ __global__ void AssignToGrid(
 			diff.y -= halfCellWidth;
 			idy = ceilf(diff.y / gridCellWidth);
 		}
-		unsigned int idz;
+		int idz;
 		if (diff.z > 0)
 		{
 			diff.z += halfCellWidth;
@@ -317,9 +317,9 @@ __global__ void AssignToGrid(
 		else
 		{
 			diff.z -= halfCellWidth;
-			idx = ceilf(diff.z / gridCellWidth);
+			idz = ceilf(diff.z / gridCellWidth);
 		}
-
+		//printf("\n%d, %d, %d\n", idx, idy, idz);
 		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 		grid[id].AddObjectToGridCell(object);
 
@@ -426,23 +426,19 @@ __global__ void RT(
 			Sphere localSphere = *((Sphere*)(grid[id].GetCellObject(i)));
 			Vector3 spherePos = localSphere.GetPos();
 
-			float closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
-			if (closestPoint != -1.0f)
+			Vector2 closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
+			if (closestPoint.x != -1.0f)
 			{
-				Vector3 point = cameraPos + directionWSpace * closestPoint;
 				//Make sure the point is in the box we are checking atm.
-				if (point.x >= bMin.x && point.x <= bMax.x && point.y >= bMin.y && point.y <= bMax.y && point.z >= bMin.z && point.z <= bMax.z)
-				{
-					closest = closestPoint;
-					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
-					bestNormal = normalSphere;
+				closest = closestPoint.x;
+				Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+				bestNormal = normalSphere;
 
-					//The vector 3 here is just to make the spheres not "follow" the player.
-					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = localSphere.GetColor();
+				//The vector 3 here is just to make the spheres not "follow" the player.
+				shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+				bestColor = localSphere.GetColor();
 
-					hitSomething = true;
-				}
+				hitSomething = true;
 			}
 		}
 		else if (type == ObjectType::PlaneType)
@@ -537,6 +533,8 @@ __global__ void RT(
 	int currentX = 0;
 	int currentY = 0;
 	int currentZ = 0;
+	Vector3 bMinTemp;
+	Vector3 bMaxTemp;
 	while (!hitSomething)
 	{
 		int tempX = 0;
@@ -544,7 +542,7 @@ __global__ void RT(
 		int tempZ = 0;
 		if (first == 1)
 		{
-			if (directionWSpace.x < 0)
+			if (directionWSpace.x < 0.0f)
 			{
 				tempX = -1;
 			}
@@ -557,7 +555,7 @@ __global__ void RT(
 		}
 		else if (first == 2)
 		{
-			if (directionWSpace.y < 0)
+			if (directionWSpace.y < 0.0f)
 			{
 				tempY = -1;
 			}
@@ -570,7 +568,7 @@ __global__ void RT(
 		}
 		else
 		{
-			if (directionWSpace.z < 0)
+			if (directionWSpace.z < 0.0f)
 			{
 				tempZ = -1;
 			}
@@ -582,23 +580,15 @@ __global__ void RT(
 			tempY = 0;
 		}
 
-		
-		bMin = Vector3(
-			cameraPos.x + (currentX + tempX) * gridCellWidth - halfCellWidth,
-			cameraPos.y + (currentY + tempY) * gridCellWidth - halfCellWidth,
-			cameraPos.z + (currentZ + tempZ) * gridCellWidth - halfCellWidth);
-		bMax = bMin + gridCellWidth;
-		/*if (row == 30 && column == 170 && currentX == 0 && currentY == 0 && currentZ == 0)
-		{
-			printf("\nBMIN: %f, %f, %f\n", bMin.x, bMin.y, bMin.z);
-			printf("BMAX: %f, %f, %f\n", bMax.x, bMax.y, bMax.z);
-		}*/
+		bMinTemp = Vector3(bMin.x + tempX * gridCellWidth, bMin.y + tempY * gridCellWidth, bMin.z + tempZ * gridCellWidth);
+		bMaxTemp = bMinTemp + gridCellWidth;
 
-		if (!RayAABBIntersect(bMin, bMax, cameraPos, directionWSpace))
+
+		if (!RayAABBIntersect(bMinTemp, bMaxTemp, cameraPos, directionWSpace))
 		{
 			if (second == 1)
 			{
-				if (directionWSpace.x < 0)
+				if (directionWSpace.x < 0.0f)
 				{
 					tempX = -1;
 				}
@@ -611,7 +601,7 @@ __global__ void RT(
 			}
 			else if (second == 2)
 			{
-				if (directionWSpace.y < 0)
+				if (directionWSpace.y < 0.0f)
 				{
 					tempY = -1;
 				}
@@ -624,7 +614,7 @@ __global__ void RT(
 			}
 			else
 			{
-				if (directionWSpace.z < 0)
+				if (directionWSpace.z < 0.0f)
 				{
 					tempZ = -1;
 				}
@@ -636,17 +626,14 @@ __global__ void RT(
 				tempY = 0;
 			}
 
-			bMin = Vector3(
-				cameraPos.x + (currentX + tempX) * gridCellWidth - halfCellWidth,
-				cameraPos.y + (currentY + tempY) * gridCellWidth - halfCellWidth,
-				cameraPos.z + (currentZ + tempZ) * gridCellWidth - halfCellWidth);
-			bMax = bMin + gridCellWidth;
+			bMinTemp = Vector3(bMin.x + tempX * gridCellWidth, bMin.y + tempY * gridCellWidth, bMin.z + tempZ * gridCellWidth);
+			bMaxTemp = bMinTemp + gridCellWidth;
 
-			if (!RayAABBIntersect(bMin, bMax, cameraPos, directionWSpace))
+			if (!RayAABBIntersect(bMinTemp, bMaxTemp, cameraPos, directionWSpace))
 			{
 				if (third == 1)
 				{
-					if (directionWSpace.x < 0)
+					if (directionWSpace.x < 0.0f)
 					{
 						tempX = -1;
 					}
@@ -657,7 +644,7 @@ __global__ void RT(
 				}
 				else if (third == 2)
 				{
-					if (directionWSpace.y < 0)
+					if (directionWSpace.y < 0.0f)
 					{
 						tempY = -1;
 					}
@@ -668,7 +655,7 @@ __global__ void RT(
 				}
 				else
 				{
-					if (directionWSpace.z < 0)
+					if (directionWSpace.z < 0.0f)
 					{
 						tempZ = -1;
 					}
@@ -678,13 +665,13 @@ __global__ void RT(
 					}
 				}
 
-				bMin = Vector3(
-					cameraPos.x + (currentX + tempX) * gridCellWidth - halfCellWidth,
-					cameraPos.y + (currentY + tempY) * gridCellWidth - halfCellWidth,
-					cameraPos.z + (currentZ + tempZ) * gridCellWidth - halfCellWidth);
-				bMax = bMin + gridCellWidth;
+				bMinTemp = Vector3(bMin.x + tempX * gridCellWidth, bMin.y + tempY * gridCellWidth, bMin.z + tempZ * gridCellWidth);
+				bMaxTemp = bMinTemp + gridCellWidth;
 			}
 		}
+		bMin = bMinTemp;
+		bMax = bMaxTemp;
+
 		currentX += tempX;
 		currentY += tempY;
 		currentZ += tempZ;
@@ -708,15 +695,28 @@ __global__ void RT(
 				Sphere localSphere = *((Sphere*)(grid[id].GetCellObject(i)));
 				Vector3 spherePos = localSphere.GetPos();
 
-				float closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
-				if (closestPoint != -1.0f)
+				Vector2 closestPoint = RaySphereIntersect(spherePos, cameraPos - spherePos, localSphere.GetRadius(), directionWSpace, fourA, divTwoA, closest);
+				if (closestPoint.x != -1.0f)
 				{
-					Vector3 point = cameraPos + directionWSpace * closestPoint;
+					Vector3 point1 = cameraPos + directionWSpace * closestPoint.x;
+					Vector3 point2 = cameraPos + directionWSpace * closestPoint.y;
 					//Make sure the point is in the box we are checking atm.
-					if (point.x >= bMin.x && point.x <= bMax.x && point.y >= bMin.y && point.y <= bMax.y && point.z >= bMin.z && point.z <= bMax.z)
+					if ((point1.x >= bMin.x && point1.x <= bMax.x && point1.y >= bMin.y && point1.y <= bMax.y && point1.z >= bMin.z && point1.z <= bMax.z))
 					{
-						closest = closestPoint;
-						Vector3 normalSphere = (point - spherePos).Normalize();
+						closest = closestPoint.x;
+						Vector3 normalSphere = (point1 - spherePos).Normalize();
+						bestNormal = normalSphere;
+
+						//The vector 3 here is just to make the spheres not "follow" the player.
+						shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+						bestColor = localSphere.GetColor();
+
+						hitSomething = true;
+					}
+					else if ((point2.x >= bMin.x && point2.x <= bMax.x && point2.y >= bMin.y && point2.y <= bMax.y && point2.z >= bMin.z && point2.z <= bMax.z))
+					{
+						closest = closestPoint.y;
+						Vector3 normalSphere = (point1 - spherePos).Normalize(); //Use point1 to get proper shading.
 						bestNormal = normalSphere;
 
 						//The vector 3 here is just to make the spheres not "follow" the player.
@@ -763,94 +763,6 @@ __global__ void RT(
 			}
 		}
 	}
-	
-	/*
-	//Ray trace against every object.
-	for (size_t i = 0; i < localCount; i++)
-	{
-		//Localize the current object.
-		Object3D localObject = *objects[i];
-		//Here we need to check if the object is culled, if it is we continue on the next object.
-		
-
-		ObjectType type = localObject.GetType();
-		//Ray-Sphere intersection test.
-		if (type == ObjectType::SphereType)
-		{
-			Sphere localSphere = *(Sphere*)(objects[i]);
-			Vector3 spherePos = localSphere.GetPos();
-
-			Vector3 objectToCam = cameraPos - spherePos;
-			float radius = localSphere.GetRadius();
-
-			float b = 2.0f * Dot(directionWSpace, objectToCam);
-			float c = Dot(objectToCam, objectToCam) - (radius * radius);
-
-			float discriminant = b * b - fourA * c;
-
-			//It hit
-			if (discriminant >= 0.0f)
-			{
-				float sqrtDiscriminant = sqrt(discriminant);
-				float minusB = -b;
-				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
-				float t2 = (minusB - sqrtDiscriminant) * divTwoA;
-
-				//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
-				if (t1 > t2 && t2 >= 0.0f)
-				{
-					t1 = t2;
-				}
-
-				if (t1 < closest && t1 > 0.0f)
-				{
-					closest = t1;
-					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
-					bestNormal = normalSphere;
-
-					//The vector 3 here is just to make the spheres not "follow" the player.
-					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = localSphere.GetColor();
-				}
-			}
-		}
-		else if (type == ObjectType::PlaneType)
-		{
-			Plane localPlane = *((Plane*)(objects[i]));
-			Vector3 planeNormal = localPlane.GetNormal();
-			//Check if they are paralell, if not it hit.
-			float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
-			if (dotLineAndPlaneNormal != 0.0f)
-			{
-				float t1 = Dot((localPlane.GetPos() - cameraPos), planeNormal) / dotLineAndPlaneNormal;
-
-				if (t1 > 0.0f)
-				{
-					if (t1 < closest)
-					{
-						Vector3 p = cameraPos + (directionWSpace * t1);
-						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
-						{
-							shadingValue = Dot(planeNormal, Vector3(1.0f, 0.0f, 0.0f));
-
-							//Comment in this if statement to get "backface" culling for planes.
-							//if (shadingValue > 0.0f) {
-							closest = t1;
-							//}
-							bestColor = localPlane.GetColor();
-							bestNormal = planeNormal;
-							if (dotLineAndPlaneNormal > 0.0f)
-							{
-								bestNormal *= -1;
-							}
-						}
-					}
-				}
-			}
-			
-		}
-	}
-	*/
 
 	//Dont open this. Here be dragons. Print characters for ASCII mode.
 	{}
@@ -1133,7 +1045,7 @@ __global__ void RT(
 		}
 	}
 	
-	if (row == 30 && column == 170)
+	if (row == 100 && column == 170)
 	{
 		data = 'x';
 		bestColor = Vector3(255, 255, 255);

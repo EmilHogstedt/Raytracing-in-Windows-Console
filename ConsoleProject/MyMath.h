@@ -1,5 +1,81 @@
 #pragma once
 
+class Vector2
+{
+public:
+	__host__ __device__ Vector2(float x, float y) :
+		x{ x }, y{ y }
+	{
+	}
+	__host__ __device__ Vector2(int x, int y) :
+		x{ static_cast<float>(x) }, y{ static_cast<float>(y) }
+	{
+	}
+	__host__ __device__ Vector2()
+	{
+		x = 0.0f;
+		y = 0.0f;
+	}
+	virtual ~Vector2() noexcept = default;
+
+	float x;
+	float y;
+
+	__host__ __device__ Vector2(const Vector2 & other)
+	{
+		x = other.x;
+		y = other.y;
+	}
+	__host__ __device__ Vector2& operator=(const Vector2 & other)
+	{
+		if (this == &other)
+			return *this;
+
+		x = other.x;
+		y = other.y;
+
+		return *this;
+	}
+	__host__ __device__ Vector2 operator-(const Vector2 & other)
+	{
+		return Vector2(x - other.x, y - other.y);
+	}
+	__host__ __device__ Vector2 operator-(float other)
+	{
+		return Vector2(x - other, y - other);
+	}
+	__host__ __device__ Vector2 operator+(const Vector2 & other)
+	{
+		return Vector2(x + other.x, y + other.y);
+	}
+	__host__ __device__ Vector2 operator+(float other)
+	{
+		return Vector2(x + other, y + other);
+	}
+
+	__host__ __device__ Vector2 operator/(const Vector2 & other)
+	{
+		return Vector2(x / other.x, y / other.y);
+	}
+
+	//Float operations
+	__host__ __device__ Vector2 operator*(float other)
+	{
+		return Vector2(x * other, y * other);
+	}
+	__host__ __device__ void operator*=(float other)
+	{
+		x *= other;
+		y *= other;
+	}
+	__host__ __device__ Vector2 Normalize()
+	{
+		float length = 1.0f / sqrt(x * x + y * y);
+
+		return Vector2(x * length, y * length);
+	}
+};
+
 class Vector3
 {
 public:

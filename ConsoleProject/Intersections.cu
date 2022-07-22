@@ -67,7 +67,7 @@ __device__ bool RayAABBIntersect(Vector3 bMin, Vector3 bMax, Vector3 rayOrigin, 
 	return true;
 }
 
-__device__ float RaySphereIntersect(Vector3 spherePos, Vector3 objectToCam, float radius, Vector3 directionWSpace, float fourA, float divTwoA, float closest)
+__device__ Vector2 RaySphereIntersect(Vector3 spherePos, Vector3 objectToCam, float radius, Vector3 directionWSpace, float fourA, float divTwoA, float closest)
 {
 	float b = 2.0f * Dot(directionWSpace, objectToCam);
 	float c = Dot(objectToCam, objectToCam) - (radius * radius);
@@ -85,14 +85,16 @@ __device__ float RaySphereIntersect(Vector3 spherePos, Vector3 objectToCam, floa
 		//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
 		if (t1 > t2 && t2 >= 0.0f)
 		{
+			float temp = t1;
 			t1 = t2;
+			t2 = temp;
 		}
 
 		if (t1 < closest && t1 > 0.0f)
 		{
-			return t1;
+			return Vector2(t1, t2);
 		}
 	}
 
-	return -1.0f;
+	return Vector2(-1.0f, -1.0f);
 }
