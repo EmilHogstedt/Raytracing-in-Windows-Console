@@ -44,6 +44,10 @@ public:
 	{
 		return Vector3(x - other.x, y - other.y, z - other.z);
 	}
+	__host__ __device__ Vector3 operator-(float other)
+	{
+		return Vector3(x - other, y - other, z - other);
+	}
 	__host__ __device__ Vector3 operator+(const Vector3& other)
 	{
 		return Vector3(x + other.x, y + other.y, z + other.z);
