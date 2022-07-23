@@ -34,6 +34,11 @@ void Scene3D::Init()
 	CreateSphere(1.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
 	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
 	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
+
+	for (int i = 0; i < 100; i++)
+	{
+		CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
+	}
 	//CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
 

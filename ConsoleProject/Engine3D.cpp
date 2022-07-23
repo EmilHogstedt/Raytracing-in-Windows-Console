@@ -84,7 +84,6 @@ bool Engine3D::Run()
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
 	{
-		m_scene->CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
 		
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;

@@ -38,7 +38,7 @@
 #define FIVE_MEGABYTES 5000000
 #define HUNDRED_MEGABYTES 100000000
 
-#define GRID_DIMENSIONS 11 //NEEDS TO BE UNEVEN
+#define GRID_DIMENSIONS 21 //NEEDS TO BE UNEVEN
 
 #include <cuda_runtime.h>
 #include <cuda.h>

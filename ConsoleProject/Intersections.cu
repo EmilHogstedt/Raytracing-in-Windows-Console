@@ -3,43 +3,32 @@
 
 __device__ bool SphereAABBIntersect(Vector3 spherePos, float r2, Vector3 bMin, Vector3 bMax)
 {
-	float dmin = 0;
-	//x
-	if (spherePos.x < bMin.x)
-	{
-		dmin += sqrt(spherePos.x - bMin.x);
+	float dist = 0.0f;
+	float v = spherePos.x;
+	if (v < bMin.x) {
+		dist += ((bMin.x - v) * (bMin.x - v));
 	}
-	if (spherePos.x > bMax.x)
-	{
-		dmin += sqrt(spherePos.x - bMax.x);
-	}
-	//y
-	if (spherePos.y < bMin.y)
-	{
-		dmin += sqrt(spherePos.y - bMin.y);
-	}
-	if (spherePos.y > bMax.y)
-	{
-		dmin += sqrt(spherePos.y - bMax.y);
-	}
-	//z
-	if (spherePos.z < bMin.z)
-	{
-		dmin += sqrt(spherePos.z - bMin.z);
-	}
-	if (spherePos.z > bMax.z)
-	{
-		dmin += sqrt(spherePos.z - bMax.z);
+	if (v > bMax.x) {
+		dist += ((v - bMax.x) * (v - bMax.x));
 	}
 
-	if (dmin <= r2)
-	{
-		return true;
+	v = spherePos.y;
+	if (v < bMin.y) {
+		dist += ((bMin.y - v) * (bMin.y - v));
 	}
-	else
-	{
-		return false;
+	if (v > bMax.y) {
+		dist += ((v - bMax.y) * (v - bMax.y));
 	}
+
+	v = spherePos.z;
+	if (v < bMin.z) {
+		dist += ((bMin.z - v) * (bMin.z - v));
+	}
+	if (v > bMax.z) {
+		dist += ((v - bMax.z) * (v - bMax.z));
+	}
+
+	return dist <= r2;
 }
 
 __device__ bool RayAABBIntersect(Vector3 bMin, Vector3 bMax, Vector3 rayOrigin, Vector3 rayDir)
@@ -54,7 +43,7 @@ __device__ bool RayAABBIntersect(Vector3 bMin, Vector3 bMax, Vector3 rayOrigin, 
 	float tmin = fmaxf(fmaxf(fminf(t1, t2), fminf(t3, t4)), fminf(t5, t6));
 	float tmax = fminf(fminf(fmaxf(t1, t2), fmaxf(t3, t4)), fmaxf(t5, t6));
 
-	// if tmax < 0, ray (line) is intersecting AABB, but whole AABB is behing us
+	// if tmax < 0, ray (line) is intersecting AABB, but whole AABB is behind us
 	if (tmax < 0) {
 		return false;
 	}

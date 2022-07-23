@@ -225,7 +225,7 @@ __global__ void UpdateObjects(
 	return;
 }
 
-__device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsigned int idz, float gridCellWidth, unsigned int offset, GridCell* grid, Object3D* object, Vector3 spherePos, float r2, bool* searched, Vector3 camPos)
+__device__ void RecursiveGridAssignment(int idx, int idy, int idz, float gridCellWidth, unsigned int offset, GridCell** grid, Object3D* object, Vector3 spherePos, float r2, bool* searched, Vector3 camPos)
 {
 	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 
@@ -241,7 +241,7 @@ __device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsi
 	searched[id] = true;
 	if (SphereAABBIntersect(spherePos, r2, bMin, bMax))
 	{
-		grid[(idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset)].AddObjectToGridCell(object);
+		(*grid)[id].AddObjectToGridCell(object);
 
 		//Recursively call this function. But only if the sphereintersected with the AABB.
 		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
@@ -250,7 +250,6 @@ __device__ void RecursiveGridAssignment(unsigned int idx, unsigned int idy, unsi
 		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
 		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
 		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		return;
 	}
 	return;
 }
@@ -330,12 +329,12 @@ __global__ void AssignToGrid(
 		
 		
 		//Go all 6 directions.
-		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
 		break;
 	}
 	case ObjectType::PlaneType:
@@ -641,6 +640,8 @@ __global__ void RT(
 					{
 						tempX = 1;
 					}
+					tempY = 0;
+					tempZ = 0;
 				}
 				else if (third == 2)
 				{
@@ -652,6 +653,8 @@ __global__ void RT(
 					{
 						tempY = 1;
 					}
+					tempX = 0;
+					tempZ = 0;
 				}
 				else
 				{
@@ -663,10 +666,25 @@ __global__ void RT(
 					{
 						tempZ = 1;
 					}
+					tempX = 0;
+					tempY = 0;
 				}
 
 				bMinTemp = Vector3(bMin.x + tempX * gridCellWidth, bMin.y + tempY * gridCellWidth, bMin.z + tempZ * gridCellWidth);
 				bMaxTemp = bMinTemp + gridCellWidth;
+
+				//if (!RayAABBIntersect(bMinTemp, bMaxTemp, cameraPos, directionWSpace))
+				//{
+				//	hitSomething = true;
+
+				//	closest = 0.15f;
+				//	bestNormal = Vector3(1.0f, 0.0f, 0.0f);
+
+				//	//The vector 3 here is just to make the spheres not "follow" the player.
+				//	shadingValue = Dot(directionWSpace, Vector3(1.0f, 0.0f, 0.0f));
+				//	bestColor = Vector3(255.0f, 0.0f, 0.0f);
+
+				//}
 			}
 		}
 		bMin = bMinTemp;
@@ -676,7 +694,7 @@ __global__ void RT(
 		currentY += tempY;
 		currentZ += tempZ;
 
-		if (abs(currentX) > gridOffset || abs(currentY) > gridOffset || abs(currentZ) > gridOffset)
+		if (abs(currentX) > gridOffset || abs(currentY) > gridOffset || abs(currentZ) > gridOffset || hitSomething)
 		{
 			break;
 		}
@@ -701,8 +719,8 @@ __global__ void RT(
 					Vector3 point1 = cameraPos + directionWSpace * closestPoint.x;
 					Vector3 point2 = cameraPos + directionWSpace * closestPoint.y;
 					//Make sure the point is in the box we are checking atm.
-					if ((point1.x >= bMin.x && point1.x <= bMax.x && point1.y >= bMin.y && point1.y <= bMax.y && point1.z >= bMin.z && point1.z <= bMax.z))
-					{
+					//if ((point1.x >= bMin.x && point1.x <= bMax.x && point1.y >= bMin.y && point1.y <= bMax.y && point1.z >= bMin.z && point1.z <= bMax.z))
+					//{
 						closest = closestPoint.x;
 						Vector3 normalSphere = (point1 - spherePos).Normalize();
 						bestNormal = normalSphere;
@@ -712,19 +730,19 @@ __global__ void RT(
 						bestColor = localSphere.GetColor();
 
 						hitSomething = true;
-					}
-					else if ((point2.x >= bMin.x && point2.x <= bMax.x && point2.y >= bMin.y && point2.y <= bMax.y && point2.z >= bMin.z && point2.z <= bMax.z))
-					{
-						closest = closestPoint.y;
-						Vector3 normalSphere = (point1 - spherePos).Normalize(); //Use point1 to get proper shading.
-						bestNormal = normalSphere;
+					//}
+					//else if ((point2.x >= bMin.x && point2.x <= bMax.x && point2.y >= bMin.y && point2.y <= bMax.y && point2.z >= bMin.z && point2.z <= bMax.z))
+					//{
+					//	closest = closestPoint.x;
+					//	Vector3 normalSphere = (point1 - spherePos).Normalize(); //Use point1 to get proper shading.
+					//	bestNormal = normalSphere;
 
-						//The vector 3 here is just to make the spheres not "follow" the player.
-						shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-						bestColor = localSphere.GetColor();
+					//	//The vector 3 here is just to make the spheres not "follow" the player.
+					//	shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+					//	bestColor = localSphere.GetColor();
 
-						hitSomething = true;
-					}
+					//	hitSomething = true;
+					//}
 				}
 			}
 			else if (type == ObjectType::PlaneType)
@@ -1333,8 +1351,6 @@ void RayTracer::RayTracingWrapper(
 		deviceParams,
 		camFarDist / (GRID_DIMENSIONS / 2.0f)
 	);
-	
-	gpuErrchk(cudaDeviceSynchronize());
 
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
@@ -1370,7 +1386,7 @@ void RayTracer::RayTracingWrapper(
 	size_t newSize = MinimizeResults(size, y);
 
 	printMachine->GetBackBufferMutex()->lock();
-	printMachine->ResetBackBuffer(); //Might not be needed.
+	//printMachine->ResetBackBuffer(); //Might not be needed.
 	char* backBuffer = printMachine->GetBackBuffer();
 	memcpy(backBuffer, m_minimizedResultArray, newSize);
 	
@@ -1391,9 +1407,7 @@ void RayTracer::RayTracingWrapper(
 		deviceObjects.count,
 		dt
 	);
-	gpuErrchk(cudaDeviceSynchronize());
 
-	
 	gridDims.x = GRID_DIMENSIONS;
 	gridDims.y = GRID_DIMENSIONS;
 	blockDims.x = GRID_DIMENSIONS;
@@ -1403,7 +1417,6 @@ void RayTracer::RayTracingWrapper(
 	ResetGrid << <gridDims, blockDims>> > (
 		deviceGrid
 	);
-	gpuErrchk(cudaDeviceSynchronize());
 	return;
 }
 
