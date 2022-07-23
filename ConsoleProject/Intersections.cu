@@ -3,12 +3,27 @@
 
 __device__ bool SphereAABBIntersect(Vector3 spherePos, float r2, Vector3 bMin, Vector3 bMax)
 {
+	/*float x = fmaxf(fminf(spherePos.x, bMax.x), bMin.x);
+	float y = fmaxf(fminf(spherePos.y, bMax.y), bMin.y);
+	float z = fmaxf(fminf(spherePos.z, bMax.z), bMin.z);
+	Vector3 posOnCube = Vector3(x, y, z);
+	Vector3 dist = posOnCube - spherePos;
+	float l = sqrt(dist.x * dist.x + dist.y * dist.y + dist.z * dist.z);
+	if (l < r2 / r2)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}*/
+
 	float dist = 0.0f;
 	float v = spherePos.x;
 	if (v < bMin.x) {
 		dist += ((bMin.x - v) * (bMin.x - v));
 	}
-	if (v > bMax.x) {
+	else if (v > bMax.x) {
 		dist += ((v - bMax.x) * (v - bMax.x));
 	}
 
@@ -16,7 +31,7 @@ __device__ bool SphereAABBIntersect(Vector3 spherePos, float r2, Vector3 bMin, V
 	if (v < bMin.y) {
 		dist += ((bMin.y - v) * (bMin.y - v));
 	}
-	if (v > bMax.y) {
+	else if (v > bMax.y) {
 		dist += ((v - bMax.y) * (v - bMax.y));
 	}
 
@@ -24,7 +39,7 @@ __device__ bool SphereAABBIntersect(Vector3 spherePos, float r2, Vector3 bMin, V
 	if (v < bMin.z) {
 		dist += ((bMin.z - v) * (bMin.z - v));
 	}
-	if (v > bMax.z) {
+	else if (v > bMax.z) {
 		dist += ((v - bMax.z) * (v - bMax.z));
 	}
 

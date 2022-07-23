@@ -244,12 +244,12 @@ __device__ void RecursiveGridAssignment(int idx, int idy, int idz, float gridCel
 		(*grid)[id].AddObjectToGridCell(object);
 
 		//Recursively call this function. But only if the sphereintersected with the AABB.
-		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
 	}
 	return;
 }
@@ -329,12 +329,12 @@ __global__ void AssignToGrid(
 		
 		
 		//Go all 6 directions.
-		RecursiveGridAssignment(++idx, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(--idx, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, ++idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, --idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, ++idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, --idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
 		break;
 	}
 	case ObjectType::PlaneType:
