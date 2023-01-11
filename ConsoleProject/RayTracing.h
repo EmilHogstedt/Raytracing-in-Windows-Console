@@ -1,9 +1,10 @@
+#pragma once
 #include "Sphere.h"
 #include "Plane.h"
 #include "PrintMachine.h"
 #include "GridCell.h"
-
-
+#include "PointLight.h"
+#include "Camera3D.h"
 struct RayTracingParameters
 {
 	Matrix inverseVMatrix;
@@ -37,6 +38,8 @@ public:
 		{
 			assert(false && "Could not malloc m_minimizedResultArray.");
 		}
+
+		m_lastCameraPos = Vector3(-99999, -99999, -99999);
 	};
 
 	~RayTracer()
@@ -47,9 +50,10 @@ public:
 	void RayTracingWrapper(
 		size_t x, size_t y,
 		float element1, float element2,
-		float camFarDist,
+		Camera3D* camera,
 		GridCell* deviceGrid,
 		DeviceObjectArray<Object3D*> objects,
+		DeviceObjectArray<PointLight> devicePointLights,
 		RayTracingParameters* deviceParams,
 		char* deviceResultArray,
 		std::mutex* backBufferMutex,
@@ -60,5 +64,7 @@ private:
 
 	char* m_hostResultArray;
 	char* m_minimizedResultArray;
+
+	Vector3 m_lastCameraPos;
 };
 

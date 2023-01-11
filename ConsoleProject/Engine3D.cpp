@@ -130,9 +130,10 @@ void Engine3D::Render()
 	m_rayTracer->RayTracingWrapper(
 		x, y,
 		element1, element2,
-		m_camera->GetFarPlaneDistance(),
+		m_camera,
 		m_scene->GetGrid(),
 		m_scene->GetObjects(),
+		m_scene->GetPointLights(),
 		m_deviceRayTracingParameters,
 		PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(),
 		m_timer->DeltaTimeRendering()

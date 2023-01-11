@@ -28,6 +28,12 @@ void Scene3D::Init()
 	m_deviceSpheres.count = 0;
 	m_deviceSpheres.using1st = true;
 
+	gpuErrchk(cudaMalloc(&(m_devicePointLights.m_deviceArray1), FIVE_MEGABYTES));
+	gpuErrchk(cudaMemset(m_devicePointLights.m_deviceArray1, 0, FIVE_MEGABYTES));
+	m_devicePointLights.allocatedBytes = FIVE_MEGABYTES;
+	m_devicePointLights.count = 0;
+	m_devicePointLights.using1st = true;
+
 	//Temporary.
 	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
 	CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
@@ -56,6 +62,52 @@ void Scene3D::CreateGrid(unsigned int size)
 		}
 	}
 	return;
+}
+
+void Scene3D::CreatePointLight(float radius, Vector3 pos, Vector3 color)
+{
+	//Check if we have enough memory for the new pointlight.
+	if (m_devicePointLights.allocatedBytes < (m_devicePointLights.count + 1) * sizeof(PointLight))
+	{
+		if (m_devicePointLights.allocatedBytes >= HUNDRED_MEGABYTES)
+		{
+			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
+		}
+		m_devicePointLights.using1st = !m_devicePointLights.using1st;
+		PointLight* newArray;
+		PointLight* oldArray;
+		if (m_devicePointLights.using1st)
+		{
+			newArray = m_devicePointLights.m_deviceArray1;
+			oldArray = m_devicePointLights.m_deviceArray2;
+		}
+		else
+		{
+			newArray = m_devicePointLights.m_deviceArray2;
+			oldArray = m_devicePointLights.m_deviceArray1;
+		}
+		gpuErrchk(cudaMalloc(&newArray, m_devicePointLights.allocatedBytes * 2));
+		gpuErrchk(cudaMemset(newArray, 0, m_devicePointLights.allocatedBytes * 2));
+		gpuErrchk(cudaMemcpy(newArray, oldArray, m_devicePointLights.allocatedBytes, cudaMemcpyDeviceToDevice));
+		gpuErrchk(cudaFree(oldArray));
+		m_devicePointLights.allocatedBytes *= 2;
+	}
+
+	//Copy the new object to the correct spot in GPU memory in the correct array.
+	PointLight* currentArray;
+	if (m_devicePointLights.using1st)
+	{
+		currentArray = m_devicePointLights.m_deviceArray1;
+	}
+	else
+	{
+		currentArray = m_devicePointLights.m_deviceArray2;
+	}
+
+	PointLight newObject = PointLight(pos, radius, color);
+	gpuErrchk(cudaMemcpy(currentArray + m_devicePointLights.count, &newObject, sizeof(PointLight), cudaMemcpyHostToDevice));
+
+	m_devicePointLights.count++;
 }
 
 void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)
@@ -289,4 +341,9 @@ DeviceObjectArray<Object3D*> Scene3D::GetObjects()
 GridCell* Scene3D::GetGrid()
 {
 	return m_deviceGrid;
+}
+
+DeviceObjectArray<PointLight> Scene3D::GetPointLights()
+{
+	return m_devicePointLights;
 }

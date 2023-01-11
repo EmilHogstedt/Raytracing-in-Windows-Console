@@ -303,6 +303,7 @@
     </CudaCompile>
     <ClCompile Include="PrintMachine.cpp" />
     <ClCompile Include="Scene3D.cpp" />
+    <CudaCompile Include="PointLight.cu" />
     <CudaCompile Include="Sphere.cu" />
     <ClCompile Include="Timer.cpp" />
   </ItemGroup>
@@ -315,6 +316,7 @@
     <ClInclude Include="Object3D.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Plane.h" />
+    <ClInclude Include="PointLight.h" />
     <ClInclude Include="PrintMachine.h" />
     <ClInclude Include="Scene3D.h" />
     <ClInclude Include="Sphere.h" />

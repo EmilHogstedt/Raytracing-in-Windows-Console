@@ -228,8 +228,7 @@ __global__ void UpdateObjects(
 __device__ void RecursiveGridAssignment(int idx, int idy, int idz, float gridCellWidth, unsigned int offset, GridCell** grid, Object3D* object, Vector3 spherePos, float r2, bool* searched, Vector3 camPos)
 {
 	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
-
-	if (searched[id]) //If we already searched this gridcell we return.
+	if (searched[id] || id < 0 || id >= GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS) //If we already searched this gridcell we return.
 	{
 		return;
 	}
@@ -296,6 +295,11 @@ __global__ void AssignToGrid(
 			diff.x -= halfCellWidth;
 			idx = ceilf(diff.x / gridCellWidth);
 		}
+		if (idx + offset < 0 || idx + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
 		int idy;
 		if (diff.y > 0)
 		{
@@ -307,6 +311,11 @@ __global__ void AssignToGrid(
 			diff.y -= halfCellWidth;
 			idy = ceilf(diff.y / gridCellWidth);
 		}
+		if (idy + offset < 0 || idy + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
 		int idz;
 		if (diff.z > 0)
 		{
@@ -318,7 +327,11 @@ __global__ void AssignToGrid(
 			diff.z -= halfCellWidth;
 			idz = ceilf(diff.z / gridCellWidth);
 		}
-		//printf("\n%d, %d, %d\n", idx, idy, idz);
+		if (idz + offset < 0 || idz + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
 		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 		grid[id].AddObjectToGridCell(object);
 
@@ -1326,22 +1339,33 @@ __global__ void ResetGrid(GridCell* grid)
 void RayTracer::RayTracingWrapper(
 	size_t x, size_t y,
 	float element1, float element2,
-	float camFarDist,
+	Camera3D* camera,
 	GridCell* deviceGrid,
 	DeviceObjectArray<Object3D*> deviceObjects,
+	DeviceObjectArray<PointLight> devicePointLights,
 	RayTracingParameters* deviceParams,
 	char* deviceResultArray, std::mutex* backBufferMutex,
 	double dt
 )
 {
+	dim3 gridDims(GRID_DIMENSIONS, GRID_DIMENSIONS, 1);
+	dim3 blockDims(GRID_DIMENSIONS, 1, 1);
+
+	float camFarDist = camera->GetFarPlaneDistance();
+
+	ResetGrid << <gridDims, blockDims >> > (
+		deviceGrid
+		);
+
 	unsigned int threadsPerBlock = deviceObjects.count;
 	unsigned int numberOfBlocks = 1;
 	if (deviceObjects.count > 1024)
 	{
 		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
 	}
-	dim3 gridDims(numberOfBlocks, 1, 1);
-	dim3 blockDims(threadsPerBlock, 1, 1);
+	gridDims.x = numberOfBlocks;
+	gridDims.y = 1;
+	blockDims.x = threadsPerBlock;
 
 	//Classify the objects into the grid.
 	AssignToGrid<<<gridDims, blockDims>>>(
@@ -1408,15 +1432,6 @@ void RayTracer::RayTracingWrapper(
 		dt
 	);
 
-	gridDims.x = GRID_DIMENSIONS;
-	gridDims.y = GRID_DIMENSIONS;
-	blockDims.x = GRID_DIMENSIONS;
-	blockDims.y = 1;
-	blockDims.z = 1;
-	
-	ResetGrid << <gridDims, blockDims>> > (
-		deviceGrid
-	);
 	return;
 }
 
