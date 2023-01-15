@@ -289,8 +289,8 @@ bool PrintMachine::Print()
 		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
 		//printf("%.*s", (unsigned int)(37 * currentHeight * currentWidth + currentHeight), m_printBuffer);
 		printf("\x1b[m");
-		printf("Rendering FPS: %d    \n", m_renderingFps);
-		printf("Printing FPS: %d    \n", m_printingFps);
+		//printf("Rendering FPS: %d    \n", m_renderingFps);
+		//printf("Printing FPS: %d    \n", m_printingFps);
 		
 		//DEBUG ONLY
 		//std::cout << m_debugInfo << std::endl;

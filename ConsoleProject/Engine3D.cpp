@@ -133,7 +133,6 @@ void Engine3D::Render()
 		m_camera,
 		m_scene->GetGrid(),
 		m_scene->GetObjects(),
-		m_scene->GetPointLights(),
 		m_deviceRayTracingParameters,
 		PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(),
 		m_timer->DeltaTimeRendering()

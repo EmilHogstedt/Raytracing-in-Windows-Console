@@ -228,7 +228,7 @@ __global__ void UpdateObjects(
 __device__ void RecursiveGridAssignment(int idx, int idy, int idz, float gridCellWidth, unsigned int offset, GridCell** grid, Object3D* object, Vector3 spherePos, float r2, bool* searched, Vector3 camPos)
 {
 	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
-	if (searched[id] || id < 0 || id >= GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS) //If we already searched this gridcell we return.
+	if (searched[id] || id >= GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS) //If we already searched this gridcell we return.
 	{
 		return;
 	}
@@ -243,12 +243,70 @@ __device__ void RecursiveGridAssignment(int idx, int idy, int idz, float gridCel
 		(*grid)[id].AddObjectToGridCell(object);
 
 		//Recursively call this function. But only if the sphereintersected with the AABB.
-		RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idx - 1 + offset < GRID_DIMENSIONS && idx - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+
+		if (idy + 1 + offset < GRID_DIMENSIONS && idy + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idy - 1 + offset < GRID_DIMENSIONS && idy - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+
+		if (idz + 1 + offset < GRID_DIMENSIONS && idz + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idz - 1 + offset < GRID_DIMENSIONS && idz - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, grid, object, spherePos, r2, searched, camPos);
+		}
+	}
+	return;
+}
+
+__device__ void RecursiveGridAssignmentLight(int idx, int idy, int idz, float gridCellWidth, unsigned int offset, GridCell** grid, PointLight* pointLight, Vector3 lightPos, float r2, bool* searched, Vector3 camPos)
+{
+	unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
+	if (searched[id] || id >= GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS) //If we already searched this gridcell we return.
+	{
+		return;
+	}
+	
+	//Calculate bMin & bMax
+	Vector3 bMin = Vector3(camPos.x + (idx * gridCellWidth) - (gridCellWidth * 0.5f), camPos.y + (idy * gridCellWidth) - (gridCellWidth * 0.5f), camPos.z + (idz * gridCellWidth) - (gridCellWidth * 0.5f));
+	Vector3 bMax = bMin + gridCellWidth;
+	
+	searched[id] = true;
+	
+	if (SphereAABBIntersect(lightPos, r2, bMin, bMax))
+	{
+		(*grid)[id].AddPointLightToGridCell(pointLight);
+		
+		//Recursively call this function. But only if the sphereintersected with the AABB.
+		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0) 
+			RecursiveGridAssignmentLight(idx + 1, idy, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		if (idx - 1 + offset < GRID_DIMENSIONS && idx - 1 + offset >= 0)
+			RecursiveGridAssignmentLight(idx - 1, idy, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+
+		if (idy + 1 + offset < GRID_DIMENSIONS && idy + 1 + offset >= 0)
+			RecursiveGridAssignmentLight(idx, idy + 1, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		if (idy - 1 + offset < GRID_DIMENSIONS && idy - 1 + offset >= 0)
+			RecursiveGridAssignmentLight(idx, idy - 1, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+
+		if (idz + 1 + offset < GRID_DIMENSIONS && idz + 1 + offset >= 0)
+			RecursiveGridAssignmentLight(idx, idy, idz + 1, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		if (idz - 1 + offset < GRID_DIMENSIONS && idz - 1 + offset >= 0)
+			RecursiveGridAssignmentLight(idx, idy, idz - 1, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		
 	}
 	return;
 }
@@ -267,21 +325,21 @@ __global__ void AssignToGrid(
 		return;
 	}
 
+	float halfCellWidth = gridCellWidth * 0.5f;
+	bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS + 21] = { false };
+
+	//Assign object
 	Object3D* object = objects[index];
 	switch (object->GetType())
 	{
 	case ObjectType::SphereType:
 	{
-		float halfCellWidth = (gridCellWidth * 0.5f);
-
 		Vector3 spherePos = ((Sphere*)object)->GetPos();
 		float r2 = ((Sphere*)object)->GetRadius();
 		r2 *= r2;
 		Vector3 camPos = params->camPos;
 		Vector3 diff = spherePos - camPos;
 		unsigned int offset = ((GRID_DIMENSIONS - 1) * 0.5f);
-		
-		bool searched[GRID_DIMENSIONS * GRID_DIMENSIONS * GRID_DIMENSIONS + 21] = { false };
 
 		//Calculate ID for the gridcell where the center of the sphere is.
 		int idx;
@@ -336,23 +394,136 @@ __global__ void AssignToGrid(
 		grid[id].AddObjectToGridCell(object);
 
 		//object->AddGridCell(grid + id); //Will be needed later for object physicsupdate.
-		
+
 		searched[id] = true;
 
-		
-		
 		//Go all 6 directions.
-		RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
-		RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx + 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idx - 1 + offset < GRID_DIMENSIONS && idx - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx - 1, idy, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+
+		if (idy + 1 + offset < GRID_DIMENSIONS && idy + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy + 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idy - 1 + offset < GRID_DIMENSIONS && idy - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy - 1, idz, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+
+		if (idz + 1 + offset < GRID_DIMENSIONS && idz + 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy, idz + 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+		if (idz - 1 + offset < GRID_DIMENSIONS && idz - 1 + offset >= 0)
+		{
+			RecursiveGridAssignment(idx, idy, idz - 1, gridCellWidth, offset, &grid, object, spherePos, r2, searched, camPos);
+		}
+
 		break;
 	}
 	case ObjectType::PlaneType:
 	{
 		//((Plane*)object)->Update(dt);
+		break;
+	}
+	case ObjectType::PointLightType:
+	{
+		Vector3 lightPos = ((PointLight*)object)->GetPos();
+		float r2 = ((PointLight*)object)->GetRange();
+		r2 *= r2;
+		Vector3 camPos = params->camPos;
+		Vector3 diff = lightPos - camPos;
+		unsigned int offset = ((GRID_DIMENSIONS - 1) * 0.5f);
+
+		//Calculate ID for the gridcell where the center of the sphere is.
+		int idx;
+		if (diff.x > 0)
+		{
+			diff.x += halfCellWidth;
+			idx = (int)floorf(diff.x / gridCellWidth);
+		}
+		else
+		{
+			diff.x -= halfCellWidth;
+			idx = (int)ceilf(diff.x / gridCellWidth);
+		}
+		if (idx + offset < 0 || idx + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
+		int idy = 0;
+		if (diff.y > 0)
+		{
+			diff.y += halfCellWidth;
+			idy = floorf(diff.y / gridCellWidth);
+		}
+		else
+		{
+			diff.y -= halfCellWidth;
+			idy = ceilf(diff.y / gridCellWidth);
+		}
+		if (idy + offset < 0 || idy + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
+		int idz = 0;
+		if (diff.z > 0)
+		{
+			diff.z += halfCellWidth;
+			idz = floorf(diff.z / gridCellWidth);
+		}
+		else
+		{
+			diff.z -= halfCellWidth;
+			idz = ceilf(diff.z / gridCellWidth);
+		}
+		if (idz + offset < 0 || idz + offset >= GRID_DIMENSIONS)
+		{
+			return;
+		}
+
+		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
+		grid[id].AddPointLightToGridCell(((PointLight*)object));
+
+		searched[id] = true;
+
+		//Go all 6 directions.
+		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx + 1, idy, idz, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+		if (idx - 1 + offset < GRID_DIMENSIONS && idx - 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx - 1, idy, idz, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+
+
+		if (idy + 1 + offset < GRID_DIMENSIONS && idy + 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx, idy + 1, idz, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+		if (idy - 1 + offset < GRID_DIMENSIONS && idy - 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx, idy - 1, idz, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+
+		if (idz + 1 + offset < GRID_DIMENSIONS && idz + 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx, idy, idz + 1, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+		if (idz - 1 + offset < GRID_DIMENSIONS && idz - 1 + offset >= 0)
+		{
+			RecursiveGridAssignmentLight(idx, idy, idz - 1, gridCellWidth, offset, &grid, ((PointLight*)object), lightPos, r2, searched, camPos);
+		}
+
 		break;
 	}
 	default:
@@ -1342,7 +1513,6 @@ void RayTracer::RayTracingWrapper(
 	Camera3D* camera,
 	GridCell* deviceGrid,
 	DeviceObjectArray<Object3D*> deviceObjects,
-	DeviceObjectArray<PointLight> devicePointLights,
 	RayTracingParameters* deviceParams,
 	char* deviceResultArray, std::mutex* backBufferMutex,
 	double dt
@@ -1361,7 +1531,7 @@ void RayTracer::RayTracingWrapper(
 	unsigned int numberOfBlocks = 1;
 	if (deviceObjects.count > 1024)
 	{
-		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
+		numberOfBlocks = static_cast<int>(std::ceil((deviceObjects.count) / 1024.0));
 	}
 	gridDims.x = numberOfBlocks;
 	gridDims.y = 1;
@@ -1375,7 +1545,6 @@ void RayTracer::RayTracingWrapper(
 		deviceParams,
 		camFarDist / (GRID_DIMENSIONS / 2.0f)
 	);
-
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.

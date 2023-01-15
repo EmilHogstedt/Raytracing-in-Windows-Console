@@ -44,6 +44,8 @@ void Scene3D::Init()
 	for (int i = 0; i < 100; i++)
 	{
 		CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
+
+		CreatePointLight(100.0f, Vector3(rand() % 200 - 100, rand() % 200 - 100, rand() % 200 - 100), Vector3(rand() % 255, rand() % 255, rand() % 255));
 	}
 	//CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
@@ -66,6 +68,46 @@ void Scene3D::CreateGrid(unsigned int size)
 
 void Scene3D::CreatePointLight(float radius, Vector3 pos, Vector3 color)
 {
+	//See so that we have space for the object pointers on the GPU.
+	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
+	{
+		if (m_deviceObjects.allocatedBytes >= HUNDRED_MEGABYTES)
+		{
+			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
+		}
+		//If we do not we allocate more memory and copy over the current array to the new memory.
+		//This is done elegantly by changing the current array that is used.
+		m_deviceObjects.using1st = !m_devicePlanes.using1st;
+		Object3D** newArray;
+		Object3D** oldArray;
+		if (m_deviceObjects.using1st)
+		{
+			newArray = m_deviceObjects.m_deviceArray1;
+			oldArray = m_deviceObjects.m_deviceArray2;
+		}
+		else
+		{
+			newArray = m_deviceObjects.m_deviceArray2;
+			oldArray = m_deviceObjects.m_deviceArray1;
+		}
+		gpuErrchk(cudaMalloc(&newArray, m_deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemset(newArray, 0, m_deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemcpy(newArray, oldArray, m_deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
+		gpuErrchk(cudaFree(oldArray));
+		m_deviceObjects.allocatedBytes *= 2;
+	}
+
+	//Check which we are currently using.
+	Object3D** currentObjectArray;
+	if (m_deviceObjects.using1st)
+	{
+		currentObjectArray = m_deviceObjects.m_deviceArray1;
+	}
+	else
+	{
+		currentObjectArray = m_deviceObjects.m_deviceArray2;
+	}
+
 	//Check if we have enough memory for the new pointlight.
 	if (m_devicePointLights.allocatedBytes < (m_devicePointLights.count + 1) * sizeof(PointLight))
 	{
@@ -107,7 +149,13 @@ void Scene3D::CreatePointLight(float radius, Vector3 pos, Vector3 color)
 	PointLight newObject = PointLight(pos, radius, color);
 	gpuErrchk(cudaMemcpy(currentArray + m_devicePointLights.count, &newObject, sizeof(PointLight), cudaMemcpyHostToDevice));
 
+	//Now we have to copy the pointer of the object we just added to the objectPointer array on the GPU.
+	Object3D* temp[1];
+	temp[0] = currentArray + m_devicePointLights.count;
+	gpuErrchk(cudaMemcpy(currentObjectArray + m_deviceObjects.count, temp, sizeof(Object3D*), cudaMemcpyHostToDevice));
+
 	m_devicePointLights.count++;
+	m_deviceObjects.count++;
 }
 
 void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)

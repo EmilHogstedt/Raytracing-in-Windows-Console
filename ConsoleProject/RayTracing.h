@@ -53,7 +53,6 @@ public:
 		Camera3D* camera,
 		GridCell* deviceGrid,
 		DeviceObjectArray<Object3D*> objects,
-		DeviceObjectArray<PointLight> devicePointLights,
 		RayTracingParameters* deviceParams,
 		char* deviceResultArray,
 		std::mutex* backBufferMutex,

@@ -15,7 +15,7 @@ struct DeviceObjectArray {
 
 };
 
-enum class ObjectType { None = 0, PlaneType, SphereType };
+enum class ObjectType { None = 0, PlaneType, SphereType, PointLightType };
 
 //Barebones baseclass in order to be able to group all objects together.
 class __align__(16) Object3D

@@ -1,22 +1,14 @@
 #pragma once
-#include "MyMath.h"
+#include "Object3D.h"
 
-
-class __align__(16) PointLight
+class __align__(16) PointLight : public Object3D
 {
 public:
-	PointLight() noexcept : m_pos{ Vector3() }, m_rangeOfInfluence{ 0.0f }, m_color{ Vector3(1.0f, 1.0f, 1.0f) } {
-	}
-	PointLight(Vector3 pos, float range, Vector3 color) : m_pos{ pos }, m_rangeOfInfluence{ range }, m_color{ color } {
+	PointLight(Vector3 pos, float range, Vector3 color) : Object3D{pos, ObjectType::PointLightType, color}, m_rangeOfInfluence{range} {
 	}
 	~PointLight() noexcept = default;
 
-	__device__ void Update(float dt);
-
-	__device__ const Vector3& GetPos() const noexcept
-	{
-		return m_pos;
-	}
+	__device__ void Update(long double);
 
 	__device__ float GetRange() const noexcept
 	{
@@ -24,7 +16,5 @@ public:
 	}
 
 private:
-	Vector3 m_pos;
-	Vector3 m_color;
 	float m_rangeOfInfluence;
 };
