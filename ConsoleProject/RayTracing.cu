@@ -292,20 +292,33 @@ __device__ void RecursiveGridAssignmentLight(int idx, int idy, int idz, float gr
 		(*grid)[id].AddPointLightToGridCell(pointLight);
 		
 		//Recursively call this function. But only if the sphereintersected with the AABB.
-		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0) 
+		
+		if (idx + 1 + offset < GRID_DIMENSIONS && idx + 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx + 1, idy, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		}
 		if (idx - 1 + offset < GRID_DIMENSIONS && idx - 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx - 1, idy, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		}
 
 		if (idy + 1 + offset < GRID_DIMENSIONS && idy + 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx, idy + 1, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		}
 		if (idy - 1 + offset < GRID_DIMENSIONS && idy - 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx, idy - 1, idz, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
-
+		}
+			
 		if (idz + 1 + offset < GRID_DIMENSIONS && idz + 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx, idy, idz + 1, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		}
 		if (idz - 1 + offset < GRID_DIMENSIONS && idz - 1 + offset >= 0)
+		{
 			RecursiveGridAssignmentLight(idx, idy, idz - 1, gridCellWidth, offset, grid, pointLight, lightPos, r2, searched, camPos);
+		}
 		
 	}
 	return;
@@ -490,6 +503,7 @@ __global__ void AssignToGrid(
 			return;
 		}
 
+		//printf("THREADID: %d\t IDX: %d\t IDY: %d\t IDZ: %d\n", index, idx, idy, idz);
 		unsigned int id = (idx + offset) + GRID_DIMENSIONS * (idy + offset) + GRID_DIMENSIONS * GRID_DIMENSIONS * (idz + offset);
 		grid[id].AddPointLightToGridCell(((PointLight*)object));
 
@@ -663,7 +677,9 @@ __global__ void RT(
 	int first = 0;
 	int second = 0;
 	int third = 0;
+
 	//In here we calculate the most likely direction for the next box.
+	if (!hitSomething)
 	{
 		if (abs(directionWSpace.x) > abs(directionWSpace.y))
 		{
@@ -856,19 +872,6 @@ __global__ void RT(
 
 				bMinTemp = Vector3(bMin.x + tempX * gridCellWidth, bMin.y + tempY * gridCellWidth, bMin.z + tempZ * gridCellWidth);
 				bMaxTemp = bMinTemp + gridCellWidth;
-
-				//if (!RayAABBIntersect(bMinTemp, bMaxTemp, cameraPos, directionWSpace))
-				//{
-				//	hitSomething = true;
-
-				//	closest = 0.15f;
-				//	bestNormal = Vector3(1.0f, 0.0f, 0.0f);
-
-				//	//The vector 3 here is just to make the spheres not "follow" the player.
-				//	shadingValue = Dot(directionWSpace, Vector3(1.0f, 0.0f, 0.0f));
-				//	bestColor = Vector3(255.0f, 0.0f, 0.0f);
-
-				//}
 			}
 		}
 		bMin = bMinTemp;
@@ -902,31 +905,16 @@ __global__ void RT(
 				{
 					Vector3 point1 = cameraPos + directionWSpace * closestPoint.x;
 					Vector3 point2 = cameraPos + directionWSpace * closestPoint.y;
-					//Make sure the point is in the box we are checking atm.
-					//if ((point1.x >= bMin.x && point1.x <= bMax.x && point1.y >= bMin.y && point1.y <= bMax.y && point1.z >= bMin.z && point1.z <= bMax.z))
-					//{
-						closest = closestPoint.x;
-						Vector3 normalSphere = (point1 - spherePos).Normalize();
-						bestNormal = normalSphere;
+					
+					closest = closestPoint.x;
+					Vector3 normalSphere = (point1 - spherePos).Normalize();
+					bestNormal = normalSphere;
 
-						//The vector 3 here is just to make the spheres not "follow" the player.
-						shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-						bestColor = localSphere.GetColor();
+					//The vector 3 here is just to make the spheres not "follow" the player.
+					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+					bestColor = localSphere.GetColor();
 
-						hitSomething = true;
-					//}
-					//else if ((point2.x >= bMin.x && point2.x <= bMax.x && point2.y >= bMin.y && point2.y <= bMax.y && point2.z >= bMin.z && point2.z <= bMax.z))
-					//{
-					//	closest = closestPoint.x;
-					//	Vector3 normalSphere = (point1 - spherePos).Normalize(); //Use point1 to get proper shading.
-					//	bestNormal = normalSphere;
-
-					//	//The vector 3 here is just to make the spheres not "follow" the player.
-					//	shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
-					//	bestColor = localSphere.GetColor();
-
-					//	hitSomething = true;
-					//}
+					hitSomething = true;
 				}
 			}
 			else if (type == ObjectType::PlaneType)
@@ -963,6 +951,16 @@ __global__ void RT(
 					}
 				}
 			}
+		}
+	}
+
+	if (hitSomething) //If we hit something we want to check lighting.
+	{
+		Vector3 origin = cameraPos + directionWSpace * closest;
+		for (size_t i = 0; i < grid[id].GetPointLightCount(); ++i)
+		{
+			Vector3 pointLightPos = grid[id].GetCellPointLight(i)->GetPos();
+			Vector3 dir = (pointLightPos - origin).Normalize();
 		}
 	}
 

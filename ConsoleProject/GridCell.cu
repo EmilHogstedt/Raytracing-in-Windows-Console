@@ -44,6 +44,6 @@ __device__ void GridCell::Reset()
 {
 	m_currentObjectIndex = 0;
 	m_currentPointLightIndex = 0;
-	memset(m_currentObjects, 0, sizeof(Object3D*) * 100);
-	memset(m_currentPointLights, 0, sizeof(PointLight*) * 100);
+	memset(m_currentObjects, 0, sizeof(Object3D*) * GRID_CAPACITY);
+	memset(m_currentPointLights, 0, sizeof(PointLight*) * GRID_CAPACITY);
 }

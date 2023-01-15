@@ -4,6 +4,8 @@
 #include "Object3D.h"
 #include "PointLight.h"
 
+#define GRID_CAPACITY 150
+
 class __align__(16) GridCell {
 public:
 	GridCell(int idx, int idy, int idz) noexcept;
@@ -19,7 +21,7 @@ public:
 private:
 	Vector3 m_id;
 	int m_currentObjectIndex = 0;
-	Object3D* m_currentObjects[100] = { 0 };
+	Object3D* m_currentObjects[GRID_CAPACITY] = { 0 };
 	int m_currentPointLightIndex = 0;
-	PointLight* m_currentPointLights[100] = { 0 };
+	PointLight* m_currentPointLights[GRID_CAPACITY] = { 0 };
 };

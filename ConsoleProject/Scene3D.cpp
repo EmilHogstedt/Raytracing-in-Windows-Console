@@ -5,8 +5,8 @@
 void Scene3D::Init()
 {
 	//Allocate memory for the grid.
-	gpuErrchk(cudaMalloc(&(m_deviceGrid), 2 * HUNDRED_MEGABYTES));
-	gpuErrchk(cudaMemset(m_deviceGrid, 0, 2 * HUNDRED_MEGABYTES));
+	gpuErrchk(cudaMalloc(&(m_deviceGrid), 8 * HUNDRED_MEGABYTES));
+	gpuErrchk(cudaMemset(m_deviceGrid, 0, 8 * HUNDRED_MEGABYTES));
 	CreateGrid(m_gridSize);
 
 	//Allocating Objectarrays.
@@ -35,17 +35,17 @@ void Scene3D::Init()
 	m_devicePointLights.using1st = true;
 
 	//Temporary.
-	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
-	CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
-	CreateSphere(1.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
-	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
-	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
+	//CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
+	//CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
+	//CreateSphere(1.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
+	//CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
+	//CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
 
 	for (int i = 0; i < 100; i++)
 	{
 		CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
 
-		CreatePointLight(100.0f, Vector3(rand() % 200 - 100, rand() % 200 - 100, rand() % 200 - 100), Vector3(rand() % 255, rand() % 255, rand() % 255));
+		CreatePointLight(rand() % 50 + 40, Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
 	}
 	//CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
 }
