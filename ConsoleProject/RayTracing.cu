@@ -734,7 +734,7 @@ __global__ void RT(
 		//If the pixel hit something during ray tracing.
 		if (data != ' ')
 		{
-			//Increase the 7 to increase the ambient light.
+			//Increase the right-hand value to increase the ambient light.
 			float ambient = 0.01492537f * 7;
 			if (shadingValue < ambient)
 			{

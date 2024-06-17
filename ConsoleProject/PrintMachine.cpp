@@ -25,7 +25,8 @@ size_t PrintMachine::m_printSize = 0;
 size_t PrintMachine::m_backBufferPrintSize = 0;
 std::string PrintMachine::m_debugInfo = "";
 
-HANDLE PrintMachine::m_handle;
+HANDLE PrintMachine::m_inputHandle;
+HANDLE PrintMachine::m_outputHandle;
 
 std::thread PrintMachine::m_printThread;
 std::mutex PrintMachine::m_backBufferMutex;
@@ -59,6 +60,28 @@ bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
 		//ERROR: Unable to set console mode
 		return false;
 	}
+
+	return true;
+}
+
+bool ConfigureConsoleOutputMode(HANDLE outputHandle)
+{
+	//Get current console mode
+	unsigned int consoleMode = 0;
+	if (!GetConsoleMode(outputHandle, (LPDWORD)&consoleMode)) {
+		//ERROR: Unable to get console mode.
+		return false;
+	}
+
+	consoleMode |= ENABLE_PROCESSED_OUTPUT;
+	consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+	//Set the new mode
+	if (!SetConsoleMode(outputHandle, consoleMode)) {
+		//ERROR: Unable to set console mode
+		return false;
+	}
+
 	return true;
 }
 
@@ -114,9 +137,13 @@ PrintMachine::PrintMachine(size_t x, size_t y)
 
 void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
 {
-	m_handle = GetStdHandle(STD_INPUT_HANDLE);
+	m_outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+	m_inputHandle = GetStdHandle(STD_INPUT_HANDLE);
+
 	//Console stuff
-	DisableConsoleQuickEdit(m_handle); //Disables being able to click in the console window.
+	DisableConsoleQuickEdit(m_inputHandle); //Disables being able to click in the console window.
+	ConfigureConsoleOutputMode(m_outputHandle);
+
 	std::ios::sync_with_stdio(false);
 
 	if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
@@ -187,9 +214,14 @@ size_t PrintMachine::GetMaxSize()
 	return m_maxSize;
 }
 
-HANDLE PrintMachine::GetConsoleHandle()
+HANDLE PrintMachine::GetConsoleInputHandle()
 {
-	return m_handle;
+	return m_inputHandle;
+}
+
+HANDLE PrintMachine::GetConsoleOutputHandle()
+{
+	return m_outputHandle;
 }
 
 size_t PrintMachine::GetPrintSize()
@@ -285,6 +317,9 @@ bool PrintMachine::Print()
 		//system("cls");
 		ClearConsole();
 		fwrite(m_printBuffer, 1, m_printSize, stdout);
+		//DWORD written;
+		//WriteConsoleOutputCharacterA(m_outputHandle, m_printBuffer, m_printSize, {0, 0}, &written);
+		//WriteConsoleA(m_outputHandle, m_printBuffer, m_printSize, &written, NULL);
 		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
 		//printf("%.*s", (unsigned int)(37 * currentHeight * currentWidth + currentHeight), m_printBuffer);
 		printf("\x1b[m");
@@ -337,12 +372,12 @@ void PrintMachine::ClearConsole() {
 	//Move the cursor home
 	SetConsoleCursorPosition(hStdOut, homeCoords);
 	*/
-	HANDLE hOut;
-	COORD Position;
+	//HANDLE hOut;
+	//COORD Position;
 
-	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	//hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	
-	Position.X = 0;
-	Position.Y = 0;
-	SetConsoleCursorPosition(hOut, Position);
+	//Position.X = 0;
+	//Position.Y = 0;
+	SetConsoleCursorPosition(m_outputHandle, {0, 0});
 }

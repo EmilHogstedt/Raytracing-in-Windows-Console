@@ -46,7 +46,8 @@ public:
 	static size_t GetWidth();
 	static size_t GetHeight();
 	static size_t GetMaxSize();
-	static HANDLE GetConsoleHandle();
+	static HANDLE GetConsoleInputHandle();
+	static HANDLE GetConsoleOutputHandle();
 	static size_t GetPrintSize();
 	static PrintMode GetPrintMode();
 
@@ -55,7 +56,8 @@ public:
 	static void SetPrintSize(size_t);
 	static void SetPrintMode(PrintMode);
 private:
-	static HANDLE m_handle;
+	static HANDLE m_inputHandle;
+	static HANDLE m_outputHandle;
 
 	static PrintMode m_printMode;
 
