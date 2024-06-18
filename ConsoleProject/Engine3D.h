@@ -8,7 +8,7 @@
 class Engine3D {
 	static Engine3D* pInstance;
 protected:
-	Engine3D();
+	Engine3D() = delete;
 	~Engine3D();
 public:
 	Engine3D(Engine3D& other) = delete;
