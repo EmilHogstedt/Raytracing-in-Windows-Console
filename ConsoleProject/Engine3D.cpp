@@ -50,7 +50,7 @@ Engine3D::~Engine3D()
 void Engine3D::Start()
 {
 	//When we create the print machine it also starts printing.
-	PrintMachine::CreatePrintMachine(400, 100);
+	PrintMachine::CreatePrintMachine(400, 150);
 	m_rayTracer = DBG_NEW RayTracer();
 	m_camera->Init();
 	m_camera->Update();
