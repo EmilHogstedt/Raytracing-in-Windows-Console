@@ -6,10 +6,13 @@
 
 //3D Singleton Engine.
 class Engine3D {
+private:
 	static Engine3D* pInstance;
+
 protected:
-	Engine3D() = delete;
+	Engine3D();
 	~Engine3D();
+
 public:
 	Engine3D(Engine3D& other) = delete;
 	void operator=(const Engine3D&) = delete;
