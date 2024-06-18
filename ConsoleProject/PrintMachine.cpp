@@ -166,6 +166,9 @@ PrintMachine* PrintMachine::GetInstance()
 
 void PrintMachine::CleanUp()
 {
+	system("cls");
+	printf("\x1b[m");
+
 	delete m_timer;
 	cudaFree(m_deviceBackBuffer);
 	delete m_backBuffer;
@@ -307,6 +310,7 @@ bool PrintMachine::Print()
 			m_printSize = m_backBufferPrintSize;
 
 			memcpy(m_printBuffer, m_backBuffer, m_printSize);
+			
 			//char* temp = m_printBuffer;
 			//m_printBuffer = m_backBuffer;
 			//m_backBuffer = m_printBuffer;
@@ -317,6 +321,7 @@ bool PrintMachine::Print()
 		//system("cls");
 		ClearConsole();
 		fwrite(m_printBuffer, 1, m_printSize, stdout);
+		
 		//DWORD written;
 		//WriteConsoleOutputCharacterA(m_outputHandle, m_printBuffer, m_printSize, {0, 0}, &written);
 		//WriteConsoleA(m_outputHandle, m_printBuffer, m_printSize, &written, NULL);
@@ -325,7 +330,6 @@ bool PrintMachine::Print()
 		printf("\x1b[m");
 		printf("Rendering FPS: %d    \n", m_renderingFps);
 		printf("Printing FPS: %d    \n", m_printingFps);
-		
 		//DEBUG ONLY
 		//std::cout << m_debugInfo << std::endl;
 	}

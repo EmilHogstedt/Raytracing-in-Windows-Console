@@ -6,12 +6,7 @@ class Time
 	using t_dSec = std::chrono::duration<long double, std::ratio<1, 1>>;
 	using t_dNano = std::chrono::duration<long double, std::ratio<1, 1000000000>>;
 	using t_moment = std::chrono::time_point<t_clock, t_dNano>;
-private:
-	t_moment m_start;
-	t_moment m_loopBeginRendering;
-	t_moment m_loopBeginPrinting;
-	t_dSec m_deltaTimeRendering;
-	t_dSec m_deltaTimePrinting;
+
 public:
 	Time();
 	virtual ~Time() = default;
@@ -20,4 +15,11 @@ public:
 	long double DeltaTimePrinting();
 	void UpdateRendering();
 	void UpdatePrinting();
+
+private:
+	t_moment m_start;
+	t_moment m_loopBeginRendering;
+	t_moment m_loopBeginPrinting;
+	t_dSec m_deltaTimeRendering;
+	t_dSec m_deltaTimePrinting;
 };

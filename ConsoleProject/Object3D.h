@@ -20,7 +20,7 @@ class Object3D
 {
 public:
 	Object3D() = delete;
-	Object3D(Vector3 middle, ObjectType type, Vector3 color) :
+	Object3D(MyMath::Vector3 middle, ObjectType type, MyMath::Vector3 color) :
 		m_middlePos{ middle }, m_type{ type }, m_color{ color }
 	{
 	}
@@ -28,14 +28,20 @@ public:
 
 	//__device__ virtual void Update(long double) = 0; NOT POSSIBLE TO HAVE PURE VIRTUAL FUNCTIONS IN CUDA!!!!
 
-	__host__ __device__ ObjectType GetType();
-	__host__ __device__ Vector3 GetPos() const;
-	__host__ __device__ Vector3 GetColor();
+	__host__ __device__
+	ObjectType GetType();
+
+	__host__ __device__
+	MyMath::Vector3 GetPos() const;
+
+	__host__ __device__
+	MyMath::Vector3 GetColor();
+
 	void SetType(ObjectType);
-	void SetMiddlePos(Vector3);
+	void SetMiddlePos(MyMath::Vector3);
 protected:
-	Vector3 m_middlePos;
+	MyMath::Vector3 m_middlePos;
 private:
 	ObjectType m_type;
-	Vector3 m_color;
+	MyMath::Vector3 m_color;
 };

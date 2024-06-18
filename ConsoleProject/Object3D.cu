@@ -6,12 +6,12 @@ __host__ __device__ ObjectType Object3D::GetType()
 	return m_type;
 }
 
-__host__ __device__ Vector3 Object3D::GetPos() const
+__host__ __device__ MyMath::Vector3 Object3D::GetPos() const
 {
 	return m_middlePos;
 }
 
-__host__ __device__ Vector3 Object3D::GetColor()
+__host__ __device__ MyMath::Vector3 Object3D::GetColor()
 {
 	return m_color;
 }
@@ -21,7 +21,7 @@ void Object3D::SetType(ObjectType type)
 	m_type = type;
 }
 
-void Object3D::SetMiddlePos(Vector3 middlePos)
+void Object3D::SetMiddlePos(MyMath::Vector3 middlePos)
 {
 	m_middlePos = middlePos;
 }

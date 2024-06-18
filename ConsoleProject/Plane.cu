@@ -6,7 +6,7 @@ __device__ void Plane::Update(long double dt)
 	return;
 }
 
-__host__ __device__ Vector3 Plane::GetNormal()
+__host__ __device__ MyMath::Vector3 Plane::GetNormal()
 {
 	return m_normal;
 }

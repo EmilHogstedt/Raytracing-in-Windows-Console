@@ -4,7 +4,7 @@
 class Sphere : public Object3D
 {
 public:
-	Sphere(Vector3 middle, float r, Vector3 color) :
+	Sphere(MyMath::Vector3 middle, float r, MyMath::Vector3 color) :
 		Object3D{ middle, ObjectType::SphereType, color }, m_radius{ r }, mover{ -1 }
 	{
 		int temp = rand() % 300 + 100;

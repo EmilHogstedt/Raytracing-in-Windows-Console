@@ -4,46 +4,36 @@
 #include "Scene3D.h"
 #include "RayTracing.h"
 
-//3D Singleton Engine.
 class Engine3D {
-private:
-	static Engine3D* pInstance;
-
-protected:
-	Engine3D();
-	~Engine3D();
-
 public:
-	Engine3D(Engine3D& other) = delete;
-	void operator=(const Engine3D&) = delete;
+	Engine3D() = default;
+	~Engine3D() = default;
 
-	//Called at the beginning of the program to create the instance if it is not already created.
-	//This is done in this function instead of in GetInstance to reduce wait time for threads.
-	static void CreateEngine();
-	//Returns the instance if there is one.
-	static Engine3D* GetInstance();
-	static void Start();
-	//Is called in our game loop.
-	static bool Run();
-	static void CleanUp();
+	void Start();
+	bool Run();
+	void CleanUp();
 
 private:
-	static void Render();
+	void Render();
 
-	static void CheckKeyboard(long double dt);
+	void CheckKeyboard(long double dt);
 
-	static Time* m_timer;
-	static Camera3D* m_camera;
-	static Scene3D* m_scene;
+	std::unique_ptr<Time> m_timer;
+	std::unique_ptr<Camera3D> m_camera;
+	std::unique_ptr<Scene3D> m_scene;
 
-	static long double m_fpsTimer;
-	static int m_fps;
+	long double m_fpsTimer;
+	int m_fps;
 	
-	static size_t m_num_threads;
+	size_t m_numThreads;
 	
 	//Move these to input handler.
-	static bool m_lockMouse;
+	bool m_lockMouse;
 
-	static RayTracer* m_rayTracer;
-	static RayTracingParameters* m_deviceRayTracingParameters;
+	std::unique_ptr<RayTracer> m_rayTracer;
+
+	//The raytracingparameters is always nullptr on the CPU. Meaning "new" is never called on it.
+	RayTracingParameters* m_deviceRayTracingParameters;
+
+	bool m_quit = false;
 };

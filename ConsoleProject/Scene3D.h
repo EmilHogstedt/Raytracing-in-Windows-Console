@@ -17,8 +17,8 @@ public:
 
 	void CleanUp();
 
-	void CreatePlane(Vector3 middlePos, Vector3 normal, Vector3 color);
-	void CreateSphere(float radius, Vector3 middlePos, Vector3 color);
+	void CreatePlane(MyMath::Vector3 middlePos, MyMath::Vector3 normal, MyMath::Vector3 color);
+	void CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vector3 color);
 
 	DeviceObjectArray<Object3D*> GetObjects();
 private:

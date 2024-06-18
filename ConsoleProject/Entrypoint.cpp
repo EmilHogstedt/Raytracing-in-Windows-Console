@@ -3,11 +3,11 @@
 
 int main()
 {
-    Engine3D::CreateEngine();
-    Engine3D::GetInstance()->Start();
-    //Always returns true. Quits and cleans up by closing the console through CEvents.
-    while(Engine3D::GetInstance()->Run())
+    std::unique_ptr<Engine3D> engine = std::make_unique<Engine3D>();
+    engine->Start();
+
+    while(engine->Run())
     { }
     
-    Engine3D::GetInstance()->CleanUp();
+    engine->CleanUp();
 }

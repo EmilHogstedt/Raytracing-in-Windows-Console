@@ -1,63 +1,29 @@
 #include "pch.h"
 #include "Engine3D.h"
 
-//A lot of this will be moved/removed when CUDA is added.
-//Move input stuff to an input handler.
-Engine3D* Engine3D::pInstance{ nullptr };
-Camera3D* Engine3D::m_camera{ nullptr };
-Scene3D* Engine3D::m_scene{ nullptr };
-
-Time* Engine3D::m_timer{ nullptr };
-long double Engine3D::m_fpsTimer = 0.0f;
-int Engine3D::m_fps = 0;
-
-size_t Engine3D::m_num_threads = 0;
-
-bool Engine3D::m_lockMouse = false;
-
-RayTracer* Engine3D::m_rayTracer = nullptr;
-RayTracingParameters* Engine3D::m_deviceRayTracingParameters = nullptr;
-
-//Creates the singleton instance.
-void Engine3D::CreateEngine()
-{
-	if (!pInstance)
-		pInstance = DBG_NEW Engine3D();
-}
-
-Engine3D* Engine3D::GetInstance()
-{
-	return pInstance;
-}
-
-Engine3D::Engine3D() {
-	//Engine objects
-	m_timer = DBG_NEW Time();
-	m_camera = DBG_NEW Camera3D();
-	m_scene = DBG_NEW Scene3D();
-	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
-}
-
-Engine3D::~Engine3D()
-{
-	delete m_timer;
-	delete m_camera;
-	delete m_scene;
-	delete m_rayTracer;
-	cudaFree(m_deviceRayTracingParameters);
-}
-
 void Engine3D::Start()
 {
+	//Engine objects
+	m_timer = std::make_unique<Time>();
+	m_camera = std::make_unique<Camera3D>();
+	m_scene = std::make_unique<Scene3D>();
+
+	//Allocate memory for the raytracingparameters.
+	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
+
 	//When we create the print machine it also starts printing.
 	PrintMachine::CreatePrintMachine(400, 150);
-	m_rayTracer = DBG_NEW RayTracer();
+
+	//The printmachine needs to be created for the raytracer to be created.
+	m_rayTracer = std::make_unique<RayTracer>();
+
 	m_camera->Init();
 	m_camera->Update();
+
 	m_scene->Init();
 
 	//Not needed atm. Maybe later.
-	m_num_threads = std::thread::hardware_concurrency();
+	m_numThreads = std::thread::hardware_concurrency();
 }
 
 bool Engine3D::Run()
@@ -69,40 +35,43 @@ bool Engine3D::Run()
 		return false;
 	}
 	
-	long double dt = m_timer->DeltaTimeRendering();
-	CheckKeyboard(dt);
-	//Move using the current input.
-	m_camera->Move(static_cast<float>(dt));
+	//Check if we want to quit.
+	if (m_quit)
+	{
+		return false;
+	}
 
+	long double dt = m_timer->DeltaTimeRendering();
 	m_timer->UpdateRendering();
+	m_fpsTimer += m_timer->DeltaTimeRendering();
 	m_fps++;
 
-	m_fpsTimer += m_timer->DeltaTimeRendering();
+	//Handle keyboard input
+	CheckKeyboard(dt);
+
+	//Move using the current input.
+	m_camera->Move(dt);
 
 	Render();
 
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
 	{
-		m_scene->CreateSphere(static_cast<float>(rand() % 10), Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), Vector3(rand() % 255, rand() % 255, rand() % 255));
+		//Create a sphere every second for testing purposes
+		m_scene->CreateSphere(static_cast<float>(rand() % 10), MyMath::Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), MyMath::Vector3(rand() % 255, rand() % 255, rand() % 255));
 		
+		//Send the fps to the printmachine.
 		PrintMachine::GetInstance()->UpdateFPS(m_fps);
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
 	
 	//Some debugging text. Maybe add an information panel at the bottom that can get sent text? Should be done in PrintMachine though.
+	/*
 	Vector3 forward = m_camera->GetForward();
 	std::ostringstream oss;
 	oss << "\x1b[36mForward: X: " << forward.x << " Y: " << forward.y << " Z: " << forward.z << "\x1b[m";
 	PrintMachine::GetInstance()->SetDebugInfo(oss.str());
-	/*
-	Vector3 pos = m_camera->GetPos();
-	Vector3 rot = m_camera->GetRot();
-	std::cout << "Pos: " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-	std::cout << "Rot: " << rot.x << " " << rot.y << " " << rot.z << std::endl;
-	COORD coords = m_camera->GetMouseCoords();
-	std::cout << "Mousecoords: " << coords.X << " " << coords.Y << std::endl;
 	*/
 	return true;
 }
@@ -111,6 +80,7 @@ void Engine3D::Render()
 {
 	//Update the view matrix.
 	m_camera->Update();
+
 	//Update the objects in the scene.
 	m_scene->Update(m_timer->DeltaTimeRendering());
 
@@ -128,8 +98,22 @@ void Engine3D::Render()
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
+
+	//Reset the backbuffer.
 	PrintMachine::GetInstance()->ResetDeviceBackBuffer();
-	m_rayTracer->RayTracingWrapper(x, y, element1, element2, m_camera->GetFarPlaneDistance(), objects, m_deviceRayTracingParameters, PrintMachine::GetInstance()->GetDeviceBackBuffer(), PrintMachine::GetInstance()->GetBackBufferMutex(), m_timer->DeltaTimeRendering());
+
+	m_rayTracer->RayTracingWrapper(
+		x, 
+		y, 
+		element1, 
+		element2, 
+		m_camera->GetFarPlaneDistance(), 
+		objects, 
+		m_deviceRayTracingParameters, 
+		PrintMachine::GetInstance()->GetDeviceBackBuffer(), 
+		PrintMachine::GetInstance()->GetBackBufferMutex(), 
+		m_timer->DeltaTimeRendering()
+	);
 }
 
 //Move this to an input handler.
@@ -174,10 +158,7 @@ void Engine3D::CheckKeyboard(long double dt)
 
 	if (GetKeyState('P') & 0x8000)
 	{
-		if (!m_lockMouse)
-		{
-			m_lockMouse = true;
-		}
+		m_lockMouse = !m_lockMouse;
 	}
 
 	if (GetKeyState(VK_SHIFT) & 0x8000)
@@ -200,11 +181,7 @@ void Engine3D::CheckKeyboard(long double dt)
 
 	if (GetKeyState(VK_ESCAPE) & 0x8000)
 	{
-		
-		if (m_lockMouse)
-		{
-			m_lockMouse = false;
-		}
+		m_quit = true;
 	}
 
 	//Change printing mode.
@@ -243,6 +220,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	//Mouse positioning.
 	POINT newCoordsPoint;
 	GetCursorPos(&newCoordsPoint);
+
 	COORD newCoords;
 	newCoords.X = static_cast<SHORT>(newCoordsPoint.x);
 	newCoords.Y = static_cast<SHORT>(newCoordsPoint.y);
@@ -250,6 +228,7 @@ void Engine3D::CheckKeyboard(long double dt)
 	{
 		return;
 	}
+
 	COORD oldCoords = m_camera->GetMouseCoords();
 	if (oldCoords.X < 0.0f && oldCoords.Y < 0.0f)
 	{
@@ -261,12 +240,9 @@ void Engine3D::CheckKeyboard(long double dt)
 
 	if (m_lockMouse)
 	{
-		if (newCoords.X > 1300 || newCoords.X < 1100 || newCoords.Y > 600 || newCoords.Y < 400)
-		{
-			SetCursorPos(1200, 500);
-			newCoords.X = 1200;
-			newCoords.Y = 500;
-		}
+		SetCursorPos(1200, 500);
+		newCoords.X = 1200;
+		newCoords.Y = 500;
 	}
 
 	m_camera->AddRot(diffY, diffX, 0);
@@ -275,6 +251,7 @@ void Engine3D::CheckKeyboard(long double dt)
 
 void Engine3D::CleanUp()
 {
-	delete pInstance;
 	PrintMachine::GetInstance()->CleanUp();
+
+	cudaFree(m_deviceRayTracingParameters);
 }

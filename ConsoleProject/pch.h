@@ -28,6 +28,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <cmath>
+
 #if defined(DEBUG) | defined (_DEBUG)
 #define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
 #else 

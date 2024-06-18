@@ -1,185 +1,229 @@
 #pragma once
 
-class Vector3
+namespace MyMath
 {
-public:
-	__host__ __device__ Vector3(float x, float y, float z) :
-		x{ x }, y{ y }, z{ z }
+	class Vector3
 	{
-	}
-	__host__ __device__ Vector3(int x, int y, int z) :
-		x{ static_cast<float>(x) }, y{ static_cast<float>(y) }, z{ static_cast<float>(z) }
-	{
-	}
-	__host__ __device__ Vector3()
-	{
-		x = 0.0f;
-		y = 0.0f;
-		z = 0.0f;
-	}
-	virtual ~Vector3() noexcept = default;
+	public:
+		__host__ __device__
+			Vector3(float inX, float inY, float inZ)
+		{
+			x = inX;
+			y = inY;
+			z = inZ;
+		}
 
-	float x;
-	float y;
-	float z;
+		__host__ __device__
+			Vector3(int inX, int inY, int inZ)
+		{
+			x = static_cast<float>(inX);
+			y = static_cast<float>(inY);
+			z = static_cast<float>(inZ);
+		}
 
-	__host__ __device__ Vector3(const Vector3& other)
-	{
-		x = other.x;
-		y = other.y;
-		z = other.z;
-	}
-	__host__ __device__ Vector3& operator=(const Vector3& other)
-	{
-		if (this == &other)
+		__host__ __device__
+			Vector3()
+		{
+			x = 0.0f;
+			y = 0.0f;
+			z = 0.0f;
+		}
+
+		~Vector3() = default;
+
+		__host__ __device__
+			Vector3(const Vector3& other)
+		{
+			x = other.x;
+			y = other.y;
+			z = other.z;
+		}
+		__host__ __device__
+			Vector3& operator=(const Vector3& other)
+		{
+			if (this == &other)
+				return *this;
+
+			x = other.x;
+			y = other.y;
+			z = other.z;
+
 			return *this;
+		}
+		__host__ __device__
+			Vector3 operator-(const Vector3& other)
+		{
+			return Vector3(x - other.x, y - other.y, z - other.z);
+		}
 
-		x = other.x;
-		y = other.y;
-		z = other.z;
+		__host__ __device__
+			Vector3 operator+(const Vector3& other)
+		{
+			return Vector3(x + other.x, y + other.y, z + other.z);
+		}
 
-		return *this;
-	}
-	__host__ __device__ Vector3 operator-(const Vector3& other)
-	{
-		return Vector3(x - other.x, y - other.y, z - other.z);
-	}
-	__host__ __device__ Vector3 operator+(const Vector3& other)
-	{
-		return Vector3(x + other.x, y + other.y, z + other.z);
-	}
-	//Float operations
-	__host__ __device__ Vector3 operator*(float other)
-	{
-		return Vector3(x * other, y * other, z * other);
-	}
-	__host__ __device__ void operator*=(float other)
-	{
-		x *= other;
-		y *= other;
-		z *= other;
-	}
-	__host__ __device__ Vector3 Normalize()
-	{
-		float length = 1.0f / sqrt(x * x + y * y + z * z);
-		
-		return Vector3(x * length, y * length, z * length);
-	}
+		//Float operations
+		__host__ __device__
+			Vector3 operator*(float other)
+		{
+			return Vector3(x * other, y * other, z * other);
+		}
 
-private:
-};
+		__host__ __device__
+			void operator*=(float other)
+		{
+			x *= other;
+			y *= other;
+			z *= other;
+		}
 
-class Vector4 : public Vector3
-{
-public:
-	__host__ __device__ Vector4(float x, float y, float z, float w) :
-		Vector3{ x, y, z }, w{ w }
-	{
-	}
-	Vector4(Vector3 v, float w) :
-		Vector3{ v }, w{ w }
-	{
-	}
-	Vector4() :
-		Vector3{ 0.0f, 0.0f, 0.0f }
-	{
-		w = 0.0f;
-	}
-	virtual ~Vector4() noexcept = default;
+		__host__ __device__
+			Vector3 Normalize()
+		{
+			float length = 1.0f / sqrt(x * x + y * y + z * z);
 
-	float w;
+			return Vector3(x * length, y * length, z * length);
+		}
 
-	__host__ __device__ Vector4(const Vector4& other) :
-		Vector3{other.x, other.y, other.z}
-	{
-		w = other.w;
-	}
+		float x;
+		float y;
+		float z;
+	};
 
-	Vector4& operator=(const Vector4& other)
+	class Vector4
 	{
-		if (this == &other)
+	public:
+		__host__ __device__
+			Vector4(float inX, float inY, float inZ, float inW)
+		{
+			x = inX;
+			y = inY;
+			z = inZ;
+			w = inW;
+		}
+
+		Vector4(Vector3 inV, float inW)
+		{
+			x = inV.x;
+			y = inV.y;
+			z = inV.z;
+			w = inW;
+		}
+
+		Vector4()
+		{
+			x = 0.0f;
+			y = 0.0f;
+			z = 0.0f;
+			w = 0.0f;
+		}
+
+		~Vector4() = default;
+
+
+		__host__ __device__
+			Vector4(const Vector4& other)
+		{
+			x = other.x;
+			y = other.y;
+			z = other.z;
+			w = other.w;
+		}
+
+		Vector4& operator=(const Vector4& other)
+		{
+			if (this == &other)
+				return *this;
+
+			x = other.x;
+			y = other.y;
+			z = other.z;
+			w = other.w;
+
 			return *this;
+		}
 
-		x = other.x;
-		y = other.y;
-		z = other.z;
-		w = other.w;
+		__host__ __device__
+		Vector3 xyz()
+		{
+			return Vector3(x, y, z);
+		}
 
-		return *this;
-	}
-	
-	//Implement operations (+, -, * etc)
+		//Implement operations (+, -, * etc)
 
-	Vector4 Normalize()
+		Vector4 Normalize()
+		{
+			float length = 1.0f / sqrt(x * x + y * y + z * z + w * w);
+
+			return Vector4(x * length, y * length, z * length, w * length);
+		}
+
+		float x;
+		float y;
+		float z;
+		float w;
+	};
+
+	class Matrix
 	{
-		Vector4 result = Vector4();
-		float length = sqrt(x * x + y * y + z * z + w * w);
-		length = 1.0f / length;
-		result.x = x * length;
-		result.y = y * length;
-		result.z = z * length;
-		result.w = w * length;
+	public:
+		Matrix(Vector4 v1, Vector4 v2, Vector4 v3, Vector4 v4)
+		{
+			row1 = v1;
+			row2 = v2;
+			row3 = v3;
+			row4 = v4;
+		}
 
-		return result;
-	}
+		Matrix()
+		{
+			row1 = Vector4();
+			row2 = Vector4();
+			row3 = Vector4();
+			row4 = Vector4();
+		}
 
-private:
-};
+		~Matrix() = default;
 
-class Matrix
-{
-public:
-	Matrix(Vector4 v1, Vector4 v2, Vector4 v3, Vector4 v4) :
-		row1{ v1 }, row2{ v2 }, row3{ v3 }, row4{ v4 }
-	{
-	}
-	Matrix()
-	{
-		row1 = Vector4();
-		row2 = Vector4();
-		row3 = Vector4();
-		row4 = Vector4();
-	}
-	virtual ~Matrix() noexcept = default;
+		Matrix(const Matrix& other)
+		{
+			row1 = other.row1;
+			row2 = other.row2;
+			row3 = other.row3;
+			row4 = other.row4;
+		}
 
-	__host__ __device__ Vector4 Mult(Vector4 v)
-	{
-		return Vector4(
-			row1.x * v.x + row1.y * v.y + row1.z * v.z + row1.w * v.w,
-			row2.x * v.x + row2.y * v.y + row2.z * v.z + row2.w * v.w,
-			row3.x * v.x + row3.y * v.y + row3.z * v.z + row3.w * v.w,
-			row4.x * v.x + row4.y * v.y + row4.z * v.z + row4.w * v.w
+		Matrix& operator=(const Matrix& other)
+		{
+			if (this == &other)
+				return *this;
+
+			row1 = other.row1;
+			row2 = other.row2;
+			row3 = other.row3;
+			row4 = other.row4;
+
+			return *this;
+		}
+
+		__host__ __device__
+			Vector4 Mult(Vector4 v)
+		{
+			return Vector4(
+				row1.x * v.x + row1.y * v.y + row1.z * v.z + row1.w * v.w,
+				row2.x * v.x + row2.y * v.y + row2.z * v.z + row2.w * v.w,
+				row3.x * v.x + row3.y * v.y + row3.z * v.z + row3.w * v.w,
+				row4.x * v.x + row4.y * v.y + row4.z * v.z + row4.w * v.w
 			);
-	}
+		}
 
-	Vector4 row1;
-	Vector4 row2;
-	Vector4 row3;
-	Vector4 row4;
+		Vector4 row1;
+		Vector4 row2;
+		Vector4 row3;
+		Vector4 row4;
+	};
 
-	Matrix(const Matrix& other)
-	{
-		row1 = other.row1;
-		row2 = other.row2;
-		row3 = other.row3;
-		row4 = other.row4;
-	}
-	Matrix& operator=(const Matrix& other)
-	{
-		if (this == &other)
-			return *this;
-
-		row1 = other.row1;
-		row2 = other.row2;
-		row3 = other.row3;
-		row4 = other.row4;
-
-		return *this;
-	}
-
-private:
-};
-
-__host__ __device__ float Dot(Vector3 v1, Vector3 v2);
-__host__ __device__ float Dot(Vector4 v1, Vector4 v2);
-__host__ __device__ Vector3 Cross(Vector3 v1, Vector3 v2);
+	__host__ __device__ float Dot(Vector3 v1, Vector3 v2);
+	__host__ __device__ float Dot(Vector4 v1, Vector4 v2);
+	__host__ __device__ Vector3 Cross(Vector3 v1, Vector3 v2);
+}

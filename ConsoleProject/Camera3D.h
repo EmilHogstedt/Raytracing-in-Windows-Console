@@ -5,29 +5,29 @@
 class Camera3D
 {
 public:
-	Camera3D();
-	~Camera3D();
+	Camera3D() = default;
+	~Camera3D() = default;
 
 	void Init();
 	void Update();
 	void SetRot(float, float, float);
 	void SetPos(float, float, float);
-	void Move(float dt);
+	void Move(long double dt);
 	void AddRot(short, short, short);
 
-	Matrix GetVMatrix();
-	Matrix GetInverseVMatrix();
-	Matrix GetPMatrix();
+	MyMath::Matrix GetVMatrix();
+	MyMath::Matrix GetInverseVMatrix();
+	MyMath::Matrix GetPMatrix();
 
-	Vector3 GetPos();
-	Vector3 GetRot();
+	MyMath::Vector3 GetPos();
+	MyMath::Vector3 GetRot();
 
-	Vector3 GetRight();
-	Vector3 GetUp();
-	Vector3 GetForward();
+	MyMath::Vector3 GetRight();
+	MyMath::Vector3 GetUp();
+	MyMath::Vector3 GetForward();
 
 	float GetFarPlaneDistance();
-	Vector4 GetFrustum();
+	MyMath::Vector4 GetFrustum();
 
 	COORD GetMouseCoords();
 	void SetMouseCoords(COORD newCords);
@@ -47,29 +47,30 @@ public:
 	PressedKeys m_Keys;
 
 private:
-	Matrix m_vMatrix;
-	Matrix m_pMatrix;
+	MyMath::Matrix m_vMatrix = MyMath::Matrix();
+	MyMath::Matrix m_pMatrix = MyMath::Matrix();
 
-	Vector3 m_right;
-	Vector3 m_up;
-	Vector3 m_forward;
+	MyMath::Vector3 m_right = MyMath::Vector3(-1.0f, 0.0f, 0.0f);
+	MyMath::Vector3 m_up = MyMath::Vector3(0.0f, 1.0f, 0.0f);
+	MyMath::Vector3 m_forward = MyMath::Vector3(0.0f, 0.0f, 1.0f);
 
 	//Used when moving. Are only updated using the yaw and not the pitch.
-	Vector3 m_staticForward;
-	Vector3 m_staticRight;
+	MyMath::Vector3 m_staticRight = MyMath::Vector3(-1.0f, 0.0f, 0.0f);
+	MyMath::Vector3 m_staticForward = MyMath::Vector3(0.0f, 0.0f, 1.0f);
 
-	Vector3 m_pos;
+	MyMath::Vector3 m_pos = MyMath::Vector3();
+
 	//pitch yaw roll
-	Vector3 m_rot;
+	MyMath::Vector3 m_rot = MyMath::Vector3(0.0f, static_cast<float>(M_PI), 0.0f);
 	
-	float m_screenNear = 0.1f;
-	float m_screenFar = 250.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
-	float m_hNear;
-	float m_wNear;
-	float m_hFar;
-	float m_wFar;
+	float m_hNear = 0.0f;
+	float m_wNear = 0.0f;
+	float m_hFar = 0.0f;
+	float m_wFar = 0.0f;
 
-	COORD m_mouseCoords;
+	COORD m_mouseCoords = { static_cast<SHORT>(-1.0f), static_cast<SHORT>(-1.0f) };
 
-	float m_FOV = 2.0f; //Do not set to 1
+	const float m_screenNear = 0.1f;
+	const float m_screenFar = 250.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
+	const float m_FOV = 2.0f; //Do not set to 1
 };

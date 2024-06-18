@@ -2,29 +2,6 @@
 #include "Camera3D.h"
 #include "PrintMachine.h"
 
-Camera3D::Camera3D() :
-	m_pos{ Vector3() },
-	m_rot{ Vector3(0.0f, static_cast<float>(M_PI), 0.0f) },
-	m_right{ Vector3(-1.0f, 0.0f, 0.0f) },
-	m_up{ Vector3(0.0f, 1.0f, 0.0f) },
-	m_forward{ Vector3(0.0f, 0.0f, 1.0f) },
-	m_staticForward{ Vector3(0.0f, 0.0f, 1.0f) },
-	m_staticRight{ Vector3(-1.0f, 0.0f, 0.0f)},
-	m_vMatrix{ Matrix() },
-	m_pMatrix{ Matrix() },
-	m_hNear{0.0f},
-	m_wNear{0.0f},
-	m_hFar{0.0f},
-	m_wFar{0.0f}
-{
-	m_mouseCoords.X = static_cast<SHORT>(-1.0f);
-	m_mouseCoords.Y = static_cast<SHORT>(-1.0f);
-}
-
-Camera3D::~Camera3D()
-{
-}
-
 //The pMatrix is set up in init. Since there is no option to change it atm.
 void Camera3D::Init()
 {
@@ -121,22 +98,22 @@ float Camera3D::GetFarPlaneDistance()
 	return m_screenFar;
 }
 
-Vector4 Camera3D::GetFrustum()
+MyMath::Vector4 Camera3D::GetFrustum()
 {
-	return Vector4(m_wNear, m_hNear, m_wFar, m_hFar);
+	return MyMath::Vector4(m_wNear, m_hNear, m_wFar, m_hFar);
 }
 
-Vector3 Camera3D::GetRight()
+MyMath::Vector3 Camera3D::GetRight()
 {
 	return m_right;
 }
 
-Vector3 Camera3D::GetUp()
+MyMath::Vector3 Camera3D::GetUp()
 {
 	return m_up;
 }
 
-Vector3 Camera3D::GetForward()
+MyMath::Vector3 Camera3D::GetForward()
 {
 	return m_forward;
 }
@@ -156,13 +133,13 @@ void Camera3D::SetPos(float x, float y, float z)
 }
 
 //Moves using the keymap.
-void Camera3D::Move(float dt)
+void Camera3D::Move(long double dt)
 {
 	float speed = 10.0f;
 
 	//Use the current right & forward vectors to calculate movement in the x-z plane.
-	Vector3 moveX = m_staticRight * static_cast<float>(m_Keys.D - m_Keys.A);
-	Vector3 moveZ = m_staticForward * static_cast<float>(m_Keys.W - m_Keys.S);
+	MyMath::Vector3 moveX = m_staticRight * static_cast<float>(m_Keys.D - m_Keys.A);
+	MyMath::Vector3 moveZ = m_staticForward * static_cast<float>(m_Keys.W - m_Keys.S);
 	//Then add those to the current posision.
 	m_pos.x = m_pos.x + (moveX.x * dt * speed) + (moveZ.x * dt * speed);
 	m_pos.z = m_pos.z + (moveX.z * dt * speed) + (moveZ.z * dt * speed);
@@ -199,16 +176,16 @@ void Camera3D::SetMouseCoords(COORD newCoords)
 	m_mouseCoords = newCoords;
 }
 
-Matrix Camera3D::GetVMatrix()
+MyMath::Matrix Camera3D::GetVMatrix()
 {
 	return m_vMatrix;
 }
 
 //Manual calculation of the inverse 4x4 matrix. Is there any way to optimize this???
 //Here be dragons
-Matrix Camera3D::GetInverseVMatrix()
+MyMath::Matrix Camera3D::GetInverseVMatrix()
 {
-	Matrix inverseMatrix = Matrix();
+	MyMath::Matrix inverseMatrix = MyMath::Matrix();
 
 	//First column.
 	//00 Done
@@ -393,17 +370,17 @@ Matrix Camera3D::GetInverseVMatrix()
 	return inverseMatrix;
 }
 
-Matrix Camera3D::GetPMatrix()
+MyMath::Matrix Camera3D::GetPMatrix()
 {
 	return m_pMatrix;
 }
 
-Vector3 Camera3D::GetPos()
+MyMath::Vector3 Camera3D::GetPos()
 {
 	return m_pos;
 }
 
-Vector3 Camera3D::GetRot()
+MyMath::Vector3 Camera3D::GetRot()
 {
 	return m_rot;
 }

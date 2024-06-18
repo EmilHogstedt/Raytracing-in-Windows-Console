@@ -23,15 +23,15 @@ void Scene3D::Init()
 	m_deviceSpheres.using1st = true;
 
 	//Temporary.
-	CreateSphere(7.0f, Vector3(0.0f, 10.0f, 20.0f), Vector3(255.0f, 1.0f, 1.0f));
-	CreateSphere(6.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(1.0f, 255.0f, 1.0f));
-	CreateSphere(10.0f, Vector3(10.0f, 10.0f, 40.0f), Vector3(1.0f, 1.0f, 255.0f));
-	CreateSphere(3.0f, Vector3(5.0f, 10.0f, 20.0f), Vector3(225.0f, 210.0f, 20.0f));
-	CreateSphere(4.0f, Vector3(-5.0f, 10.0f, 40.0f), Vector3(225.0f, 10.0f, 220.0f));
-	CreatePlane(Vector3(0.0f, -3.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f), Vector3(100.0f, 100.0f, 100.0f));
+	CreateSphere(7.0f, MyMath::Vector3(0.0f, 10.0f, 20.0f), MyMath::Vector3(255.0f, 1.0f, 1.0f));
+	CreateSphere(6.0f, MyMath::Vector3(5.0f, 10.0f, 20.0f), MyMath::Vector3(1.0f, 255.0f, 1.0f));
+	CreateSphere(10.0f, MyMath::Vector3(10.0f, 10.0f, 40.0f), MyMath::Vector3(1.0f, 1.0f, 255.0f));
+	CreateSphere(3.0f, MyMath::Vector3(5.0f, 10.0f, 20.0f), MyMath::Vector3(225.0f, 210.0f, 20.0f));
+	CreateSphere(4.0f, MyMath::Vector3(-5.0f, 10.0f, 40.0f), MyMath::Vector3(225.0f, 10.0f, 220.0f));
+	CreatePlane(MyMath::Vector3(0.0f, -3.0f, 0.0f), MyMath::Vector3(0.0f, 1.0f, 0.0f), MyMath::Vector3(100.0f, 100.0f, 100.0f));
 }
 
-void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)
+void Scene3D::CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vector3 color)
 {
 	//See so that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
@@ -124,7 +124,7 @@ void Scene3D::CreateSphere(float radius, Vector3 middlePos, Vector3 color)
 	m_deviceObjects.count++;
 }
 
-void Scene3D::CreatePlane(Vector3 middlePos, Vector3 normal, Vector3 color)
+void Scene3D::CreatePlane(MyMath::Vector3 middlePos, MyMath::Vector3 normal, MyMath::Vector3 color)
 {
 	//See so that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))

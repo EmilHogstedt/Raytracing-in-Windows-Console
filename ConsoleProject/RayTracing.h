@@ -3,8 +3,8 @@
 #include "PrintMachine.h"
 struct RayTracingParameters
 {
-	Matrix inverseVMatrix;
-	Vector3 camPos;
+	MyMath::Matrix inverseVMatrix;
+	MyMath::Vector3 camPos;
 };
 
 class RayTracer

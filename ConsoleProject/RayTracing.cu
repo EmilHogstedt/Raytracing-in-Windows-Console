@@ -269,8 +269,8 @@ __global__ void RT(
 	float convertedX = (2 * column - (float)x) / x;
 
 	//Calculate the ray.
-	Vector4 pixelVSpace = Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	Vector3 directionWSpace = ((Vector3)(params->inverseVMatrix.Mult(pixelVSpace))).Normalize();
+	MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
+	MyMath::Vector3 directionWSpace = params->inverseVMatrix.Mult(pixelVSpace).xyz().Normalize();
 	
 	//Used during intersection tests with spheres.
 	float a = Dot(directionWSpace, directionWSpace);
@@ -280,11 +280,11 @@ __global__ void RT(
 	char data = ' ';
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
-	Vector3 bestColor;
-	Vector3 bestNormal;
+	MyMath::Vector3 bestColor;
+	MyMath::Vector3 bestNormal;
 
 	//Localizing variables.
-	Vector3 cameraPos = params->camPos;
+	MyMath::Vector3 cameraPos = params->camPos;
 	size_t localCount = count;
 	
 	//Ray trace against every object.
@@ -300,9 +300,9 @@ __global__ void RT(
 		if (type == ObjectType::SphereType)
 		{
 			Sphere localSphere = *(Sphere*)(objects[i]);
-			Vector3 spherePos = localSphere.GetPos();
+			MyMath::Vector3 spherePos = localSphere.GetPos();
 
-			Vector3 objectToCam = cameraPos - spherePos;
+			MyMath::Vector3 objectToCam = cameraPos - spherePos;
 			float radius = localSphere.GetRadius();
 
 			float b = 2.0f * Dot(directionWSpace, objectToCam);
@@ -327,11 +327,11 @@ __global__ void RT(
 				if (t1 < closest && t1 > 0.0f)
 				{
 					closest = t1;
-					Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+					MyMath::Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
 					bestNormal = normalSphere;
 
 					//The vector 3 here is just to make the spheres not "follow" the player.
-					shadingValue = Dot(normalSphere, Vector3(1.0f, 0.0f, 0.0f));
+					shadingValue = Dot(normalSphere, MyMath::Vector3(1.0f, 0.0f, 0.0f));
 					bestColor = localSphere.GetColor();
 				}
 			}
@@ -339,7 +339,7 @@ __global__ void RT(
 		else if (type == ObjectType::PlaneType)
 		{
 			Plane localPlane = *((Plane*)(objects[i]));
-			Vector3 planeNormal = localPlane.GetNormal();
+			MyMath::Vector3 planeNormal = localPlane.GetNormal();
 			//Check if they are paralell, if not it hit.
 			float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
 			if (dotLineAndPlaneNormal != 0.0f)
@@ -350,10 +350,10 @@ __global__ void RT(
 				{
 					if (t1 < closest)
 					{
-						Vector3 p = cameraPos + (directionWSpace * t1);
+						MyMath::Vector3 p = cameraPos + (directionWSpace * t1);
 						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
 						{
-							shadingValue = Dot(planeNormal, Vector3(1.0f, 0.0f, 0.0f));
+							shadingValue = Dot(planeNormal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
 
 							//Comment in this if statement to get "backface" culling for planes.
 							//if (shadingValue > 0.0f) {
