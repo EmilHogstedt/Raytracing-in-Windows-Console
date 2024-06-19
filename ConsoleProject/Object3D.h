@@ -4,13 +4,12 @@
 //Used for sending objects to the GPU.
 template<typename T>
 struct DeviceObjectArray {
-	T* m_deviceArray1;
-	T* m_deviceArray2;
+	T DEVICE_MEMORY_PTR m_deviceArray1;
+	T DEVICE_MEMORY_PTR m_deviceArray2;
 
 	bool using1st;
 	unsigned int allocatedBytes;
 	unsigned int count;
-
 };
 
 enum class ObjectType { None = 0, PlaneType, SphereType };

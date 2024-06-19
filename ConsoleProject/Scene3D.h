@@ -2,8 +2,8 @@
 #include "Sphere.h"
 #include "Plane.h"
 
-#define FIVE_MEGABYTES 5000000
-#define HUNDRED_MEGABYTES 100000000
+#define FIVE_MEGABYTES 5'000'000
+#define HUNDRED_MEGABYTES 100'000'000
 
 class Scene3D
 {
@@ -12,21 +12,22 @@ public:
 	~Scene3D() = default;
 
 	void Init();
+
 	//Update all objects
-	void Update(long double);
+	void Update(const long double dt);
 
 	void CleanUp();
 
-	void CreatePlane(MyMath::Vector3 middlePos, MyMath::Vector3 normal, MyMath::Vector3 color);
-	void CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vector3 color);
+	void CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color);
+	void CreateSphere(const float radius, const MyMath::Vector3& middlePos, const MyMath::Vector3& color);
 
 	DeviceObjectArray<Object3D*> GetObjects();
-private:
-	//Are these hostarrays even needed?
-	Sphere* m_hostSpheres;
-	Plane* m_hostPlanes;
 
-	DeviceObjectArray<Object3D*> m_deviceObjects;
+private:
+	//Pointers to all objects allocated on the device.
+	DeviceObjectArray<Object3D DEVICE_MEMORY_PTR> m_deviceObjects;
+
+	//#todo: Investigate if it is possible to optimize these away and only use m_deviceObjects.
 	DeviceObjectArray<Plane> m_devicePlanes;
 	DeviceObjectArray<Sphere> m_deviceSpheres;
 };

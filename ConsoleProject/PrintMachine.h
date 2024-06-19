@@ -6,42 +6,32 @@
 
 class PrintMachine {
 private:
-	static PrintMachine* pInstance;
 	static std::mutex m_Lock;
 
 protected:
-	PrintMachine(size_t, size_t);
-	~PrintMachine() = default;
-
-public:
-	PrintMachine(PrintMachine& other) = delete;
-	void operator=(const PrintMachine&) = delete;
+	PrintMachine() = delete;
 
 public:
 	enum PrintMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS };
-	//Called at the beginning of the program to create the instance if it is not already created.
-	//This is done in this function instead of in GetInstance to reduce wait time for threads.
-	static void CreatePrintMachine(size_t, size_t);
-	//Returns the instance if there is one.
-	static PrintMachine* GetInstance();
-	static bool CheckIfRunning();
-	static void SetDebugInfo(std::string);
-	static void TerminateThread();
 
-	//Before closing program
+	static void Start(const size_t x, const size_t y);
 	static void CleanUp();
 
+	static bool CheckIfRunning();
+	static void SetDebugInfo(const std::string& debugString);
+	static void TerminateThread();
+
 public:
-	static bool ChangeSize(size_t, size_t);
-
-	static void Fill(char);
+	//Thread function.
 	static bool Print();
-	static void UpdateFPS(int);
 
-	static size_t* GetBackBufferSwap();
+	static void UpdateRenderingFPS(const int fps);
+
+	static bool ChangeSize(const size_t x, const size_t y);
+
 	static std::mutex* GetBackBufferMutex();
 	static char* GetBackBuffer();
-	static char* GetDeviceBackBuffer();
+	static char DEVICE_MEMORY_PTR GetDeviceBackBuffer();
 	static void ResetDeviceBackBuffer();
 	static size_t GetWidth();
 	static size_t GetHeight();
@@ -52,20 +42,22 @@ public:
 	static PrintMode GetPrintMode();
 
 	static void ResetBackBuffer();
-	static void SetBufferSwap(size_t);
-	static void SetPrintSize(size_t);
-	static void SetPrintMode(PrintMode);
+	static void FlagForBufferSwap();
+	static void SetPrintSize(const size_t newSize);
+	static void SetPrintMode(const PrintMode mode);
+
 private:
 	static HANDLE m_inputHandle;
 	static HANDLE m_outputHandle;
 
 	static PrintMode m_printMode;
 
-	static void ClearConsole();
+	static void ResetConsolePointer();
 
 	static int m_renderingFps;
 	static int m_printingFps;
-	static Time* m_timer;
+
+	static std::unique_ptr<Time> m_timer;
 	static int m_printingFpsCounter;
 	static float m_printingFpsTimer;
 
@@ -76,14 +68,25 @@ private:
 	static bool m_running;
 	static bool m_terminateThread;
 
-	static char* m_printBuffer;
-	static char* m_backBuffer;
-	static char* m_deviceBackBuffer;
+	//static char* m_printBuffer;
+	static std::unique_ptr<char[]> m_printBuffer;
+
+	//These are two different buffers.
+	//The first is a buffer that is written to on the CPU using the minimized result of the GPU processing, and then swapped with the printbuffer.
+	//static char* m_backBuffer;
+	static std::unique_ptr<char[]> m_backBuffer;
+
+	//The second is the buffer which is used to write to from the GPU threads.
+	static char DEVICE_MEMORY_PTR m_deviceBackBuffer;
+
 	static size_t m_printSize;
 	static size_t m_backBufferPrintSize;
 	static std::string m_debugInfo;
 
 	static std::thread m_printThread;
 	static std::mutex m_backBufferMutex;
-	static size_t m_backBufferSwap;
+	static bool m_bShouldSwapBuffer;
+
+	//20 characters per pixel allows RGB colors.
+	static const size_t m_charsPerPixel = 20;
 };

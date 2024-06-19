@@ -6,7 +6,7 @@ namespace MyMath
 	{
 	public:
 		__host__ __device__
-			Vector3(float inX, float inY, float inZ)
+		Vector3(const float inX, const float inY, const float inZ)
 		{
 			x = inX;
 			y = inY;
@@ -14,7 +14,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-			Vector3(int inX, int inY, int inZ)
+		Vector3(const int inX, const int inY, const int inZ)
 		{
 			x = static_cast<float>(inX);
 			y = static_cast<float>(inY);
@@ -22,7 +22,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-			Vector3()
+		Vector3()
 		{
 			x = 0.0f;
 			y = 0.0f;
@@ -32,14 +32,15 @@ namespace MyMath
 		~Vector3() = default;
 
 		__host__ __device__
-			Vector3(const Vector3& other)
+		Vector3(const Vector3& other)
 		{
 			x = other.x;
 			y = other.y;
 			z = other.z;
 		}
+
 		__host__ __device__
-			Vector3& operator=(const Vector3& other)
+		Vector3& operator=(const Vector3& other)
 		{
 			if (this == &other)
 				return *this;
@@ -50,27 +51,28 @@ namespace MyMath
 
 			return *this;
 		}
+
 		__host__ __device__
-			Vector3 operator-(const Vector3& other)
+		Vector3 operator-(const Vector3& other)
 		{
 			return Vector3(x - other.x, y - other.y, z - other.z);
 		}
 
 		__host__ __device__
-			Vector3 operator+(const Vector3& other)
+		Vector3 operator+(const Vector3& other)
 		{
 			return Vector3(x + other.x, y + other.y, z + other.z);
 		}
 
 		//Float operations
 		__host__ __device__
-			Vector3 operator*(float other)
+		Vector3 operator*(const float other)
 		{
 			return Vector3(x * other, y * other, z * other);
 		}
 
 		__host__ __device__
-			void operator*=(float other)
+		void operator*=(const float other)
 		{
 			x *= other;
 			y *= other;
@@ -78,9 +80,9 @@ namespace MyMath
 		}
 
 		__host__ __device__
-			Vector3 Normalize()
+		Vector3 Normalize()
 		{
-			float length = 1.0f / sqrt(x * x + y * y + z * z);
+			const float length = 1.0f / sqrt(x * x + y * y + z * z);
 
 			return Vector3(x * length, y * length, z * length);
 		}
@@ -94,7 +96,7 @@ namespace MyMath
 	{
 	public:
 		__host__ __device__
-			Vector4(float inX, float inY, float inZ, float inW)
+		Vector4(const float inX, const float inY, const float inZ, const float inW)
 		{
 			x = inX;
 			y = inY;
@@ -102,7 +104,7 @@ namespace MyMath
 			w = inW;
 		}
 
-		Vector4(Vector3 inV, float inW)
+		Vector4(const Vector3& inV, const float inW)
 		{
 			x = inV.x;
 			y = inV.y;
@@ -122,7 +124,7 @@ namespace MyMath
 
 
 		__host__ __device__
-			Vector4(const Vector4& other)
+		Vector4(const Vector4& other)
 		{
 			x = other.x;
 			y = other.y;
@@ -149,11 +151,11 @@ namespace MyMath
 			return Vector3(x, y, z);
 		}
 
-		//Implement operations (+, -, * etc)
+		//#todo: Implement operations (+, -, * etc)
 
 		Vector4 Normalize()
 		{
-			float length = 1.0f / sqrt(x * x + y * y + z * z + w * w);
+			const float length = 1.0f / sqrt(x * x + y * y + z * z + w * w);
 
 			return Vector4(x * length, y * length, z * length, w * length);
 		}
@@ -167,7 +169,7 @@ namespace MyMath
 	class Matrix
 	{
 	public:
-		Matrix(Vector4 v1, Vector4 v2, Vector4 v3, Vector4 v4)
+		Matrix(const Vector4& v1, const Vector4& v2, const Vector4& v3, const Vector4& v4)
 		{
 			row1 = v1;
 			row2 = v2;
@@ -207,7 +209,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-			Vector4 Mult(Vector4 v)
+		Vector4 Mult(const Vector4& v)
 		{
 			return Vector4(
 				row1.x * v.x + row1.y * v.y + row1.z * v.z + row1.w * v.w,
@@ -223,7 +225,8 @@ namespace MyMath
 		Vector4 row4;
 	};
 
-	__host__ __device__ float Dot(Vector3 v1, Vector3 v2);
-	__host__ __device__ float Dot(Vector4 v1, Vector4 v2);
-	__host__ __device__ Vector3 Cross(Vector3 v1, Vector3 v2);
+	__host__ __device__ float Dot(const Vector3& v1, const Vector3& v2);
+	__host__ __device__ float Dot(const Vector4& v1, const Vector4& v2);
+	__host__ __device__ Vector3 Cross(const Vector3& v1, const Vector3& v2);
+	//#todo: Implement cross product for Vector4.
 }

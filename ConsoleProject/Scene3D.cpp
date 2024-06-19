@@ -1,15 +1,16 @@
 #include "pch.h"
 #include "Scene3D.h"
 
-//Here the starter objects are created.
 void Scene3D::Init()
 {
+	//Allocate device memory for pointers to the objects.
 	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray1), FIVE_MEGABYTES));
 	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray1, 0, FIVE_MEGABYTES));
 	m_deviceObjects.allocatedBytes = FIVE_MEGABYTES;
 	m_deviceObjects.count = 0;
 	m_deviceObjects.using1st = true;
 
+	//Allocate device memory for the object data.
 	gpuErrchk(cudaMalloc(&(m_devicePlanes.m_deviceArray1), FIVE_MEGABYTES));
 	gpuErrchk(cudaMemset(m_devicePlanes.m_deviceArray1, 0, FIVE_MEGABYTES));
 	m_devicePlanes.allocatedBytes = FIVE_MEGABYTES;
@@ -31,16 +32,16 @@ void Scene3D::Init()
 	CreatePlane(MyMath::Vector3(0.0f, -3.0f, 0.0f), MyMath::Vector3(0.0f, 1.0f, 0.0f), MyMath::Vector3(100.0f, 100.0f, 100.0f));
 }
 
-void Scene3D::CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vector3 color)
+void Scene3D::CreateSphere(const float radius, const MyMath::Vector3& middlePos, const MyMath::Vector3& color)
 {
-	//See so that we have space for the object pointers on the GPU.
+	//Make sure that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
 	{
 		if (m_deviceObjects.allocatedBytes >= HUNDRED_MEGABYTES)
 		{
 			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
 		}
-		//If we do not we allocate more memory and copy over the current array to the new memory.
+		//If we do not have enough memory allocated we allocate more memory and copy over the current array to the new memory.
 		//This is done elegantly by changing the current array that is used.
 		m_deviceObjects.using1st = !m_devicePlanes.using1st;
 		Object3D** newArray;
@@ -55,6 +56,7 @@ void Scene3D::CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vect
 			newArray = m_deviceObjects.m_deviceArray2;
 			oldArray = m_deviceObjects.m_deviceArray1;
 		}
+
 		gpuErrchk(cudaMalloc(&newArray, m_deviceObjects.allocatedBytes * 2));
 		gpuErrchk(cudaMemset(newArray, 0, m_deviceObjects.allocatedBytes * 2));
 		gpuErrchk(cudaMemcpy(newArray, oldArray, m_deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
@@ -124,7 +126,7 @@ void Scene3D::CreateSphere(float radius, MyMath::Vector3 middlePos, MyMath::Vect
 	m_deviceObjects.count++;
 }
 
-void Scene3D::CreatePlane(MyMath::Vector3 middlePos, MyMath::Vector3 normal, MyMath::Vector3 color)
+void Scene3D::CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color)
 {
 	//See so that we have space for the object pointers on the GPU.
 	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
@@ -218,7 +220,7 @@ void Scene3D::CreatePlane(MyMath::Vector3 middlePos, MyMath::Vector3 normal, MyM
 }
 
 //Update all objects
-void Scene3D::Update(long double deltaTime)
+void Scene3D::Update(const long double deltaTime)
 {
 	//Let GPU update objects instead
 }

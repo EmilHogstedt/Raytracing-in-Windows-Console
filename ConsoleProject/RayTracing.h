@@ -12,7 +12,7 @@ class RayTracer
 public:
 	RayTracer()
 	{
-		size_t size = sizeof(char) * PrintMachine::GetInstance()->GetMaxSize();
+		size_t size = sizeof(char) * PrintMachine::GetMaxSize();
 		m_hostResultArray = (char*)malloc(size);
 		if (m_hostResultArray)
 		{

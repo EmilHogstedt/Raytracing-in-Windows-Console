@@ -10,27 +10,27 @@ public:
 
 	void Init();
 	void Update();
-	void SetRot(float, float, float);
-	void SetPos(float, float, float);
-	void Move(long double dt);
-	void AddRot(short, short, short);
+	void SetRot(const float p, const float y, const float r);
+	void SetPos(const float x, const float y , const float z);
+	void Move(const long double dt);
+	void AddRot(const long double dt, const short p, const short y, const short r);
 
-	MyMath::Matrix GetVMatrix();
-	MyMath::Matrix GetInverseVMatrix();
-	MyMath::Matrix GetPMatrix();
+	const MyMath::Matrix& GetVMatrix() const;
+	const MyMath::Matrix& GetInverseVMatrix() const;
+	const MyMath::Matrix& GetPMatrix() const;
 
-	MyMath::Vector3 GetPos();
-	MyMath::Vector3 GetRot();
+	const MyMath::Vector3& GetPos() const;
+	const MyMath::Vector3& GetRot() const;
 
-	MyMath::Vector3 GetRight();
-	MyMath::Vector3 GetUp();
-	MyMath::Vector3 GetForward();
+	const MyMath::Vector3& GetRight() const;
+	const MyMath::Vector3& GetUp() const;
+	const MyMath::Vector3& GetForward() const;
 
-	float GetFarPlaneDistance();
-	MyMath::Vector4 GetFrustum();
+	const float GetFarPlaneDistance() const;
+	const MyMath::Vector4& GetFrustum() const;
 
-	COORD GetMouseCoords();
-	void SetMouseCoords(COORD newCords);
+	void SetMouseCoords(const COORD& newCords);
+	const COORD& GetMouseCoords();
 
 	//For keeping track of what keys are currently being pressed so that the movement can be updated accordingly.
 	struct PressedKeys
@@ -72,5 +72,9 @@ private:
 
 	const float m_screenNear = 0.1f;
 	const float m_screenFar = 250.0f; //Lower this. Cant see anything noteworthy after ~500 anyway. Maybe set this depending on pixel resolution? For example the height of the screen * 2.
-	const float m_FOV = 2.0f; //Do not set to 1
+
+	//Set to 1.5 for high resolution.
+	//Set to 2.0 for low resolution.
+	//(1.5 seems to be a good FOV for both)
+	const float m_FOV = 1.5f; //Do not set to 1
 };

@@ -35,6 +35,8 @@
 #define DBG_NEW new 
 #endif
 
+#define DEVICE_MEMORY_PTR *
+
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include <string.h>

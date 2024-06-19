@@ -12,7 +12,9 @@ void Engine3D::Start()
 	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
 
 	//When we create the print machine it also starts printing.
-	PrintMachine::CreatePrintMachine(400, 150);
+	//Set it to 1920x500 for high resolution.
+	//Set it to 400x150 for low resolution.
+	PrintMachine::Start(400, 150);
 
 	//The printmachine needs to be created for the raytracer to be created.
 	m_rayTracer = std::make_unique<RayTracer>();
@@ -29,21 +31,21 @@ void Engine3D::Start()
 bool Engine3D::Run()
 {
 	//Check if the console window is still running.
-	if (!PrintMachine::GetInstance()->CheckIfRunning())
+	if (!PrintMachine::CheckIfRunning())
 	{
 		CleanUp();
 		return false;
 	}
 	
 	//Check if we want to quit.
-	if (m_quit)
+	if (m_bShouldQuit)
 	{
 		return false;
 	}
 
-	long double dt = m_timer->DeltaTimeRendering();
-	m_timer->UpdateRendering();
-	m_fpsTimer += m_timer->DeltaTimeRendering();
+	long double dt = m_timer->DeltaTime();//Rendering();
+	m_timer->Update();// Rendering();
+	m_fpsTimer += m_timer->DeltaTime();//Rendering();
 	m_fps++;
 
 	//Handle keyboard input
@@ -61,7 +63,7 @@ bool Engine3D::Run()
 		m_scene->CreateSphere(static_cast<float>(rand() % 10), MyMath::Vector3(rand() % 100 - 50, rand() % 100 - 50, rand() % 100 - 50), MyMath::Vector3(rand() % 255, rand() % 255, rand() % 255));
 		
 		//Send the fps to the printmachine.
-		PrintMachine::GetInstance()->UpdateFPS(m_fps);
+		PrintMachine::UpdateRenderingFPS(m_fps);
 		m_fpsTimer = 0.0f;
 		m_fps = 0;
 	}
@@ -82,7 +84,7 @@ void Engine3D::Render()
 	m_camera->Update();
 
 	//Update the objects in the scene.
-	m_scene->Update(m_timer->DeltaTimeRendering());
+	m_scene->Update(m_timer->DeltaTime());// Rendering());
 
 	//Update pixel shader variables.
 	//After update is complete we set the device variable
@@ -92,15 +94,15 @@ void Engine3D::Render()
 	cudaMemset(m_deviceRayTracingParameters, 0, sizeof(RayTracingParameters));
 	cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice);
 
-	size_t x = PrintMachine::GetInstance()->GetWidth();
-	size_t y = PrintMachine::GetInstance()->GetHeight();
+	size_t x = PrintMachine::GetWidth();
+	size_t y = PrintMachine::GetHeight();
 	float element1 = m_camera->GetPMatrix().row1.x;
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 
 	//Reset the backbuffer.
-	PrintMachine::GetInstance()->ResetDeviceBackBuffer();
+	PrintMachine::ResetDeviceBackBuffer();
 
 	m_rayTracer->RayTracingWrapper(
 		x, 
@@ -110,14 +112,14 @@ void Engine3D::Render()
 		m_camera->GetFarPlaneDistance(), 
 		objects, 
 		m_deviceRayTracingParameters, 
-		PrintMachine::GetInstance()->GetDeviceBackBuffer(), 
-		PrintMachine::GetInstance()->GetBackBufferMutex(), 
-		m_timer->DeltaTimeRendering()
+		PrintMachine::GetDeviceBackBuffer(), 
+		PrintMachine::GetBackBufferMutex(), 
+		m_timer->DeltaTime()//Rendering()
 	);
 }
 
 //Move this to an input handler.
-void Engine3D::CheckKeyboard(long double dt)
+void Engine3D::CheckKeyboard(const long double dt)
 {
 	//Keyboard input.
 	if (GetKeyState('W') & 0x8000)
@@ -158,7 +160,7 @@ void Engine3D::CheckKeyboard(long double dt)
 
 	if (GetKeyState('P') & 0x8000)
 	{
-		m_lockMouse = !m_lockMouse;
+		m_bIsMouseLocked = !m_bIsMouseLocked;
 	}
 
 	if (GetKeyState(VK_SHIFT) & 0x8000)
@@ -181,29 +183,29 @@ void Engine3D::CheckKeyboard(long double dt)
 
 	if (GetKeyState(VK_ESCAPE) & 0x8000)
 	{
-		m_quit = true;
+		m_bShouldQuit = true;
 	}
 
 	//Change printing mode.
 	if (GetKeyState(VK_F1) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::ASCII);
+		PrintMachine::SetPrintMode(PrintMachine::ASCII);
 	}
 	if (GetKeyState(VK_F2) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::PIXEL);
+		PrintMachine::SetPrintMode(PrintMachine::PIXEL);
 	}
 	if (GetKeyState(VK_F3) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_ASCII);
+		PrintMachine::SetPrintMode(PrintMachine::RGB_ASCII);
 	}
 	if (GetKeyState(VK_F4) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_PIXEL);
+		PrintMachine::SetPrintMode(PrintMachine::RGB_PIXEL);
 	}
 	if (GetKeyState(VK_F5) & 0x8000)
 	{
-		PrintMachine::GetInstance()->SetPrintMode(PrintMachine::RGB_NORMALS);
+		PrintMachine::SetPrintMode(PrintMachine::RGB_NORMALS);
 	}
 
 	//Mouse input.
@@ -238,20 +240,20 @@ void Engine3D::CheckKeyboard(long double dt)
 	short diffX = oldCoords.X - newCoords.X;
 	short diffY = oldCoords.Y - newCoords.Y;
 
-	if (m_lockMouse)
+	if (m_bIsMouseLocked)
 	{
 		SetCursorPos(1200, 500);
 		newCoords.X = 1200;
 		newCoords.Y = 500;
 	}
 
-	m_camera->AddRot(diffY, diffX, 0);
+	m_camera->AddRot(dt, diffY, diffX, 0);
 	m_camera->SetMouseCoords(newCoords);
 }
 
 void Engine3D::CleanUp()
 {
-	PrintMachine::GetInstance()->CleanUp();
+	PrintMachine::CleanUp();
 
 	cudaFree(m_deviceRayTracingParameters);
 }

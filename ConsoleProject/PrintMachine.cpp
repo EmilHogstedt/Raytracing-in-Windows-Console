@@ -1,12 +1,11 @@
 #include "pch.h"
 #include "PrintMachine.h"
 
-PrintMachine* PrintMachine::pInstance{ nullptr };
 std::mutex PrintMachine::m_Lock;
 
 int PrintMachine::m_renderingFps = 60;
 int PrintMachine::m_printingFps = 60;
-Time* PrintMachine::m_timer{ nullptr };
+std::unique_ptr<Time> PrintMachine::m_timer = nullptr;
 int PrintMachine::m_printingFpsCounter = 0;
 float PrintMachine::m_printingFpsTimer = 0.0f;
 PrintMachine::PrintMode PrintMachine::m_printMode = PrintMachine::ASCII;
@@ -18,8 +17,10 @@ size_t PrintMachine::m_maxSize = 0;
 bool PrintMachine::m_running = true;
 bool PrintMachine::m_terminateThread = false;
 
-char* PrintMachine::m_printBuffer = nullptr;
-char* PrintMachine::m_backBuffer = nullptr;
+std::unique_ptr<char[]> PrintMachine::m_printBuffer = nullptr;
+std::unique_ptr<char[]> PrintMachine::m_backBuffer = nullptr;
+//char* PrintMachine::m_printBuffer = nullptr;
+//char* PrintMachine::m_backBuffer = nullptr;
 char* PrintMachine::m_deviceBackBuffer = nullptr;
 size_t PrintMachine::m_printSize = 0;
 size_t PrintMachine::m_backBufferPrintSize = 0;
@@ -30,18 +31,12 @@ HANDLE PrintMachine::m_outputHandle;
 
 std::thread PrintMachine::m_printThread;
 std::mutex PrintMachine::m_backBufferMutex;
-size_t PrintMachine::m_backBufferSwap = 0;
+bool PrintMachine::m_bShouldSwapBuffer = false;
 
 
 //Sets up the consolemode. Rename this.
-bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
-	std::ios_base::sync_with_stdio(false);
-	setlocale(LC_ALL, "C");
-	printf("\x1b[?25l"); // Disables blinking cursor.
-	printf("\x1b]0;Avero Console Rendering Engine\x1b\x5c"); //Set the title of the program.
-
-	const unsigned int ENABLE_QUICK_EDIT = 0x0040;
-	//HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+bool ConfigureConsoleInputMode(HANDLE consoleHandle)
+{
 
 	//Get current console mode
 	unsigned int consoleMode = 0;
@@ -51,7 +46,8 @@ bool DisableConsoleQuickEdit(HANDLE consoleHandle) {
 	}
 
 	// Clear the quick edit bit in the mode flags
-	consoleMode &= ~ENABLE_QUICK_EDIT;
+	
+	consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
 	consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	consoleMode |= ENABLE_MOUSE_INPUT;
 
@@ -91,13 +87,13 @@ BOOL WINAPI ConsoleHandler(DWORD CEvent)
 	switch (CEvent)
 	{
 	case CTRL_CLOSE_EVENT:
-		PrintMachine::GetInstance()->TerminateThread();
+		PrintMachine::TerminateThread();
 		break;
 	case CTRL_LOGOFF_EVENT:
-		PrintMachine::GetInstance()->TerminateThread();
+		PrintMachine::TerminateThread();
 		break;
 	case CTRL_SHUTDOWN_EVENT:
-		PrintMachine::GetInstance()->TerminateThread();
+		PrintMachine::TerminateThread();
 		break;
 	}
 	return TRUE;
@@ -113,72 +109,77 @@ bool PrintMachine::CheckIfRunning()
 	return m_running;
 }
 
-PrintMachine::PrintMachine(size_t x, size_t y)
+void PrintMachine::Start(const size_t x, const size_t y)
 {
+	//Set up the console.
+	{
+		m_outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		m_inputHandle = GetStdHandle(STD_INPUT_HANDLE);
+
+		//When this is set to true it guarantees that all c-stream and c++-stream output functions sync correctly.
+		//PS: Earlier I had this set to false for some reason? It said that it can increase performance if only using c++ fuinctions, so maybe that is why.
+		std::ios_base::sync_with_stdio(true);
+
+		//This command is run at program startup automatically, why have it here?
+		//setlocale(LC_ALL, "C");
+
+		printf("\x1b[?25l"); // Disables blinking cursor.
+
+		printf("\x1b]0;Avero's Console RayTracing Engine\x1b\x5c"); //Set the title of the program.
+
+		//Console stuff
+		ConfigureConsoleInputMode(m_inputHandle); //Disables being able to click in the console window.
+		ConfigureConsoleOutputMode(m_outputHandle); //Enables processed output and virtual terminal processing.
+
+		//std::ios::sync_with_stdio(false);
+
+		//The console handler handles when the console is closed for any reason.
+		if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
+		{
+			printf("Unable to install handler!\n");
+			assert(false);
+		}
+	}
+	
 	currentWidth = x;
 	currentHeight = y;
 
-	//+ heightlimit is for the line-ending characters.
-	size_t charsPerPixel = 20;
-	m_maxSize = (charsPerPixel * currentWidth * currentHeight) + currentHeight;
-	m_printBuffer = DBG_NEW char[m_maxSize];
-	memset(m_printBuffer, 0, sizeof(char) * m_maxSize);
-	m_backBuffer = DBG_NEW char[m_maxSize];
-	memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
+	//The console window is width * characters per pixel * height.
+	//+ currentHeight is to account for the line-ending characters.
+	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight) + currentHeight;
+
+	//m_printBuffer = DBG_NEW char[m_maxSize];
+	//memset(m_printBuffer, 0, sizeof(char) * m_maxSize);
+	m_printBuffer = std::make_unique<char[]>(m_maxSize);
+
+	//m_backBuffer = DBG_NEW char[m_maxSize];
+	//memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
+	m_backBuffer = std::make_unique<char[]>(m_maxSize);
+
 	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * m_maxSize);
 	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * m_maxSize);
 	m_printSize = m_maxSize;
 
-	m_timer = DBG_NEW Time();
+	m_timer = std::make_unique<Time>();
 
 	m_printThread = std::thread(&Print);
 	m_printThread.detach();
 }
 
-void PrintMachine::CreatePrintMachine(size_t sizeX = 0, size_t sizeY = 0)
-{
-	m_outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-	m_inputHandle = GetStdHandle(STD_INPUT_HANDLE);
-
-	//Console stuff
-	DisableConsoleQuickEdit(m_inputHandle); //Disables being able to click in the console window.
-	ConfigureConsoleOutputMode(m_outputHandle);
-
-	std::ios::sync_with_stdio(false);
-
-	if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
-	{
-		// unable to install handler... 
-		// display message to the user
-		printf("Unable to install handler!\n");
-		assert(false);
-	}
-
-	if (!pInstance)
-		pInstance = DBG_NEW PrintMachine(sizeX, sizeY);
-
-}
-
-PrintMachine* PrintMachine::GetInstance()
-{
-	return pInstance;
-}
-
 void PrintMachine::CleanUp()
 {
-	system("cls");
+	ResetConsolePointer();
+
+	//Reset color.
 	printf("\x1b[m");
 
-	delete m_timer;
-	cudaFree(m_deviceBackBuffer);
-	delete m_backBuffer;
-	delete m_printBuffer;
-	delete pInstance;
-}
+	//Soft reset settings.
+	printf("\x1b[!p");
 
-size_t* PrintMachine::GetBackBufferSwap()
-{
-	return &m_backBufferSwap;
+	//Clear the screen.
+	printf("\x1b[2J");
+
+	cudaFree(m_deviceBackBuffer);
 }
 
 std::mutex* PrintMachine::GetBackBufferMutex()
@@ -189,10 +190,10 @@ std::mutex* PrintMachine::GetBackBufferMutex()
 //The backbuffer mutex NEEDS to be locked before calling this function.
 char* PrintMachine::GetBackBuffer()
 {
-	return m_backBuffer;
+	return m_backBuffer.get();
 }
 
-char* PrintMachine::GetDeviceBackBuffer()
+char DEVICE_MEMORY_PTR PrintMachine::GetDeviceBackBuffer()
 {
 	return m_deviceBackBuffer;
 }
@@ -237,62 +238,52 @@ PrintMachine::PrintMode PrintMachine::GetPrintMode()
 	return m_printMode;
 }
 
-void PrintMachine::SetPrintMode(PrintMachine::PrintMode mode)
+void PrintMachine::SetPrintMode(const PrintMachine::PrintMode mode)
 {
 	m_printMode = mode;
 }
 
-bool PrintMachine::ChangeSize(size_t x, size_t y)
+bool PrintMachine::ChangeSize(const size_t x, const size_t y)
 {
-	if (x > WIDTHLIMIT)
-		return false;
-	if (y > HEIGHTLIMIT)
-		return false;
-
 	currentWidth = x;
 	currentHeight = y;
 
 	return true;
 }
 
-void PrintMachine::UpdateFPS(int fps)
+void PrintMachine::UpdateRenderingFPS(const int fps)
 {
 	m_renderingFps = fps;
 }
 
-void PrintMachine::SetDebugInfo(std::string debugString)
+void PrintMachine::SetDebugInfo(const std::string& debugString)
 {
 	m_debugInfo = debugString;
-
 }
 
-void PrintMachine::SetBufferSwap(size_t swap)
+void PrintMachine::FlagForBufferSwap()
 {
-	m_backBufferSwap = swap;
+	m_bShouldSwapBuffer = true;
 }
 
-void PrintMachine::SetPrintSize(size_t newSize)
+void PrintMachine::SetPrintSize(const size_t newSize)
 {
 	m_backBufferPrintSize = newSize;
 }
 
 void PrintMachine::ResetBackBuffer()
 {
-	memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
-}
-
-void PrintMachine::Fill(char character)
-{
+	memset(m_backBuffer.get(), 0, sizeof(char) * m_maxSize);
 }
 
 bool PrintMachine::Print()
 {
 	while (!m_terminateThread)
 	{
-		m_timer->UpdatePrinting();
+		m_timer->Update();
 		m_printingFpsCounter++;
 
-		m_printingFpsTimer += m_timer->DeltaTimePrinting();
+		m_printingFpsTimer += m_timer->DeltaTime();
 
 		//Once every second we update the fps.
 		if (m_printingFpsTimer >= 1.0f)
@@ -304,32 +295,31 @@ bool PrintMachine::Print()
 
 		//Check if we need to swap to the backbuffer.
 		m_backBufferMutex.lock();
-		if (m_backBufferSwap)
+		if (m_bShouldSwapBuffer)
 		{
-			m_backBufferSwap = 0;
+			m_bShouldSwapBuffer = false;
+
 			m_printSize = m_backBufferPrintSize;
 
-			memcpy(m_printBuffer, m_backBuffer, m_printSize);
-			
-			//char* temp = m_printBuffer;
-			//m_printBuffer = m_backBuffer;
-			//m_backBuffer = m_printBuffer;
+			//Which one of these are faster?
+			//memcpy(m_printBuffer.get(), m_backBuffer.get(), m_printSize);
+			m_printBuffer.swap(m_backBuffer);
 		}
 		m_backBufferMutex.unlock();
 
-		//Clear the console and print the data.
-		//system("cls");
-		ClearConsole();
-		fwrite(m_printBuffer, 1, m_printSize, stdout);
+		//Reset pointer and print the data.
+		ResetConsolePointer();
+		fwrite(m_printBuffer.get(), 1, m_printSize, stdout);
 		
 		//DWORD written;
 		//WriteConsoleOutputCharacterA(m_outputHandle, m_printBuffer, m_printSize, {0, 0}, &written);
 		//WriteConsoleA(m_outputHandle, m_printBuffer, m_printSize, &written, NULL);
-		//std::cout.write(m_printBuffer, 37 * currentHeight * currentWidth + currentHeight);
+		//std::cout.write(m_printBuffer.get(), m_printSize);
 		//printf("%.*s", (unsigned int)(37 * currentHeight * currentWidth + currentHeight), m_printBuffer);
 		printf("\x1b[m");
 		printf("Rendering FPS: %d    \n", m_renderingFps);
 		printf("Printing FPS: %d    \n", m_printingFps);
+
 		//DEBUG ONLY
 		//std::cout << m_debugInfo << std::endl;
 	}
@@ -337,51 +327,7 @@ bool PrintMachine::Print()
 	return true;
 }
 
-//Very strange functionality. Does not behave as it should.
-void PrintMachine::ClearConsole() {
-	/*
-	HANDLE                     hStdOut;
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	DWORD                      count;
-	DWORD                      cellCount;
-	COORD                      homeCoords = { 0, 0 };
-
-	hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (hStdOut == INVALID_HANDLE_VALUE) return;
-
-	//Get the number of cells in the current buffer
-	if (!GetConsoleScreenBufferInfo(hStdOut, &csbi)) return;
-	cellCount = csbi.dwSize.X * csbi.dwSize.Y;
-
-	//Fill the entire buffer with spaces
-	
-	if (!FillConsoleOutputCharacter(
-		hStdOut,
-		(TCHAR)' ',
-		cellCount,
-		homeCoords,
-		&count
-	)) return;
-
-	//Fill the entire buffer with the current colors and attributes
-	
-	if (!FillConsoleOutputAttribute(
-		hStdOut,
-		csbi.wAttributes,
-		2000,
-		homeCoords,
-		&count
-	)) return;
-
-	//Move the cursor home
-	SetConsoleCursorPosition(hStdOut, homeCoords);
-	*/
-	//HANDLE hOut;
-	//COORD Position;
-
-	//hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	
-	//Position.X = 0;
-	//Position.Y = 0;
+void PrintMachine::ResetConsolePointer()
+{
 	SetConsoleCursorPosition(m_outputHandle, {0, 0});
 }

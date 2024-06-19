@@ -949,35 +949,37 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 		camFarDist,
 		deviceParams,
 		deviceResultArray,
-		PrintMachine::GetInstance()->GetPrintMode()
+		PrintMachine::GetPrintMode()
 	);
 	//Make sure all the threads are done.
 	//Then we lock the mutex and copy the results from the GPU to the backbuffer.
 	//Then we signal to the print thread that the backbuffer is ready. 
 	gpuErrchk(cudaDeviceSynchronize());
 
-	PrintMachine* printMachine = PrintMachine::GetInstance();
-	//Make a function to get the original "max size".
-	size_t size = printMachine->GetMaxSize();
-	memset(m_hostResultArray, '0', size); //Might not be needed.
-	memset(m_minimizedResultArray, '0', size); //Might not be needed.
+	//#todo: Make a function to get the original "max size". Why?
+	size_t size = PrintMachine::GetMaxSize();
+
+	//memset(m_hostResultArray, '0', size); //Might not be needed. Yep, seems to not be needed.
+	//memset(m_minimizedResultArray, '0', size); //Might not be needed. Yep, seems to not be needed.
+
 	gpuErrchk(cudaMemcpy(m_hostResultArray, deviceResultArray, size, cudaMemcpyDeviceToHost));
 	size_t newSize = MinimizeResults(size, y);
 
-	printMachine->GetBackBufferMutex()->lock();
-	printMachine->ResetBackBuffer(); //Might not be needed.
-	char* backBuffer = printMachine->GetBackBuffer();
+	PrintMachine::GetBackBufferMutex()->lock();
+	//PrintMachine::ResetBackBuffer(); //Might not be needed. Yep, seems to not be needed.
+	char* backBuffer = PrintMachine::GetBackBuffer();
 	memcpy(backBuffer, m_minimizedResultArray, newSize);
 	
-	printMachine->SetBufferSwap(1);
-	printMachine->SetPrintSize(newSize);
-	printMachine->GetBackBufferMutex()->unlock();
+	PrintMachine::FlagForBufferSwap();
+	PrintMachine::SetPrintSize(newSize);
+	PrintMachine::GetBackBufferMutex()->unlock();
+
 	return;
 }
 
 size_t RayTracer::MinimizeResults(size_t size, size_t y)
 {
-	PrintMachine::PrintMode mode = PrintMachine::GetInstance()->GetPrintMode();
+	PrintMachine::PrintMode mode = PrintMachine::GetPrintMode();
 
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -1066,7 +1068,7 @@ size_t RayTracer::MinimizeResults(size_t size, size_t y)
 				addedChars++;
 				i++;
 
-				if (newlines == PrintMachine::GetInstance()->GetHeight())
+				if (newlines == PrintMachine::GetHeight())
 				{
 					break;
 				}
