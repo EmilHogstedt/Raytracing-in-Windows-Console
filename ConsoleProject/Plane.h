@@ -4,10 +4,7 @@
 class Plane : public Object3D
 {
 public:
-	Plane(MyMath::Vector3 point, MyMath::Vector3 normal, MyMath::Vector3 color) :
-		Object3D{ point, ObjectType::PlaneType, color }, m_normal{ normal }
-	{
-	}
+	Plane(const MyMath::Vector3& center, const MyMath::Vector3& normal, const MyMath::Vector3& color);
 	Plane() = default;
 	virtual ~Plane() noexcept = default;
 
@@ -17,11 +14,17 @@ public:
 		SetType(ObjectType::PlaneType);
 		m_normal = normal;
 	}
-	__device__ void Update(long double);
-	__host__ __device__ MyMath::Vector3 GetNormal();
+
+	__device__
+	void Update(long double);
+
+	__host__ __device__
+	const MyMath::Vector3& GetNormal();
+
 private:
 	MyMath::Vector3 m_normal;
-	/*
-	double padding[4];
-	float padding2;*/
+	
+	//Make sure the object has a size which is a multiple of 32.
+	//int padding[2];
+	//float padding2;
 };

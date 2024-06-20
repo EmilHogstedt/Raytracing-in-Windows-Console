@@ -916,7 +916,9 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	// 
 	//Physics update of the objects.
 	UpdateObjects<<<gridDims, blockDims>>>(
-		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		//deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		deviceObjects.m_deviceArray,
+
 		deviceObjects.count,
 		dt
 	);
@@ -940,7 +942,9 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	blockDims.y = 16u;
 	
 	RT << <gridDims, blockDims >> > (
-		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		//deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+		deviceObjects.m_deviceArray,
+
 		deviceObjects.count,
 		x,
 		y,

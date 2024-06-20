@@ -11,15 +11,11 @@ public:
 	Time();
 	virtual ~Time() = default;
 	long double SinceStart();
-	long double DeltaTime();// Rendering();
-	//long double DeltaTimePrinting();
-	void Update();// Rendering();
-	//void UpdatePrinting();
+	long double DeltaTime();
+	void Update();
 
 private:
 	t_moment m_start;
-	t_moment m_loopBegin;// Rendering;
-	//t_moment m_loopBeginPrinting;
-	t_dSec m_deltaTime;// Rendering;
-	//t_dSec m_deltaTimePrinting;
+	t_moment m_loopBegin;
+	t_dSec m_deltaTime;
 };

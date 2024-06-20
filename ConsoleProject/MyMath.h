@@ -225,8 +225,14 @@ namespace MyMath
 		Vector4 row4;
 	};
 
-	__host__ __device__ float Dot(const Vector3& v1, const Vector3& v2);
-	__host__ __device__ float Dot(const Vector4& v1, const Vector4& v2);
-	__host__ __device__ Vector3 Cross(const Vector3& v1, const Vector3& v2);
+	__host__ __device__
+	float Dot(const Vector3& v1, const Vector3& v2);
+	__host__ __device__
+	float Dot(const Vector4& v1, const Vector4& v2);
+	__host__ __device__
+	Vector3 Cross(const Vector3& v1, const Vector3& v2);
 	//#todo: Implement cross product for Vector4.
+
+	//template<typename T>
+	__host__ __device__ float Clamp(const float val, const float min, const float max);
 }

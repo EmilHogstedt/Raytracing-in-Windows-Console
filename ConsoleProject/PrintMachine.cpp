@@ -19,8 +19,6 @@ bool PrintMachine::m_terminateThread = false;
 
 std::unique_ptr<char[]> PrintMachine::m_printBuffer = nullptr;
 std::unique_ptr<char[]> PrintMachine::m_backBuffer = nullptr;
-//char* PrintMachine::m_printBuffer = nullptr;
-//char* PrintMachine::m_backBuffer = nullptr;
 char* PrintMachine::m_deviceBackBuffer = nullptr;
 size_t PrintMachine::m_printSize = 0;
 size_t PrintMachine::m_backBufferPrintSize = 0;
@@ -37,7 +35,6 @@ bool PrintMachine::m_bShouldSwapBuffer = false;
 //Sets up the consolemode. Rename this.
 bool ConfigureConsoleInputMode(HANDLE consoleHandle)
 {
-
 	//Get current console mode
 	unsigned int consoleMode = 0;
 	if (!GetConsoleMode(consoleHandle, (LPDWORD)&consoleMode)) {
@@ -46,7 +43,6 @@ bool ConfigureConsoleInputMode(HANDLE consoleHandle)
 	}
 
 	// Clear the quick edit bit in the mode flags
-	
 	consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
 	consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	consoleMode |= ENABLE_MOUSE_INPUT;
@@ -127,11 +123,8 @@ void PrintMachine::Start(const size_t x, const size_t y)
 
 		printf("\x1b]0;Avero's Console RayTracing Engine\x1b\x5c"); //Set the title of the program.
 
-		//Console stuff
 		ConfigureConsoleInputMode(m_inputHandle); //Disables being able to click in the console window.
 		ConfigureConsoleOutputMode(m_outputHandle); //Enables processed output and virtual terminal processing.
-
-		//std::ios::sync_with_stdio(false);
 
 		//The console handler handles when the console is closed for any reason.
 		if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
@@ -148,12 +141,8 @@ void PrintMachine::Start(const size_t x, const size_t y)
 	//+ currentHeight is to account for the line-ending characters.
 	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight) + currentHeight;
 
-	//m_printBuffer = DBG_NEW char[m_maxSize];
-	//memset(m_printBuffer, 0, sizeof(char) * m_maxSize);
 	m_printBuffer = std::make_unique<char[]>(m_maxSize);
 
-	//m_backBuffer = DBG_NEW char[m_maxSize];
-	//memset(m_backBuffer, 0, sizeof(char) * m_maxSize);
 	m_backBuffer = std::make_unique<char[]>(m_maxSize);
 
 	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * m_maxSize);

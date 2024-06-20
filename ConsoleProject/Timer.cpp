@@ -3,10 +3,8 @@
 
 Time::Time() : m_start{ t_clock::now() }
 {
-	m_loopBegin/*Rendering*/ = Time::t_clock::now();
-	//m_loopBeginPrinting = Time::t_clock::now();
-	m_deltaTime/*Rendering*/ = Time::m_loopBegin/*Rendering*/ - Time::m_loopBegin/*Rendering*/;
-	//m_deltaTimePrinting = Time::m_loopBeginPrinting - Time::m_loopBeginPrinting;
+	m_loopBegin = Time::t_clock::now();
+	m_deltaTime = Time::m_loopBegin - Time::m_loopBegin;
 }
 
 long double Time::SinceStart()
@@ -15,24 +13,13 @@ long double Time::SinceStart()
 	return elapsed.count();
 }
 
-long double Time::DeltaTime()// Rendering()
+long double Time::DeltaTime()
 {
-	return m_deltaTime/*Rendering*/.count();
+	return m_deltaTime.count();
 }
-/*
-long double Time::DeltaTimePrinting()
+
+void Time::Update()
 {
-	return m_deltaTimePrinting.count();
+	m_deltaTime = t_clock::now() - m_loopBegin;
+	m_loopBegin = t_clock::now();
 }
-*/
-void Time::Update()//Rendering()
-{
-	m_deltaTime/*Rendering*/ = t_clock::now() - m_loopBegin/*Rendering*/;
-	m_loopBegin/*Rendering*/ = t_clock::now();
-}
-/*
-void Time::UpdatePrinting()
-{
-	m_deltaTimePrinting = t_clock::now() - m_loopBeginPrinting;
-	m_loopBeginPrinting = t_clock::now();
-}*/

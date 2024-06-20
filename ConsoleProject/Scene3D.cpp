@@ -1,27 +1,26 @@
 #include "pch.h"
 #include "Scene3D.h"
+#include "PrintMachine.h"
 
 void Scene3D::Init()
 {
 	//Allocate device memory for pointers to the objects.
-	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray1), FIVE_MEGABYTES));
-	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray1, 0, FIVE_MEGABYTES));
-	m_deviceObjects.allocatedBytes = FIVE_MEGABYTES;
+	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray), 80));// FIVE_MEGABYTES));
+	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray, 0, 80));//FIVE_MEGABYTES));
+	m_deviceObjects.allocatedBytes = 80;//FIVE_MEGABYTES;
 	m_deviceObjects.count = 0;
-	m_deviceObjects.using1st = true;
 
 	//Allocate device memory for the object data.
-	gpuErrchk(cudaMalloc(&(m_devicePlanes.m_deviceArray1), FIVE_MEGABYTES));
-	gpuErrchk(cudaMemset(m_devicePlanes.m_deviceArray1, 0, FIVE_MEGABYTES));
+	//MAKE SURE ENOUGH MEMORY IS ALLOCATED FROM THE START!!
+	gpuErrchk(cudaMalloc(&(m_devicePlanes.m_deviceArray), FIVE_MEGABYTES));
+	gpuErrchk(cudaMemset(m_devicePlanes.m_deviceArray, 0, FIVE_MEGABYTES));
 	m_devicePlanes.allocatedBytes = FIVE_MEGABYTES;
 	m_devicePlanes.count = 0;
-	m_devicePlanes.using1st = true;
 
-	gpuErrchk(cudaMalloc(&(m_deviceSpheres.m_deviceArray1), FIVE_MEGABYTES));
-	gpuErrchk(cudaMemset(m_deviceSpheres.m_deviceArray1, 0, FIVE_MEGABYTES));
+	gpuErrchk(cudaMalloc(&(m_deviceSpheres.m_deviceArray), FIVE_MEGABYTES));
+	gpuErrchk(cudaMemset(m_deviceSpheres.m_deviceArray, 0, FIVE_MEGABYTES));
 	m_deviceSpheres.allocatedBytes = FIVE_MEGABYTES;
 	m_deviceSpheres.count = 0;
-	m_deviceSpheres.using1st = true;
 
 	//Temporary.
 	CreateSphere(7.0f, MyMath::Vector3(0.0f, 10.0f, 20.0f), MyMath::Vector3(255.0f, 1.0f, 1.0f));
@@ -35,92 +34,24 @@ void Scene3D::Init()
 void Scene3D::CreateSphere(const float radius, const MyMath::Vector3& middlePos, const MyMath::Vector3& color)
 {
 	//Make sure that we have space for the object pointers on the GPU.
-	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
-	{
-		if (m_deviceObjects.allocatedBytes >= HUNDRED_MEGABYTES)
-		{
-			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
-		}
-		//If we do not have enough memory allocated we allocate more memory and copy over the current array to the new memory.
-		//This is done elegantly by changing the current array that is used.
-		m_deviceObjects.using1st = !m_devicePlanes.using1st;
-		Object3D** newArray;
-		Object3D** oldArray;
-		if (m_deviceObjects.using1st)
-		{
-			newArray = m_deviceObjects.m_deviceArray1;
-			oldArray = m_deviceObjects.m_deviceArray2;
-		}
-		else
-		{
-			newArray = m_deviceObjects.m_deviceArray2;
-			oldArray = m_deviceObjects.m_deviceArray1;
-		}
-
-		gpuErrchk(cudaMalloc(&newArray, m_deviceObjects.allocatedBytes * 2));
-		gpuErrchk(cudaMemset(newArray, 0, m_deviceObjects.allocatedBytes * 2));
-		gpuErrchk(cudaMemcpy(newArray, oldArray, m_deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
-		gpuErrchk(cudaFree(oldArray));
-		m_deviceObjects.allocatedBytes *= 2;
-	}
-
-	//Check which we are currently using.
-	Object3D** currentObjectArray;
-	if (m_deviceObjects.using1st)
-	{
-		currentObjectArray = m_deviceObjects.m_deviceArray1;
-	}
-	else
-	{
-		currentObjectArray = m_deviceObjects.m_deviceArray2;
-	}
+	CheckDeviceObjectsPtrMemory();
 
 	//Now we can check if we have enough memory for the new subtype of Object3D.
-	//The process is the same as above.
-	if (m_deviceSpheres.allocatedBytes < (m_deviceSpheres.count + 1) * sizeof(Sphere))
+	if (!CheckDeviceObjectsDataMemory<Sphere>(m_deviceSpheres))
 	{
-		if (m_deviceSpheres.allocatedBytes >= HUNDRED_MEGABYTES)
-		{
-			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
-		}
-		m_deviceSpheres.using1st = !m_deviceSpheres.using1st;
-		Sphere* newArray;
-		Sphere* oldArray;
-		if (m_deviceSpheres.using1st)
-		{
-			newArray = m_deviceSpheres.m_deviceArray1;
-			oldArray = m_deviceSpheres.m_deviceArray2;
-		}
-		else
-		{
-			newArray = m_deviceSpheres.m_deviceArray2;
-			oldArray = m_deviceSpheres.m_deviceArray1;
-		}
-		gpuErrchk(cudaMalloc(&newArray, m_deviceSpheres.allocatedBytes * 2));
-		gpuErrchk(cudaMemset(newArray, 0, m_deviceSpheres.allocatedBytes * 2));
-		gpuErrchk(cudaMemcpy(newArray, oldArray, m_deviceSpheres.allocatedBytes, cudaMemcpyDeviceToDevice));
-		gpuErrchk(cudaFree(oldArray));
-		m_deviceSpheres.allocatedBytes *= 2;
-	}
-
-	//Copy the new object to the correct spot in GPU memory in the correct array.
-	Sphere* currentArray;
-	if (m_deviceSpheres.using1st)
-	{
-		currentArray = m_deviceSpheres.m_deviceArray1;
-	}
-	else
-	{
-		currentArray = m_deviceSpheres.m_deviceArray2;
+		return;
 	}
 
 	Sphere newObject = Sphere(middlePos, radius, color);
-	gpuErrchk(cudaMemcpy(currentArray + m_deviceSpheres.count, &newObject, sizeof(Sphere), cudaMemcpyHostToDevice));
-	
-	//Now we have to copy the pointer of the object we just added to the objectPointer array on the GPU.
-	Object3D* temp[1];
-	temp[0] = currentArray + m_deviceSpheres.count;
-	gpuErrchk(cudaMemcpy(currentObjectArray + m_deviceObjects.count, temp, sizeof(Object3D*), cudaMemcpyHostToDevice));
+
+	void DEVICE_MEMORY_PTR ObjectMemoryLocation = m_deviceSpheres.m_deviceArray + m_deviceSpheres.count;
+	void DEVICE_MEMORY_PTR PointerMemoryLocation = m_deviceObjects.m_deviceArray + m_deviceObjects.count;
+
+	//Copy the new object to the correct spot in GPU memory.
+	gpuErrchk(cudaMemcpy(ObjectMemoryLocation, &newObject, sizeof(Sphere), cudaMemcpyHostToDevice));
+
+	//Copy the address of the object memory to the pointer memory.
+	gpuErrchk(cudaMemcpy(PointerMemoryLocation, &ObjectMemoryLocation, sizeof(Object3D*), cudaMemcpyHostToDevice));
 	
 	m_deviceSpheres.count++;
 	m_deviceObjects.count++;
@@ -129,91 +60,24 @@ void Scene3D::CreateSphere(const float radius, const MyMath::Vector3& middlePos,
 void Scene3D::CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color)
 {
 	//See so that we have space for the object pointers on the GPU.
-	if (m_deviceObjects.allocatedBytes < (m_deviceObjects.count + 1) * sizeof(Object3D*))
-	{
-		if (m_deviceObjects.allocatedBytes >= HUNDRED_MEGABYTES)
-		{
-			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
-		}
-		//If we do not we allocate more memory and copy over the current array to the new memory.
-		//This is done elegantly by changing the current array that is used.
-		m_deviceObjects.using1st = !m_devicePlanes.using1st;
-		Object3D** newArray;
-		Object3D** oldArray;
-		if (m_deviceObjects.using1st)
-		{
-			newArray = m_deviceObjects.m_deviceArray1;
-			oldArray = m_deviceObjects.m_deviceArray2;
-		}
-		else
-		{
-			newArray = m_deviceObjects.m_deviceArray2;
-			oldArray = m_deviceObjects.m_deviceArray1;
-		}
-		gpuErrchk(cudaMalloc(&newArray, m_deviceObjects.allocatedBytes * 2));
-		gpuErrchk(cudaMemset(newArray, 0, m_deviceObjects.allocatedBytes * 2));
-		gpuErrchk(cudaMemcpy(newArray, oldArray, m_deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
-		gpuErrchk(cudaFree(oldArray));
-		m_deviceObjects.allocatedBytes *= 2;
-	}
-
-	//Check which we are currently using.
-	Object3D** currentObjectArray;
-	if (m_deviceObjects.using1st)
-	{
-		currentObjectArray = m_deviceObjects.m_deviceArray1;
-	}
-	else
-	{
-		currentObjectArray = m_deviceObjects.m_deviceArray2;
-	}
+	CheckDeviceObjectsPtrMemory();
 
 	//Now we can check if we have enough memory for the new subtype of Object3D.
-	//The process is the same as above.
-	if (m_devicePlanes.allocatedBytes < (m_devicePlanes.count + 1) * sizeof(Plane))
+	if (!CheckDeviceObjectsDataMemory<Plane>(m_devicePlanes))
 	{
-		if (m_devicePlanes.allocatedBytes >= HUNDRED_MEGABYTES)
-		{
-			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
-		}
-		m_devicePlanes.using1st = !m_devicePlanes.using1st;
-		Plane* newArray;
-		Plane* oldArray;
-		if (m_devicePlanes.using1st)
-		{
-			newArray = m_devicePlanes.m_deviceArray1;
-			oldArray = m_devicePlanes.m_deviceArray2;
-		}
-		else
-		{
-			newArray = m_devicePlanes.m_deviceArray2;
-			oldArray = m_devicePlanes.m_deviceArray1;
-		}
-		gpuErrchk(cudaMalloc(&newArray, m_devicePlanes.allocatedBytes * 2));
-		gpuErrchk(cudaMemset(newArray, 0, m_devicePlanes.allocatedBytes * 2));
-		gpuErrchk(cudaMemcpy(newArray, oldArray, m_devicePlanes.allocatedBytes, cudaMemcpyDeviceToDevice));
-		gpuErrchk(cudaFree(oldArray));
-		m_devicePlanes.allocatedBytes *= 2;
-	}
-
-	//Copy the new object to the correct spot in GPU memory in the correct array.
-	Plane* currentArray;
-	if (m_devicePlanes.using1st)
-	{
-		currentArray = m_devicePlanes.m_deviceArray1;
-	}
-	else
-	{
-		currentArray = m_devicePlanes.m_deviceArray2;
+		return;
 	}
 
 	Plane newObject = Plane(middlePos, normal, color);
-	gpuErrchk(cudaMemcpy(currentArray + m_devicePlanes.count, &newObject, sizeof(Plane), cudaMemcpyHostToDevice));
+
+	void DEVICE_MEMORY_PTR ObjectMemoryLocation = m_devicePlanes.m_deviceArray + m_devicePlanes.count;
+	void DEVICE_MEMORY_PTR PointerMemoryLocation = m_deviceObjects.m_deviceArray + m_deviceObjects.count;
+
+	//Copy the new object to the correct spot in GPU memory.
+	gpuErrchk(cudaMemcpy(ObjectMemoryLocation, &newObject, sizeof(Plane), cudaMemcpyHostToDevice));
 	
-	Object3D* temp[1];
-	temp[0] = currentArray + m_devicePlanes.count;
-	//Now we have to copy the pointer of the object we just added to the objectPointer array on the GPU.
-	gpuErrchk(cudaMemcpy(currentObjectArray + m_deviceObjects.count, temp, sizeof(Object3D*), cudaMemcpyHostToDevice));
+	//Copy the address of the object memory to the pointer memory.
+	gpuErrchk(cudaMemcpy(PointerMemoryLocation, &ObjectMemoryLocation, sizeof(Object3D*), cudaMemcpyHostToDevice));
 
 	m_devicePlanes.count++;
 	m_deviceObjects.count++;
@@ -227,36 +91,72 @@ void Scene3D::Update(const long double deltaTime)
 
 void Scene3D::CleanUp()
 {
-	if (m_deviceObjects.using1st)
-	{
-		gpuErrchk(cudaFree(m_deviceObjects.m_deviceArray1));
-	}
-	else
-	{
-		gpuErrchk(cudaFree(m_deviceObjects.m_deviceArray2));
-	}
-
-	if (m_devicePlanes.using1st)
-	{
-		gpuErrchk(cudaFree(m_devicePlanes.m_deviceArray1));
-	}
-	else
-	{
-		gpuErrchk(cudaFree(m_devicePlanes.m_deviceArray2));
-	}
-
-	if (m_deviceSpheres.using1st)
-	{
-		gpuErrchk(cudaFree(m_deviceSpheres.m_deviceArray1));
-	}
-	else
-	{
-		gpuErrchk(cudaFree(m_deviceSpheres.m_deviceArray2));
-	}
+	gpuErrchk(cudaFree(m_deviceObjects.m_deviceArray));
+	gpuErrchk(cudaFree(m_deviceSpheres.m_deviceArray));
+	gpuErrchk(cudaFree(m_devicePlanes.m_deviceArray));
 }
 
 //Used to send the devicepointer to the objects to the raytracer.
 DeviceObjectArray<Object3D*> Scene3D::GetObjects()
 {
 	return m_deviceObjects;
+}
+
+void Scene3D::CheckDeviceObjectsPtrMemory()
+{
+	unsigned int nextSize = (m_deviceObjects.count + 1) * sizeof(Object3D*); //For debugging.
+	if (m_deviceObjects.allocatedBytes < nextSize)
+	{
+		if (m_deviceObjects.allocatedBytes * 2 >= HUNDRED_MEGABYTES)
+		{
+			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
+		}
+
+		//If we do not have enough memory we allocate more memory and copy over the current array to the new memory.
+		//Object3D** newArray;
+		Object3D** oldArray = m_deviceObjects.m_deviceArray;
+
+		gpuErrchk(cudaMalloc(&m_deviceObjects.m_deviceArray, m_deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray, 0, m_deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemcpy(m_deviceObjects.m_deviceArray, oldArray, m_deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
+		gpuErrchk(cudaFree(oldArray));
+
+		//m_deviceObjects.m_deviceArray = newArray;
+		m_deviceObjects.allocatedBytes *= 2;
+	}
+}
+
+template<typename T>
+bool Scene3D::CheckDeviceObjectsDataMemory(DeviceObjectArray<T>& deviceObjects)
+{
+	unsigned int nextSize = (deviceObjects.count + 1) * sizeof(T); //For debugging.
+	if (deviceObjects.allocatedBytes < nextSize)
+	{
+		//REMADE TO THROW ERROR IF THERE IS NOT ENOUGH MEMORY. MAKE SURE TO ALLOCATE ENOUGH IN THE BEGINNING.
+		//STRANGE STUFF HAPPENS IF OBJECTS ARE REALLOCATED, AS THE OLD POINTERS IN DEVICEOBJECTS ARE NO LONGER VALID!
+		//#todo: Maybe revisit this in the future.
+		return false;
+		//throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
+
+		/*
+		if (deviceObjects.allocatedBytes >= HUNDRED_MEGABYTES)
+		{
+			throw std::runtime_error("Error! Out of dedicated memory when trying to create an object.");
+		}
+
+		//If we do not have enough memory we allocate more memory and copy over the current array to the new memory.
+		//T* newArray;
+		T* oldArray = deviceObjects.m_deviceArray;
+
+		gpuErrchk(cudaMalloc(&deviceObjects.m_deviceArray, deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemset(deviceObjects.m_deviceArray, 0, deviceObjects.allocatedBytes * 2));
+		gpuErrchk(cudaMemcpy(deviceObjects.m_deviceArray, oldArray, deviceObjects.allocatedBytes, cudaMemcpyDeviceToDevice));
+		gpuErrchk(cudaFree(oldArray));
+
+		//deviceObjects.m_deviceArray = newArray;
+		deviceObjects.allocatedBytes *= 2;
+		*/
+	}
+
+	return true;
 }
