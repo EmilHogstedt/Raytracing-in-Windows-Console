@@ -42,7 +42,8 @@ private:
 	std::unique_ptr<char[]> m_minimizedResultArray;
 };
 
-__constant__ const char ascii[68] = {
+#define NUM_ASCII_CHARACTERS 68
+__constant__ const char ascii[NUM_ASCII_CHARACTERS] = {
 	' ', '.', '`', '^', '"',
 	',', ':', ';', 'I', 'l',
 	'!', 'i', '>', '<', '~',

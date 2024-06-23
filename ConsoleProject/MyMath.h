@@ -296,5 +296,8 @@ namespace MyMath
 	float Clamp(const float val, const float min, const float max);
 
 	__host__ __device__
+	int Clamp(const int val, const int min, const int max);
+
+	__host__ __device__
 	bool FloatEquals(float f1, float f2);
 }

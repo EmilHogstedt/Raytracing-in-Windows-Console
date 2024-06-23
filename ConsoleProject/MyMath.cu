@@ -28,6 +28,13 @@ float MyMath::Clamp(const float val, const float min, const float max)
 }
 
 __host__ __device__
+int MyMath::Clamp(const int val, const int min, const int max)
+{
+	const int result = val < min ? min : val;
+	return result > max ? max : result;
+}
+
+__host__ __device__
 bool MyMath::FloatEquals(float f1, float f2)
 {
 	return abs(f1 - f2) < FLT_EPSILON;
