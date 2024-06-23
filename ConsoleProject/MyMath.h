@@ -1,7 +1,10 @@
 #pragma once
 
+#define FLT_EPSILON 0.000000001f
+
 namespace MyMath
 {
+
 	class Vector3
 	{
 	public:
@@ -29,6 +32,7 @@ namespace MyMath
 			z = 0.0f;
 		}
 
+		__host__ __device__
 		~Vector3() = default;
 
 		__host__ __device__
@@ -55,7 +59,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		Vector3 operator-(const Vector3& other)
+		Vector3 operator-(const Vector3& other) const
 		{
 			return Vector3(x - other.x, y - other.y, z - other.z);
 		}
@@ -69,7 +73,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		Vector3 operator+(const Vector3& other)
+		Vector3 operator+(const Vector3& other) const
 		{
 			return Vector3(x + other.x, y + other.y, z + other.z);
 		}
@@ -84,7 +88,7 @@ namespace MyMath
 
 		//Float operations
 		__host__ __device__
-		Vector3 operator*(const float other)
+		Vector3 operator*(const float other) const
 		{
 			return Vector3(x * other, y * other, z * other);
 		}
@@ -135,6 +139,7 @@ namespace MyMath
 			w = inW;
 		}
 
+		__host__ __device__
 		Vector4(const Vector3& inV, const float inW)
 		{
 			x = inV.x;
@@ -143,6 +148,7 @@ namespace MyMath
 			w = inW;
 		}
 
+		__host__ __device__
 		Vector4()
 		{
 			x = 0.0f;
@@ -151,6 +157,7 @@ namespace MyMath
 			w = 0.0f;
 		}
 
+		__host__ __device__
 		~Vector4() = default;
 
 		__host__ __device__
@@ -164,6 +171,7 @@ namespace MyMath
 
 	public:
 		//Operators
+		__host__ __device__
 		Vector4& operator=(const Vector4& other)
 		{
 			if (this == &other)
@@ -215,6 +223,7 @@ namespace MyMath
 	class Matrix
 	{
 	public:
+		__host__ __device__
 		Matrix(const Vector4& v1, const Vector4& v2, const Vector4& v3, const Vector4& v4)
 		{
 			row1 = v1;
@@ -223,6 +232,7 @@ namespace MyMath
 			row4 = v4;
 		}
 
+		__host__ __device__
 		Matrix()
 		{
 			row1 = Vector4();
@@ -231,8 +241,10 @@ namespace MyMath
 			row4 = Vector4();
 		}
 
+		__host__ __device__
 		~Matrix() = default;
 
+		__host__ __device__
 		Matrix(const Matrix& other)
 		{
 			row1 = other.row1;
@@ -241,6 +253,7 @@ namespace MyMath
 			row4 = other.row4;
 		}
 
+		__host__ __device__
 		Matrix& operator=(const Matrix& other)
 		{
 			if (this == &other)
@@ -279,6 +292,9 @@ namespace MyMath
 	Vector3 Cross(const Vector3& v1, const Vector3& v2);
 	//#todo: Implement cross product for Vector4.
 
-	//template<typename T>
-	__host__ __device__ float Clamp(const float val, const float min, const float max);
+	__host__ __device__
+	float Clamp(const float val, const float min, const float max);
+
+	__host__ __device__
+	bool FloatEquals(float f1, float f2);
 }

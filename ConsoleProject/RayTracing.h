@@ -7,6 +7,11 @@ struct RayTracingParameters
 	MyMath::Matrix inverseVMatrix;
 	MyMath::Vector3 camPos;
 
+	size_t x;
+	size_t y;
+	float element1;
+	float element2;
+	float camFarDist;
 };
 
 class RayTracer
@@ -17,11 +22,10 @@ public:
 	~RayTracer();
 
 	void RayTracingWrapper(
-		const size_t x, const size_t y,
-		const float element1, const float element2,
-		const float camFarDist,
+		const size_t x,
+		const size_t y,
 		const DeviceObjectArray<Object3D*>& objects,
-		const RayTracingParameters DEVICE_MEMORY_PTR deviceParams,
+		const RayTracingParameters DEVICE_MEMORY_PTR rayTracingParameters,
 		double dt
 	);
 
@@ -38,3 +42,19 @@ private:
 	std::unique_ptr<char[]> m_minimizedResultArray;
 };
 
+__constant__ const char ascii[68] = {
+	' ', '.', '`', '^', '"',
+	',', ':', ';', 'I', 'l',
+	'!', 'i', '>', '<', '~',
+	'+', '_', '-', '?', '*',
+	']', '[', '}', '{', '1',
+	')', '(', '|', '/', 't',
+	'f', 'j', 'r', 'x', 'n',
+	'u', 'v', 'c', 'z', 'm',
+	'w', 'X', 'Y', 'U', 'J',
+	'C', 'L', 'q', 'p', 'd',
+	'b', 'k', 'h', 'a', 'o',
+	'#', '%', 'Z', 'O', '8',
+	'B', '$', '0', 'Q', 'M',
+	'&', 'W', '@'
+};

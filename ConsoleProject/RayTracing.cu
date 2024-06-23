@@ -49,26 +49,25 @@ __global__ void Culling(
 __global__ void RayTrace(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const size_t x,
-	const size_t y,
-	const float element1,
-	const float element2,
-	const float camFarDist,
 	const RayTracingParameters* params,
 	char* resultArray,
 	const PrintMachine::PrintMode mode
 )
 {
-	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 	
+	//Localization of variables.
+	const size_t x = params->x;
+	const size_t y = params->y;
+
 	if (column >= x || row >= y)
 	{
 		return;
 	}
 
 	//Set the amount of characters in the buffer per pixel depending on the mode.
-	size_t size = (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL) ? 12 : 20;
+	const size_t size = (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL) ? 12 : 20;
 
 	//#todo: Do this when minimizing instead of in a thread.
 	//If the pixel is at the end of a line, output \n and return.
@@ -79,58 +78,58 @@ __global__ void RayTrace(
 	}
 
 	//Convert pixel coordinates to (clip space? screen space?)
-	float convertedY = ((float)y - row * 2) / y;
-	float convertedX = (2 * column - (float)x) / x;
+	const float convertedY = ((float)y - row * 2) / y;
+	const float convertedX = (2 * column - (float)x) / x;
+
+	//Localization of variables.
+	MyMath::Vector3 cameraPos = params->camPos;
+	const float element1 = params->element1;
+	const float element2 = params->element2;
+	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
 
 	//Calculate the ray.
-	MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	MyMath::Vector3 directionWSpace = params->inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace();
+	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
+	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace();
 	
 	//Used during intersection tests with spheres.
-	float a = Dot(directionWSpace, directionWSpace);
-	float fourA = 4.0f * a;
-	float divTwoA = 1.0f / (2.0f * a);
+	const float a = Dot(directionWSpace, directionWSpace);
+	const float fourA = 4.0f * a;
+	const float divTwoA = 1.0f / (2.0f * a);
 
 	char data = ' ';
 	float closest = 99999999.f;
 	float shadingValue = 0.0f;
 	MyMath::Vector3 bestColor;
 	MyMath::Vector3 bestNormal;
-
-	//Localizing variables.
-	MyMath::Vector3 cameraPos = params->camPos;
-	size_t localCount = count;
 	
 	//Ray trace against every object.
-	for (size_t i = 0; i < localCount; i++)
+	for (size_t i = 0; i < count; i++)
 	{
-		//Localize the current object.
-		Object3D localObject = *objects[i];
-		//Here we need to check if the object is culled, if it is we continue on the next object.
+		//#todo: Here we need to check if the object is culled, if it is we continue on the next object.
 		
+		const ObjectType type = objects[i]->GetType();
 
-		ObjectType type = localObject.GetType();
 		//Ray-Sphere intersection test.
 		if (type == ObjectType::SphereType)
 		{
-			Sphere localSphere = *(Sphere*)(objects[i]);
-			MyMath::Vector3 spherePos = localSphere.GetPos();
+			const Sphere* sphere = (Sphere*)objects[i];
+			const MyMath::Vector3 spherePos = sphere->GetPos();
 
-			MyMath::Vector3 objectToCam = cameraPos - spherePos;
-			float radius = localSphere.GetRadius();
+			const MyMath::Vector3 objectToCam = cameraPos - spherePos;
+			const float radius = sphere->GetRadius();
 
-			float b = 2.0f * Dot(directionWSpace, objectToCam);
-			float c = Dot(objectToCam, objectToCam) - (radius * radius);
+			const float b = 2.0f * Dot(directionWSpace, objectToCam);
+			const float c = Dot(objectToCam, objectToCam) - (radius * radius);
 
-			float discriminant = b * b - fourA * c;
+			const float discriminant = b * b - fourA * c;
 
 			//It hit
 			if (discriminant >= 0.0f)
 			{
-				float sqrtDiscriminant = sqrt(discriminant);
-				float minusB = -b;
+				const float sqrtDiscriminant = sqrt(discriminant);
+				const float minusB = -b;
 				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
-				float t2 = (minusB - sqrtDiscriminant) * divTwoA;
+				const float t2 = (minusB - sqrtDiscriminant) * divTwoA;
 
 				//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
 				if (t1 > t2 && t2 >= 0.0f)
@@ -141,40 +140,56 @@ __global__ void RayTrace(
 				if (t1 < closest && t1 > 0.0f)
 				{
 					closest = t1;
-					MyMath::Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+					const MyMath::Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
 					bestNormal = normalSphere;
 
-					//The vector 3 here is just to make the spheres not "follow" the player.
+					//1, 0, 0 is just temporary light direction.
+					//#todo: INTRODUCE REAL LIGHTS!
 					shadingValue = Dot(normalSphere, MyMath::Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = localSphere.GetColor();
+					bestColor = sphere->GetColor();
 				}
 			}
 		}
 		else if (type == ObjectType::PlaneType)
 		{
-			Plane localPlane = *((Plane*)(objects[i]));
-			MyMath::Vector3 planeNormal = localPlane.GetNormal();
-			//Check if they are paralell, if not it hit.
-			float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
-			if (dotLineAndPlaneNormal != 0.0f)
+			const Plane* plane = (Plane*)objects[i];
+			const MyMath::Vector3 planeNormal = plane->GetNormal();
+			const MyMath::Vector3 planePos = plane->GetPos();
+
+			const float dotLineAndPlaneNormal = Dot(directionWSpace, planeNormal);
+
+			//Check if the line and plane are paralell, if not it hit.
+			if (!MyMath::FloatEquals(dotLineAndPlaneNormal, 0.0f))
 			{
-				float t1 = Dot((localPlane.GetPos() - cameraPos), planeNormal) / dotLineAndPlaneNormal;
+				float t1 = Dot((planePos - cameraPos), planeNormal) / dotLineAndPlaneNormal;
 
 				if (t1 > 0.0f)
 				{
 					if (t1 < closest)
 					{
-						MyMath::Vector3 p = cameraPos + (directionWSpace * t1);
-						if (p.x > -7.0f && p.x < 7.0f && p.z > 12.0f && p.z < 35.0f) //Just arbitrary restictions. Put these into plane instead.
+						MyMath::Vector3 point = cameraPos + (directionWSpace * t1);
+						const float halfPlaneWidth = plane->GetWidth() * 0.5f;
+						const float halfPlaneHeight = plane->GetHeight() * 0.5f;
+
+						//If the ray hit inbetween the width & height.
+						if (
+							point.x > planePos.x - halfPlaneWidth && point.x < planePos.x + halfPlaneWidth &&	//Width
+							point.z > planePos.z - halfPlaneHeight && point.z < planePos.z + halfPlaneHeight	//Height
+						)
 						{
+							//1, 0, 0 is just temporary light direction.
+							//#todo: INTRODUCE REAL LIGHTS!
 							shadingValue = Dot(planeNormal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
 
 							//Comment in this if statement to get "backface" culling for planes.
 							//if (shadingValue > 0.0f) {
 							closest = t1;
 							//}
-							bestColor = localPlane.GetColor();
+
+							bestColor = plane->GetColor();
 							bestNormal = planeNormal;
+
+							//Reverse the normal if viewed from backside.
 							if (dotLineAndPlaneNormal > 0.0f)
 							{
 								bestNormal *= -1;
@@ -191,7 +206,9 @@ __global__ void RayTrace(
 	{
 		//I warned u
 	//$ @B% 8&W M#* oah kbd pqw mZO 0QL CJU YXz cvu nxr jft /| ()1 { } [ ]?- _+~ < >i!lI ; : ,"^`.
-		float t = 0.01492537f;
+
+		const float camFarDist = params->camFarDist;
+		static const float t = 0.01492537f;
 		//If we miss or its outside the frustum we dont print anything.
 		if (closest > camFarDist)
 		{
@@ -733,9 +750,8 @@ RayTracer::~RayTracer()
 }
 
 void RayTracer::RayTracingWrapper(
-	const size_t x, const size_t y,
-	const float element1, const float element2,
-	const float camFarDist,
+	const size_t x,
+	const size_t y,
 	const DeviceObjectArray<Object3D*>& deviceObjects,
 	const RayTracingParameters DEVICE_MEMORY_PTR rayTracingParameters,
 	double dt
@@ -784,11 +800,6 @@ void RayTracer::RayTracingWrapper(
 	RayTrace<<<gridDims, blockDims>>>(
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
-		x,
-		y,
-		element1,
-		element2,
-		camFarDist,
 		rayTracingParameters,
 		m_deviceResultArray,
 		PrintMachine::GetPrintMode()

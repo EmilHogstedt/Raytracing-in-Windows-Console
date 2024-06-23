@@ -9,7 +9,7 @@ Object3D::Object3D(const MyMath::Vector3& center, const ObjectType type, const M
 }
 
 __host__ __device__
-const ObjectType Object3D::GetType() const
+ObjectType Object3D::GetType() const
 {
 	return m_type;
 }
@@ -21,7 +21,7 @@ MyMath::Vector3 Object3D::GetPos() const
 }
 
 __host__ __device__
-const MyMath::Vector3& Object3D::GetColor() const
+MyMath::Vector3 Object3D::GetColor() const
 {
 	return m_color;
 }

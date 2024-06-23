@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Sphere.h"
 
-__host__ __device__ float Sphere::GetRadius()
+__host__ __device__ float Sphere::GetRadius() const
 {
 	return m_radius;
 }

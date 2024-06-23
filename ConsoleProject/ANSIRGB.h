@@ -36,7 +36,7 @@ __device__ static uint32_t cube_index_blue(uint8_t v) {
 #undef IDX
 #undef CUBE_THRESHOLDS
 
-__constant__ uint32_t colours[256] = {
+__constant__ const uint32_t colours[256] = {
 	/* The 16 system colours as used by default by xterm.  Taken
 	   from XTerm-col.ad distributed with xterm source code. */
 	0x000000, 0xcd0000, 0x00cd00, 0xcdcd00,

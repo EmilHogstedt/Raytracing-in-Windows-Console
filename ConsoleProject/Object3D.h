@@ -12,6 +12,8 @@ struct DeviceObjectArray {
 
 enum class ObjectType { None = 0, PlaneType, SphereType };
 
+
+//#todo: INTRODUCE WORLDMATRIX FOR OBJECTS INSTEAD OF POSITIONS AND ROTATIONS!
 //Barebones baseclass in order to be able to group all objects together.
 class Object3D
 {
@@ -23,13 +25,13 @@ public:
 	//__device__ virtual void Update(long double) = 0; NOT POSSIBLE TO HAVE PURE VIRTUAL FUNCTIONS IN CUDA!!!!
 
 	__host__ __device__
-	const ObjectType GetType() const;
+	ObjectType GetType() const;
 
 	__host__ __device__
 	MyMath::Vector3 GetPos() const;
 
 	__host__ __device__
-	const MyMath::Vector3& GetColor() const;
+	MyMath::Vector3 GetColor() const;
 
 	void SetType(const ObjectType type);
 	void SetMiddlePos(const MyMath::Vector3& center);

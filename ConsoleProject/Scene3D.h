@@ -18,7 +18,7 @@ public:
 
 	void CleanUp();
 
-	void CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color);
+	void CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color, const float width, const float height);
 	void CreateSphere(const float radius, const MyMath::Vector3& middlePos, const MyMath::Vector3& color);
 
 	DeviceObjectArray<Object3D*> GetObjects();

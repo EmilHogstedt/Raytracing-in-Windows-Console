@@ -28,7 +28,7 @@ void Scene3D::Init()
 	CreateSphere(10.0f, MyMath::Vector3(10.0f, 10.0f, 40.0f), MyMath::Vector3(1.0f, 1.0f, 255.0f));
 	CreateSphere(3.0f, MyMath::Vector3(5.0f, 10.0f, 20.0f), MyMath::Vector3(225.0f, 210.0f, 20.0f));
 	CreateSphere(4.0f, MyMath::Vector3(-5.0f, 10.0f, 40.0f), MyMath::Vector3(225.0f, 10.0f, 220.0f));
-	CreatePlane(MyMath::Vector3(0.0f, -3.0f, 0.0f), MyMath::Vector3(0.0f, 1.0f, 0.0f), MyMath::Vector3(100.0f, 100.0f, 100.0f));
+	CreatePlane(MyMath::Vector3(0.0f, -3.0f, 30.0f), MyMath::Vector3(0.0f, 1.0f, 0.0f), MyMath::Vector3(100.0f, 100.0f, 100.0f), 10, 20);
 }
 
 void Scene3D::CreateSphere(const float radius, const MyMath::Vector3& middlePos, const MyMath::Vector3& color)
@@ -57,7 +57,7 @@ void Scene3D::CreateSphere(const float radius, const MyMath::Vector3& middlePos,
 	m_deviceObjects.count++;
 }
 
-void Scene3D::CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color)
+void Scene3D::CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector3& normal, const MyMath::Vector3& color, const float width, const float height)
 {
 	//See so that we have space for the object pointers on the GPU.
 	CheckDeviceObjectsPtrMemory();
@@ -68,7 +68,7 @@ void Scene3D::CreatePlane(const MyMath::Vector3& middlePos, const MyMath::Vector
 		return;
 	}
 
-	Plane newObject = Plane(middlePos, normal, color);
+	Plane newObject = Plane(middlePos, normal, color, width, height);
 
 	void DEVICE_MEMORY_PTR ObjectMemoryLocation = m_devicePlanes.m_deviceArray + m_devicePlanes.count;
 	void DEVICE_MEMORY_PTR PointerMemoryLocation = m_deviceObjects.m_deviceArray + m_deviceObjects.count;

@@ -20,9 +20,15 @@ MyMath::Vector3 MyMath::Cross(const MyMath::Vector3& v1, const MyMath::Vector3& 
 }
 
 //Generates good assembly this way.
-//template<typename T>
-__host__ __device__ float MyMath::Clamp(const float val, const float min, const float max)
+__host__ __device__
+float MyMath::Clamp(const float val, const float min, const float max)
 {
 	const float result = val < min ? min : val;
 	return result > max ? max : result;
+}
+
+__host__ __device__
+bool MyMath::FloatEquals(float f1, float f2)
+{
+	return abs(f1 - f2) < FLT_EPSILON;
 }

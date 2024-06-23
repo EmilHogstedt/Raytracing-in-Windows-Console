@@ -12,7 +12,7 @@ public:
 	void Update(long double dt);
 
 	__host__ __device__
-	float GetRadius();
+	float GetRadius() const;
 
 private:
 	float m_radius;

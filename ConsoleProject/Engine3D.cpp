@@ -26,11 +26,6 @@ void Engine3D::Start()
 
 	//Not needed atm. Maybe later.
 	m_numThreads = std::thread::hardware_concurrency();
-
-	//TEST
-	int size = sizeof(Object3D);
-	int size2 = sizeof(Sphere);
-	int size3 = sizeof(Plane);
 }
 
 bool Engine3D::Run()
@@ -92,22 +87,23 @@ void Engine3D::Render()
 	m_scene->Update(m_timer->DeltaTime());
 
 	//Update pixel shader variables.
-	cudaMemcpy(&m_deviceRayTracingParameters->inverseVMatrix, &m_camera->GetInverseVMatrix(), sizeof(MyMath::Matrix), cudaMemcpyHostToDevice);
-	cudaMemcpy(&m_deviceRayTracingParameters->camPos, &m_camera->GetPos(), sizeof(MyMath::Vector3), cudaMemcpyHostToDevice);
+	RayTracingParameters params;
+	params.inverseVMatrix = m_camera->GetInverseVMatrix();
+	params.camPos = m_camera->GetPos();
+	params.x = PrintMachine::GetWidth();
+	params.y = PrintMachine::GetHeight();
+	params.element1 = m_camera->GetPMatrix().row1.x;
+	params.element2 = m_camera->GetPMatrix().row2.y;
+	params.camFarDist = m_camera->GetFarPlaneDistance();
 
-	size_t x = PrintMachine::GetWidth();
-	size_t y = PrintMachine::GetHeight();
-	float element1 = m_camera->GetPMatrix().row1.x;
-	float element2 = m_camera->GetPMatrix().row2.y;
+	gpuErrchk(cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice));
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 
+	//x and y have to be sent to the wrapper anyway, as they are also used on the CPU.
 	m_rayTracer->RayTracingWrapper(
-		x, 
-		y, 
-		element1, 
-		element2, 
-		m_camera->GetFarPlaneDistance(), 
+		params.x,
+		params.y,
 		objects, 
 		m_deviceRayTracingParameters, 
 		m_timer->DeltaTime()
