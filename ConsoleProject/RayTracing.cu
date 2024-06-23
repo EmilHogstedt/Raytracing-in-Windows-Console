@@ -1,194 +1,7 @@
 ﻿#include "pch.h"
 #include "RayTracing.h"
 
-//Move all this to a different file.
-//Not allowed to change this code without making it GNU LGPL
-#define R(c) (((c) >> 16) & 0xff)
-#define G(c) (((c) >>  8) & 0xff)
-#define B(c) ( (c)        & 0xff)
-
-#define CUBE_THRESHOLDS(a, b, c, d, e)		\
-	if      (v < a) return IDX(0,   0);	\
-	else if (v < b) return IDX(1,  95);	\
-	else if (v < c) return IDX(2, 135);	\
-	else if (v < d) return IDX(3, 175);	\
-	else if (v < e) return IDX(4, 215);	\
-	else            return IDX(5, 255);
-
-#define IDX(i, v) ((((uint32_t)i * 36 + 16) << 24) | ((uint32_t)v << 16))
-
-__device__ static uint32_t cube_index_red(uint8_t v) {
-	CUBE_THRESHOLDS(38, 115, 155, 196, 235);
-}
-
-#undef IDX
-#define IDX(i, v) ((((uint32_t)i * 6) << 24) | ((uint32_t)v << 8))
-
-__device__ static uint32_t cube_index_green(uint8_t v) {
-	CUBE_THRESHOLDS(36, 116, 154, 195, 235);
-}
-
-#undef IDX
-#define IDX(i, v) (((uint32_t)i << 24) | (uint32_t)v)
-
-__device__ static uint32_t cube_index_blue(uint8_t v) {
-	CUBE_THRESHOLDS(35, 115, 155, 195, 235);
-}
-
-#undef IDX
-#undef CUBE_THRESHOLDS
-
-__constant__ uint32_t colours[256] = {
-	/* The 16 system colours as used by default by xterm.  Taken
-	   from XTerm-col.ad distributed with xterm source code. */
-	0x000000, 0xcd0000, 0x00cd00, 0xcdcd00,
-	0x0000ee, 0xcd00cd, 0x00cdcd, 0xe5e5e5,
-	0x7f7f7f, 0xff0000, 0x00ff00, 0xffff00,
-	0x5c5cff, 0xff00ff, 0x00ffff, 0xffffff,
-
-	/* 6×6×6 cube.  One each axis, the six indices map to [0, 95,
-	   135, 175, 215, 255] RGB component values. */
-	0x000000, 0x00005f, 0x000087, 0x0000af,
-	0x0000d7, 0x0000ff, 0x005f00, 0x005f5f,
-	0x005f87, 0x005faf, 0x005fd7, 0x005fff,
-	0x008700, 0x00875f, 0x008787, 0x0087af,
-	0x0087d7, 0x0087ff, 0x00af00, 0x00af5f,
-	0x00af87, 0x00afaf, 0x00afd7, 0x00afff,
-	0x00d700, 0x00d75f, 0x00d787, 0x00d7af,
-	0x00d7d7, 0x00d7ff, 0x00ff00, 0x00ff5f,
-	0x00ff87, 0x00ffaf, 0x00ffd7, 0x00ffff,
-	0x5f0000, 0x5f005f, 0x5f0087, 0x5f00af,
-	0x5f00d7, 0x5f00ff, 0x5f5f00, 0x5f5f5f,
-	0x5f5f87, 0x5f5faf, 0x5f5fd7, 0x5f5fff,
-	0x5f8700, 0x5f875f, 0x5f8787, 0x5f87af,
-	0x5f87d7, 0x5f87ff, 0x5faf00, 0x5faf5f,
-	0x5faf87, 0x5fafaf, 0x5fafd7, 0x5fafff,
-	0x5fd700, 0x5fd75f, 0x5fd787, 0x5fd7af,
-	0x5fd7d7, 0x5fd7ff, 0x5fff00, 0x5fff5f,
-	0x5fff87, 0x5fffaf, 0x5fffd7, 0x5fffff,
-	0x870000, 0x87005f, 0x870087, 0x8700af,
-	0x8700d7, 0x8700ff, 0x875f00, 0x875f5f,
-	0x875f87, 0x875faf, 0x875fd7, 0x875fff,
-	0x878700, 0x87875f, 0x878787, 0x8787af,
-	0x8787d7, 0x8787ff, 0x87af00, 0x87af5f,
-	0x87af87, 0x87afaf, 0x87afd7, 0x87afff,
-	0x87d700, 0x87d75f, 0x87d787, 0x87d7af,
-	0x87d7d7, 0x87d7ff, 0x87ff00, 0x87ff5f,
-	0x87ff87, 0x87ffaf, 0x87ffd7, 0x87ffff,
-	0xaf0000, 0xaf005f, 0xaf0087, 0xaf00af,
-	0xaf00d7, 0xaf00ff, 0xaf5f00, 0xaf5f5f,
-	0xaf5f87, 0xaf5faf, 0xaf5fd7, 0xaf5fff,
-	0xaf8700, 0xaf875f, 0xaf8787, 0xaf87af,
-	0xaf87d7, 0xaf87ff, 0xafaf00, 0xafaf5f,
-	0xafaf87, 0xafafaf, 0xafafd7, 0xafafff,
-	0xafd700, 0xafd75f, 0xafd787, 0xafd7af,
-	0xafd7d7, 0xafd7ff, 0xafff00, 0xafff5f,
-	0xafff87, 0xafffaf, 0xafffd7, 0xafffff,
-	0xd70000, 0xd7005f, 0xd70087, 0xd700af,
-	0xd700d7, 0xd700ff, 0xd75f00, 0xd75f5f,
-	0xd75f87, 0xd75faf, 0xd75fd7, 0xd75fff,
-	0xd78700, 0xd7875f, 0xd78787, 0xd787af,
-	0xd787d7, 0xd787ff, 0xd7af00, 0xd7af5f,
-	0xd7af87, 0xd7afaf, 0xd7afd7, 0xd7afff,
-	0xd7d700, 0xd7d75f, 0xd7d787, 0xd7d7af,
-	0xd7d7d7, 0xd7d7ff, 0xd7ff00, 0xd7ff5f,
-	0xd7ff87, 0xd7ffaf, 0xd7ffd7, 0xd7ffff,
-	0xff0000, 0xff005f, 0xff0087, 0xff00af,
-	0xff00d7, 0xff00ff, 0xff5f00, 0xff5f5f,
-	0xff5f87, 0xff5faf, 0xff5fd7, 0xff5fff,
-	0xff8700, 0xff875f, 0xff8787, 0xff87af,
-	0xff87d7, 0xff87ff, 0xffaf00, 0xffaf5f,
-	0xffaf87, 0xffafaf, 0xffafd7, 0xffafff,
-	0xffd700, 0xffd75f, 0xffd787, 0xffd7af,
-	0xffd7d7, 0xffd7ff, 0xffff00, 0xffff5f,
-	0xffff87, 0xffffaf, 0xffffd7, 0xffffff,
-
-	/* Greyscale ramp.  This is calculated as (index - 232) * 10 + 8
-	   repeated for each RGB component. */
-	0x080808, 0x121212, 0x1c1c1c, 0x262626,
-	0x303030, 0x3a3a3a, 0x444444, 0x4e4e4e,
-	0x585858, 0x626262, 0x6c6c6c, 0x767676,
-	0x808080, 0x8a8a8a, 0x949494, 0x9e9e9e,
-	0xa8a8a8, 0xb2b2b2, 0xbcbcbc, 0xc6c6c6,
-	0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee,
-};
-
-__device__ uint32_t rgb_from_ansi256(uint8_t index) {
-	return colours[index];
-}
-
-__device__ static uint32_t distance(uint32_t x, uint32_t y) {
-	int32_t r_sum = R(x) + R(y);
-	int32_t r = (int32_t)R(x) - (int32_t)R(y);
-	int32_t g = (int32_t)G(x) - (int32_t)G(y);
-	int32_t b = (int32_t)B(x) - (int32_t)B(y);
-	return (1024 + r_sum) * r * r + 2048 * g * g + (1534 - r_sum) * b * b;
-}
-
-__device__ static uint8_t luminance(uint32_t rgb) {
-	
-	const uint32_t v = (UINT32_C(3567664) * R(rgb) +
-		UINT32_C(11998547) * G(rgb) +
-		UINT32_C(1211005) * B(rgb));
-	
-	//The first option out of these 2 is 5 times faster but less accurate.
-	return (v + (UINT32_C(1) << 23)) >> 24;
-	/*
-	return sqrtf((float)R(rgb) * (float)R(rgb) * 0.2126729f +
-		(float)G(rgb) * (float)G(rgb) * 0.7151521f +
-		(float)B(rgb) * (float)B(rgb) * 0.0721750);
-	*/
-}
-
-__device__ uint8_t ansi256_from_rgb(uint32_t rgb) {
-	
-	static const uint8_t ansi256_from_grey[256] = {
-		 16,  16,  16,  16,  16, 232, 232, 232,
-		232, 232, 232, 232, 232, 232, 233, 233,
-		233, 233, 233, 233, 233, 233, 233, 233,
-		234, 234, 234, 234, 234, 234, 234, 234,
-		234, 234, 235, 235, 235, 235, 235, 235,
-		235, 235, 235, 235, 236, 236, 236, 236,
-		236, 236, 236, 236, 236, 236, 237, 237,
-		237, 237, 237, 237, 237, 237, 237, 237,
-		238, 238, 238, 238, 238, 238, 238, 238,
-		238, 238, 239, 239, 239, 239, 239, 239,
-		239, 239, 239, 239, 240, 240, 240, 240,
-		240, 240, 240, 240,  59,  59,  59,  59,
-		 59, 241, 241, 241, 241, 241, 241, 241,
-		242, 242, 242, 242, 242, 242, 242, 242,
-		242, 242, 243, 243, 243, 243, 243, 243,
-		243, 243, 243, 244, 244, 244, 244, 244,
-		244, 244, 244, 244, 102, 102, 102, 102,
-		102, 245, 245, 245, 245, 245, 245, 246,
-		246, 246, 246, 246, 246, 246, 246, 246,
-		246, 247, 247, 247, 247, 247, 247, 247,
-		247, 247, 247, 248, 248, 248, 248, 248,
-		248, 248, 248, 248, 145, 145, 145, 145,
-		145, 249, 249, 249, 249, 249, 249, 250,
-		250, 250, 250, 250, 250, 250, 250, 250,
-		250, 251, 251, 251, 251, 251, 251, 251,
-		251, 251, 251, 252, 252, 252, 252, 252,
-		252, 252, 252, 252, 188, 188, 188, 188,
-		188, 253, 253, 253, 253, 253, 253, 254,
-		254, 254, 254, 254, 254, 254, 254, 254,
-		254, 255, 255, 255, 255, 255, 255, 255,
-		255, 255, 255, 255, 255, 255, 255, 231,
-		231, 231, 231, 231, 231, 231, 231, 231,
-	};
-
-	/* First of, if it’s shade of grey, we know exactly the best colour that
-	   approximates it. */
-	if (R(rgb) == G(rgb) && G(rgb) == B(rgb)) {
-		return ansi256_from_grey[rgb & 0xff];
-	}
-
-	uint8_t grey_index = ansi256_from_grey[luminance(rgb)];
-	uint32_t grey_distance = distance(rgb, rgb_from_ansi256(grey_index));
-	uint32_t cube = cube_index_red(R(rgb)) + cube_index_green(G(rgb)) +
-		cube_index_blue(B(rgb));
-	return distance(rgb, cube) < grey_distance ? cube >> 24 : grey_index;
-}
+#include "ANSIRGB.h"
 
 __global__ void UpdateObjects(
 	Object3D** objects,
@@ -233,44 +46,45 @@ __global__ void Culling(
 
 }
 
-__global__ void RT(
-	Object3D** objects,
-	unsigned int count,
-	size_t x,
-	size_t y,
-	float element1,
-	float element2,
-	float camFarDist,
-	RayTracingParameters* params,
+__global__ void RayTrace(
+	Object3D* DEVICE_MEMORY_PTR const objects,
+	const unsigned int count,
+	const size_t x,
+	const size_t y,
+	const float element1,
+	const float element2,
+	const float camFarDist,
+	const RayTracingParameters* params,
 	char* resultArray,
-	PrintMachine::PrintMode mode
+	const PrintMachine::PrintMode mode
 )
 {
 	size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	size_t column = blockIdx.x * blockDim.x + threadIdx.x;
-	size_t size = 12; //if the mode is pixel or ascii
-	if (mode != PrintMachine::ASCII && mode != PrintMachine::PIXEL)
-	{
-		size = 20; //if the mode is rgb we need more characters.
-	}
 	
 	if (column >= x || row >= y)
 	{
 		return;
 	}
-	
+
+	//Set the amount of characters in the buffer per pixel depending on the mode.
+	size_t size = (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL) ? 12 : 20;
+
+	//#todo: Do this when minimizing instead of in a thread.
+	//If the pixel is at the end of a line, output \n and return.
 	if (column == (x - 1))
 	{
 		resultArray[row * (x * size) + column * size] = '\n';
 		return;
 	}
+
 	//Convert pixel coordinates to (clip space? screen space?)
 	float convertedY = ((float)y - row * 2) / y;
 	float convertedX = (2 * column - (float)x) / x;
 
 	//Calculate the ray.
 	MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	MyMath::Vector3 directionWSpace = params->inverseVMatrix.Mult(pixelVSpace).xyz().Normalize();
+	MyMath::Vector3 directionWSpace = params->inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace();
 	
 	//Used during intersection tests with spheres.
 	float a = Dot(directionWSpace, directionWSpace);
@@ -900,8 +714,36 @@ __global__ void RT(
 	return;
 }
 
-void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float element2, float camFarDist, DeviceObjectArray<Object3D*> deviceObjects, RayTracingParameters* deviceParams, char* deviceResultArray, std::mutex* backBufferMutex, double dt)
+RayTracer::RayTracer()
 {
+	const size_t size = PrintMachine::GetMaxSize();
+
+	cudaMalloc(&m_deviceResultArray, sizeof(char) * size);
+
+	//Allocate the array which will contain the full screen before minimization.
+	m_hostResultArray = std::make_unique<char[]>(size);
+
+	//Allocate the minimized array which will be printed to the console.
+	m_minimizedResultArray = std::make_unique<char[]>(size);
+}
+
+RayTracer::~RayTracer()
+{
+	cudaFree(m_deviceResultArray);
+}
+
+void RayTracer::RayTracingWrapper(
+	const size_t x, const size_t y,
+	const float element1, const float element2,
+	const float camFarDist,
+	const DeviceObjectArray<Object3D*>& deviceObjects,
+	const RayTracingParameters DEVICE_MEMORY_PTR rayTracingParameters,
+	double dt
+)
+{
+	//The backbuffer needs to be reset in order to not produce artefacts, especially when switching printing mode to RGB.
+	ResetDeviceBackBuffer();
+
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
 	unsigned int numberOfBlocks = 1;
@@ -916,9 +758,7 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 	// 
 	//Physics update of the objects.
 	UpdateObjects<<<gridDims, blockDims>>>(
-		//deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 		deviceObjects.m_deviceArray,
-
 		deviceObjects.count,
 		dt
 	);
@@ -936,154 +776,200 @@ void RayTracer::RayTracingWrapper(size_t x, size_t y, float element1, float elem
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-	gridDims.x = static_cast<unsigned int>(std::ceil((float)(x + 1) / 16.0));
-	gridDims.y = static_cast<unsigned int>(std::ceil((float)y / 16.0));
+	gridDims.x = static_cast<unsigned int>(std::ceil((x + 1) / 16.0));
+	gridDims.y = static_cast<unsigned int>(std::ceil(y / 16.0));
 	blockDims.x = 16u;
 	blockDims.y = 16u;
 	
-	RT << <gridDims, blockDims >> > (
-		//deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
+	RayTrace<<<gridDims, blockDims>>>(
 		deviceObjects.m_deviceArray,
-
 		deviceObjects.count,
 		x,
 		y,
 		element1,
 		element2,
 		camFarDist,
-		deviceParams,
-		deviceResultArray,
+		rayTracingParameters,
+		m_deviceResultArray,
 		PrintMachine::GetPrintMode()
 	);
-	//Make sure all the threads are done.
-	//Then we lock the mutex and copy the results from the GPU to the backbuffer.
-	//Then we signal to the print thread that the backbuffer is ready. 
+	//Make sure all the threads are done with the ray tracing.
 	gpuErrchk(cudaDeviceSynchronize());
 
 	//#todo: Make a function to get the original "max size". Why?
-	size_t size = PrintMachine::GetMaxSize();
+	const size_t size = PrintMachine::GetMaxSize();
 
-	//memset(m_hostResultArray, '0', size); //Might not be needed. Yep, seems to not be needed.
-	//memset(m_minimizedResultArray, '0', size); //Might not be needed. Yep, seems to not be needed.
+	//Copy all data from GPU -> CPU.
+	gpuErrchk(cudaMemcpy(m_hostResultArray.get(), m_deviceResultArray, size, cudaMemcpyDeviceToHost));
 
-	gpuErrchk(cudaMemcpy(m_hostResultArray, deviceResultArray, size, cudaMemcpyDeviceToHost));
+	//Minimize the result, by removing unneccessary ANSI escape sequences.
 	size_t newSize = MinimizeResults(size, y);
 
-	PrintMachine::GetBackBufferMutex()->lock();
-	//PrintMachine::ResetBackBuffer(); //Might not be needed. Yep, seems to not be needed.
-	char* backBuffer = PrintMachine::GetBackBuffer();
-	memcpy(backBuffer, m_minimizedResultArray, newSize);
-	
-	PrintMachine::FlagForBufferSwap();
-	PrintMachine::SetPrintSize(newSize);
-	PrintMachine::GetBackBufferMutex()->unlock();
+	//Locking/unlocking of the mutex, flagging for changing buffer, and changing the printing size now all happens within this function.
+	//-----------------------------------------------------------------------------------------------------
+	PrintMachine::SetDataInBackBuffer(m_minimizedResultArray.get(), newSize);
+	//-----------------------------------------------------------------------------------------------------
 
 	return;
 }
 
-size_t RayTracer::MinimizeResults(size_t size, size_t y)
+void RayTracer::ResetDeviceBackBuffer()
+{
+	const size_t size = PrintMachine::GetMaxSize();
+	cudaMemset(m_deviceResultArray, 0, size);
+}
+
+size_t RayTracer::MinimizeResults(const size_t size, const size_t y)
 {
 	PrintMachine::PrintMode mode = PrintMachine::GetPrintMode();
 
-	size_t newlines = 0;
-	size_t addedChars = 0;
+
 	//If its in 8 bit mode.
 	if (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL)
 	{
-		char latestColor[3] = { 'x', 'x', 'x' };
-
-		for (size_t i = 0; i < size;)
-		{
-			char current = m_hostResultArray[i];
-			if (current == '\x1b')
-			{
-				//If its not the same color add the whole escape sequence and update latest color.
-				if (latestColor[0] != m_hostResultArray[i + 7] || latestColor[1] != m_hostResultArray[i + 8] || latestColor[2] != m_hostResultArray[i + 9])
-				{
-					memcpy(latestColor, m_hostResultArray + i + 7, 3);
-
-					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 12);
-					addedChars += 12;
-				}
-				//Only add the data and not the escape sequence.
-				else
-				{
-					//memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i + 11, 1);
-					m_minimizedResultArray[addedChars] = m_hostResultArray[i + 11];
-					addedChars += 1;
-				}
-				i += 12;
-			}
-			else if (current == '\n')
-			{
-				newlines++;
-
-				m_minimizedResultArray[addedChars] = '\n';
-				addedChars++;
-				i++;
-
-				if (newlines == y)
-				{
-					break;
-				}
-			}
-			//For \0.
-			else
-			{
-				i++;
-			}
-		}
+		return Minimize8bit(size, y);
 	}
 	//Else it is rgb.
 	else
 	{
-		char latestColor[9] = { 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x' };
+		return MinimizeRGB(size, y);
+	}
+}
 
-		for (size_t i = 0; i < size;)
+size_t RayTracer::Minimize8bit(const size_t size, const size_t y)
+{
+	size_t newlines = 0;
+	size_t addedChars = 0;
+
+	//We hold a pointer to the spot in the buffer with the latest color.
+	char* latestColor = nullptr;
+
+	for (size_t i = 0; i < size;)
+	{
+		char current = m_hostResultArray[i];
+
+		//If we are handling a pixel.
+		if (current == '\x1b')
 		{
-			char current = m_hostResultArray[i];
-			if (current == '\x1b')
+			//If its not the same color add the whole escape sequence and update latest color.
+			if (
+				!latestColor ||
+				latestColor[0] != m_hostResultArray[i + 7] ||
+				latestColor[1] != m_hostResultArray[i + 8] ||
+				latestColor[2] != m_hostResultArray[i + 9]
+			)
 			{
-				//If its not the same color Add the escape sequence and update latest color.
-				if (latestColor[0] != m_hostResultArray[i + 7] || latestColor[1] != m_hostResultArray[i + 8] || latestColor[2] != m_hostResultArray[i + 9] ||
-					latestColor[3] != m_hostResultArray[i + 11] || latestColor[4] != m_hostResultArray[i + 12] || latestColor[5] != m_hostResultArray[i + 13] ||
-					latestColor[6] != m_hostResultArray[i + 15] || latestColor[7] != m_hostResultArray[i + 16] || latestColor[8] != m_hostResultArray[i + 17])
-				{
-					memcpy(latestColor, m_hostResultArray + i + 7, 3);
-					memcpy(latestColor + 3, m_hostResultArray + i + 11, 3);
-					memcpy(latestColor + 6, m_hostResultArray + i + 15, 3);
+				//Move the pointer to the spot in the array with the color.
+				latestColor = m_hostResultArray.get() + i + 7;
 
-					memcpy(m_minimizedResultArray + addedChars, m_hostResultArray + i, 20);
-					addedChars += 20;
-				}
-				//Only add the data and not the escape sequence.
-				else
-				{
-					m_minimizedResultArray[addedChars] = m_hostResultArray[i + 19];
-					addedChars += 1;
-				}
-				i += 20;
+				//Copy the escape sequence and data to the minimized result.
+				memcpy(m_minimizedResultArray.get() + addedChars, m_hostResultArray.get() + i, 12);
+
+				addedChars += 12;
 			}
-			else if (current == '\n')
-			{
-				newlines++;
-
-				m_minimizedResultArray[addedChars] = m_hostResultArray[i];
-				addedChars++;
-				i++;
-
-				if (newlines == PrintMachine::GetHeight())
-				{
-					break;
-				}
-			}
-			//For \0.
+			//Only add the data and not the escape sequence.
 			else
 			{
-				i++;
+				m_minimizedResultArray[addedChars] = m_hostResultArray[i + 11];
+
+				addedChars += 1;
+			}
+
+			//Move 12 characters forward.
+			i += 12;
+		}
+		//If we are handling the end of a line.
+		else if (current == '\n')
+		{
+			++newlines;
+
+			m_minimizedResultArray[addedChars] = '\n';
+			++addedChars;
+
+			//Move 1 character forward.
+			++i;
+
+			//Stop iterating if the amount of lines equals the height.
+			if (newlines == y)
+			{
+				break;
 			}
 		}
+		//For \0. Simply move one character forward.
+		else
+		{
+			++i;
+		}
 	}
-	
+
+	return addedChars;
+}
+
+size_t RayTracer::MinimizeRGB(const size_t size, const size_t y)
+{
+	size_t newlines = 0;
+	size_t addedChars = 0;
+
+	//We hold a pointer to the spot in the buffer with the latest color.
+	char* latestColor = nullptr;
+
+	for (size_t i = 0; i < size;)
+	{
+		char current = m_hostResultArray[i];
+
+		//If we are handling a pixel.
+		if (current == '\x1b')
+		{
+			//If its not the same color Add the escape sequence and update latest color.
+			if (
+				!latestColor ||
+				latestColor[0] != m_hostResultArray[i + 7] || latestColor[1] != m_hostResultArray[i + 8] || latestColor[2] != m_hostResultArray[i + 9] ||		//R
+				latestColor[4] != m_hostResultArray[i + 11] || latestColor[5] != m_hostResultArray[i + 12] || latestColor[6] != m_hostResultArray[i + 13] ||	//G
+				latestColor[8] != m_hostResultArray[i + 15] || latestColor[9] != m_hostResultArray[i + 16] || latestColor[10] != m_hostResultArray[i + 17]		//B
+			)
+			{
+				//Move the pointer to the spot in the array with the color.
+				latestColor = m_hostResultArray.get() + i + 7;
+
+				//Copy the escape sequence and data to the minimized result.
+				memcpy(m_minimizedResultArray.get() + addedChars, m_hostResultArray.get() + i, 20);
+
+				addedChars += 20;
+			}
+			//Only add the data and not the escape sequence.
+			else
+			{
+				m_minimizedResultArray[addedChars] = m_hostResultArray[i + 19];
+
+				addedChars += 1;
+			}
+
+			//Move 20 characters forward.
+			i += 20;
+		}
+		//If we are handling the end of a line.
+		else if (current == '\n')
+		{
+			++newlines;
+
+			m_minimizedResultArray[addedChars] = m_hostResultArray[i];
+			++addedChars;
+
+			//Move 1 character forward.
+			++i;
+
+			//Stop iterating if the amount of lines equals the height.
+			if (newlines == PrintMachine::GetHeight())
+			{
+				break;
+			}
+		}
+		//For \0. Simply move 1 character forward.
+		else
+		{
+			++i;
+		}
+	}
+
 	return addedChars;
 }

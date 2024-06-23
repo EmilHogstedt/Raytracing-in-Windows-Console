@@ -29,17 +29,18 @@ public:
 
 	static bool ChangeSize(const size_t x, const size_t y);
 
-	static std::mutex* GetBackBufferMutex();
-	static char* GetBackBuffer();
-	static char DEVICE_MEMORY_PTR GetDeviceBackBuffer();
-	static void ResetDeviceBackBuffer();
-	static size_t GetWidth();
-	static size_t GetHeight();
-	static size_t GetMaxSize();
-	static HANDLE GetConsoleInputHandle();
-	static HANDLE GetConsoleOutputHandle();
-	static size_t GetPrintSize();
-	static PrintMode GetPrintMode();
+	static const std::mutex* GetBackBufferMutex();
+
+	static const char* GetBackBuffer();
+	static void SetDataInBackBuffer(const char* data, const size_t size);
+
+	static const size_t GetWidth();
+	static const size_t GetHeight();
+	static const size_t GetMaxSize();
+	static const HANDLE GetConsoleInputHandle();
+	static const HANDLE GetConsoleOutputHandle();
+	static const size_t GetPrintSize();
+	static const PrintMode GetPrintMode();
 
 	static void ResetBackBuffer();
 	static void FlagForBufferSwap();
@@ -68,16 +69,10 @@ private:
 	static bool m_running;
 	static bool m_terminateThread;
 
-	//static char* m_printBuffer;
 	static std::unique_ptr<char[]> m_printBuffer;
 
-	//These are two different buffers.
-	//The first is a buffer that is written to on the CPU using the minimized result of the GPU processing, and then swapped with the printbuffer.
-	//static char* m_backBuffer;
+	//A buffer that is written to on the CPU using the minimized result of the GPU processing, and then swapped with the printbuffer.
 	static std::unique_ptr<char[]> m_backBuffer;
-
-	//The second is the buffer which is used to write to from the GPU threads.
-	static char DEVICE_MEMORY_PTR m_deviceBackBuffer;
 
 	static size_t m_printSize;
 	static size_t m_backBufferPrintSize;

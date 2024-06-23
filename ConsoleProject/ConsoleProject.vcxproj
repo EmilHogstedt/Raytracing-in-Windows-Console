@@ -305,6 +305,7 @@
     <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ANSIRGB.h" />
     <ClInclude Include="Camera3D.h" />
     <ClInclude Include="Engine3D.h" />
     <ClInclude Include="MyMath.h" />

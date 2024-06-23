@@ -26,6 +26,11 @@ void Engine3D::Start()
 
 	//Not needed atm. Maybe later.
 	m_numThreads = std::thread::hardware_concurrency();
+
+	//TEST
+	int size = sizeof(Object3D);
+	int size2 = sizeof(Sphere);
+	int size3 = sizeof(Plane);
 }
 
 bool Engine3D::Run()
@@ -43,9 +48,9 @@ bool Engine3D::Run()
 		return false;
 	}
 
-	long double dt = m_timer->DeltaTime();//Rendering();
-	m_timer->Update();// Rendering();
-	m_fpsTimer += m_timer->DeltaTime();//Rendering();
+	long double dt = m_timer->DeltaTime();
+	m_timer->Update();
+	m_fpsTimer += m_timer->DeltaTime();
 	m_fps++;
 
 	//Handle keyboard input
@@ -84,15 +89,11 @@ void Engine3D::Render()
 	m_camera->Update();
 
 	//Update the objects in the scene.
-	m_scene->Update(m_timer->DeltaTime());// Rendering());
+	m_scene->Update(m_timer->DeltaTime());
 
 	//Update pixel shader variables.
-	//After update is complete we set the device variable
-	RayTracingParameters params;
-	params.inverseVMatrix = m_camera->GetInverseVMatrix();
-	params.camPos = m_camera->GetPos();
-	cudaMemset(m_deviceRayTracingParameters, 0, sizeof(RayTracingParameters));
-	cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice);
+	cudaMemcpy(&m_deviceRayTracingParameters->inverseVMatrix, &m_camera->GetInverseVMatrix(), sizeof(MyMath::Matrix), cudaMemcpyHostToDevice);
+	cudaMemcpy(&m_deviceRayTracingParameters->camPos, &m_camera->GetPos(), sizeof(MyMath::Vector3), cudaMemcpyHostToDevice);
 
 	size_t x = PrintMachine::GetWidth();
 	size_t y = PrintMachine::GetHeight();
@@ -100,9 +101,6 @@ void Engine3D::Render()
 	float element2 = m_camera->GetPMatrix().row2.y;
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
-
-	//Reset the backbuffer.
-	PrintMachine::ResetDeviceBackBuffer();
 
 	m_rayTracer->RayTracingWrapper(
 		x, 
@@ -112,9 +110,7 @@ void Engine3D::Render()
 		m_camera->GetFarPlaneDistance(), 
 		objects, 
 		m_deviceRayTracingParameters, 
-		PrintMachine::GetDeviceBackBuffer(), 
-		PrintMachine::GetBackBufferMutex(), 
-		m_timer->DeltaTime()//Rendering()
+		m_timer->DeltaTime()
 	);
 }
 

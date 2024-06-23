@@ -39,6 +39,8 @@ namespace MyMath
 			z = other.z;
 		}
 
+	public:
+		//Operators
 		__host__ __device__
 		Vector3& operator=(const Vector3& other)
 		{
@@ -59,9 +61,25 @@ namespace MyMath
 		}
 
 		__host__ __device__
+		void operator-=(const Vector3& other)
+		{
+			x -= other.x;
+			y -= other.y;
+			z -= other.z;
+		}
+
+		__host__ __device__
 		Vector3 operator+(const Vector3& other)
 		{
 			return Vector3(x + other.x, y + other.y, z + other.z);
+		}
+
+		__host__ __device__
+		void operator+=(const Vector3& other)
+		{
+			x += other.x;
+			y += other.y;
+			z += other.z;
 		}
 
 		//Float operations
@@ -79,12 +97,25 @@ namespace MyMath
 			z *= other;
 		}
 
+		//Copying functions
 		__host__ __device__
-		Vector3 Normalize()
+		Vector3 Normalize() const
 		{
 			const float length = 1.0f / sqrt(x * x + y * y + z * z);
 
 			return Vector3(x * length, y * length, z * length);
+		}
+
+		//In place alternatives to copying functions.
+		__host__ __device__
+		Vector3& Normalize_InPlace()
+		{
+			const float length = 1.0f / sqrt(x * x + y * y + z * z);
+
+			x *= length;
+			y *= length;
+			z *= length;
+			return *this;
 		}
 
 		float x;
@@ -122,7 +153,6 @@ namespace MyMath
 
 		~Vector4() = default;
 
-
 		__host__ __device__
 		Vector4(const Vector4& other)
 		{
@@ -132,6 +162,8 @@ namespace MyMath
 			w = other.w;
 		}
 
+	public:
+		//Operators
 		Vector4& operator=(const Vector4& other)
 		{
 			if (this == &other)
@@ -146,18 +178,32 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		Vector3 xyz()
+		Vector3 xyz() const
 		{
 			return Vector3(x, y, z);
 		}
 
 		//#todo: Implement operations (+, -, * etc)
 
-		Vector4 Normalize()
+		__host__ __device__
+		Vector4 Normalize() const
 		{
 			const float length = 1.0f / sqrt(x * x + y * y + z * z + w * w);
 
 			return Vector4(x * length, y * length, z * length, w * length);
+		}
+
+		//In place alternatives to copying functions.
+		__host__ __device__
+		Vector4& Normalize_InPlace()
+		{
+			const float length = 1.0f / sqrt(x * x + y * y + z * z);
+
+			x *= length;
+			y *= length;
+			z *= length;
+			w *= length;
+			return *this;
 		}
 
 		float x;
@@ -209,7 +255,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		Vector4 Mult(const Vector4& v)
+		Vector4 Mult(const Vector4& v) const
 		{
 			return Vector4(
 				row1.x * v.x + row1.y * v.y + row1.z * v.z + row1.w * v.w,

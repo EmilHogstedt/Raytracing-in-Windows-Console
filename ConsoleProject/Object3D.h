@@ -38,6 +38,4 @@ protected:
 	MyMath::Vector3 m_center;
 	ObjectType m_type;
 	MyMath::Vector3 m_color;
-
-	//Make sure the object has a size which is a multiple of 32.
 };

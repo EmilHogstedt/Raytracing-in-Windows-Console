@@ -19,7 +19,6 @@ bool PrintMachine::m_terminateThread = false;
 
 std::unique_ptr<char[]> PrintMachine::m_printBuffer = nullptr;
 std::unique_ptr<char[]> PrintMachine::m_backBuffer = nullptr;
-char* PrintMachine::m_deviceBackBuffer = nullptr;
 size_t PrintMachine::m_printSize = 0;
 size_t PrintMachine::m_backBufferPrintSize = 0;
 std::string PrintMachine::m_debugInfo = "";
@@ -145,8 +144,6 @@ void PrintMachine::Start(const size_t x, const size_t y)
 
 	m_backBuffer = std::make_unique<char[]>(m_maxSize);
 
-	cudaMalloc(&m_deviceBackBuffer, sizeof(char) * m_maxSize);
-	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * m_maxSize);
 	m_printSize = m_maxSize;
 
 	m_timer = std::make_unique<Time>();
@@ -167,62 +164,65 @@ void PrintMachine::CleanUp()
 
 	//Clear the screen.
 	printf("\x1b[2J");
-
-	cudaFree(m_deviceBackBuffer);
 }
 
-std::mutex* PrintMachine::GetBackBufferMutex()
+const std::mutex* PrintMachine::GetBackBufferMutex()
 {
 	return &m_backBufferMutex;
 }
 
-//The backbuffer mutex NEEDS to be locked before calling this function.
-char* PrintMachine::GetBackBuffer()
+const char* PrintMachine::GetBackBuffer()
 {
 	return m_backBuffer.get();
 }
 
-char DEVICE_MEMORY_PTR PrintMachine::GetDeviceBackBuffer()
+void PrintMachine::SetDataInBackBuffer(const char* data, const size_t size)
 {
-	return m_deviceBackBuffer;
+	m_backBufferMutex.lock();
+
+	//Copy the data over to the backbuffer.
+	memcpy(m_backBuffer.get(), data, size);
+
+	//Signal the printmachine that it should swap buffers.
+	PrintMachine::FlagForBufferSwap();
+
+	//Change print size to reflect the data being printed.
+	PrintMachine::SetPrintSize(size);
+
+	m_backBufferMutex.unlock();
 }
 
-void PrintMachine::ResetDeviceBackBuffer()
-{
-	cudaMemset(m_deviceBackBuffer, 0, sizeof(char) * m_maxSize);
-}
-
-size_t PrintMachine::GetWidth()
+const size_t PrintMachine::GetWidth()
 {
 	return currentWidth;
 }
 
-size_t PrintMachine::GetHeight()
+const size_t PrintMachine::GetHeight()
 {
 	return currentHeight;
 }
 
-size_t PrintMachine::GetMaxSize()
+const size_t PrintMachine::GetMaxSize()
 {
 	return m_maxSize;
 }
 
-HANDLE PrintMachine::GetConsoleInputHandle()
+const HANDLE PrintMachine::GetConsoleInputHandle()
 {
 	return m_inputHandle;
 }
 
-HANDLE PrintMachine::GetConsoleOutputHandle()
+const HANDLE PrintMachine::GetConsoleOutputHandle()
 {
 	return m_outputHandle;
 }
 
-size_t PrintMachine::GetPrintSize()
+const size_t PrintMachine::GetPrintSize()
 {
 	return m_printSize;
 }
 
-PrintMachine::PrintMode PrintMachine::GetPrintMode()
+const PrintMachine::PrintMode PrintMachine::GetPrintMode()
 {
 	return m_printMode;
 }

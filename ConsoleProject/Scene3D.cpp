@@ -5,9 +5,9 @@
 void Scene3D::Init()
 {
 	//Allocate device memory for pointers to the objects.
-	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray), 80));// FIVE_MEGABYTES));
-	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray, 0, 80));//FIVE_MEGABYTES));
-	m_deviceObjects.allocatedBytes = 80;//FIVE_MEGABYTES;
+	gpuErrchk(cudaMalloc(&(m_deviceObjects.m_deviceArray), 80));
+	gpuErrchk(cudaMemset(m_deviceObjects.m_deviceArray, 0, 80));
+	m_deviceObjects.allocatedBytes = 80;
 	m_deviceObjects.count = 0;
 
 	//Allocate device memory for the object data.
