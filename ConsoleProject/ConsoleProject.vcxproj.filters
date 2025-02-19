@@ -65,7 +65,7 @@
     <ClInclude Include="Sphere.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracing.h">
+    <ClInclude Include="RayTracingManager.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="MyMath.h">
@@ -76,7 +76,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="RayTracing.cu">
+    <CudaCompile Include="RayTracingManager.cu">
       <Filter>Resource Files</Filter>
     </CudaCompile>
     <CudaCompile Include="Object3D.cu">

@@ -318,10 +318,10 @@
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="RayTracing.cu">
+    <CudaCompile Include="RayTracingManager.cu">
       <FileType>Document</FileType>
     </CudaCompile>
-    <ClInclude Include="RayTracing.h" />
+    <ClInclude Include="RayTracingManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

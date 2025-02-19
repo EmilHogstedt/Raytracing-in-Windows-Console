@@ -8,7 +8,6 @@ int PrintMachine::m_printingFps = 60;
 std::unique_ptr<Time> PrintMachine::m_timer = nullptr;
 int PrintMachine::m_printingFpsCounter = 0;
 float PrintMachine::m_printingFpsTimer = 0.0f;
-PrintMachine::PrintMode PrintMachine::m_printMode = PrintMachine::ASCII;
 
 size_t PrintMachine::currentWidth = 0;
 size_t PrintMachine::currentHeight = 0;
@@ -220,16 +219,6 @@ const HANDLE PrintMachine::GetConsoleOutputHandle()
 const size_t PrintMachine::GetPrintSize()
 {
 	return m_printSize;
-}
-
-const PrintMachine::PrintMode PrintMachine::GetPrintMode()
-{
-	return m_printMode;
-}
-
-void PrintMachine::SetPrintMode(const PrintMachine::PrintMode mode)
-{
-	m_printMode = mode;
 }
 
 bool PrintMachine::ChangeSize(const size_t x, const size_t y)

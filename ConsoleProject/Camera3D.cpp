@@ -120,7 +120,7 @@ const MyMath::Vector3& Camera3D::GetForward() const
 	return m_forward;
 }
 
-//Set rot & pos to a specific value, when teleporting.
+//Set rot to a specific value, when teleporting.
 void Camera3D::SetRot(const float p, const float y, const float r)
 {
 	m_rot.x = p;
@@ -128,6 +128,7 @@ void Camera3D::SetRot(const float p, const float y, const float r)
 	m_rot.z = r;
 }
 
+//Set pos to a specific value, when teleporting.
 void Camera3D::SetPos(const float x, const float y, const float z)
 {
 	m_pos.x = x;
@@ -148,9 +149,12 @@ void Camera3D::Move(const long double dt)
 	MyMath::Vector3 moveX = m_staticRight * static_cast<float>(m_Keys.D - m_Keys.A);
 	MyMath::Vector3 moveZ = m_staticForward * static_cast<float>(m_Keys.W - m_Keys.S);
 
+	MyMath::Vector3 totalMovement = moveX + moveZ;
+	totalMovement.Normalize_InPlace();
+
 	//Then add those to the current posision.
-	m_pos.x = m_pos.x + (moveX.x * deltaSpeed) + (moveZ.x * deltaSpeed);
-	m_pos.z = m_pos.z + (moveX.z * deltaSpeed) + (moveZ.z * deltaSpeed);
+	m_pos.x = m_pos.x + (totalMovement.x * deltaSpeed);// +(moveZ.x * deltaSpeed);
+	m_pos.z = m_pos.z + (totalMovement.z * deltaSpeed);// +(moveZ.z * deltaSpeed);
 	
 	//The updating of the y-pos does not get effected by the rotation of the axis'
 	m_pos.y += (m_Keys.Space - m_Keys.Shift) * deltaSpeed;
@@ -180,6 +184,7 @@ void Camera3D::AddRot(const long double dt, const short p, const short y, const 
 	}
 }
 
+//TODO: Move MouseCoords to UI/2D manager.
 const COORD& Camera3D::GetMouseCoords()
 {
 	return m_mouseCoords;

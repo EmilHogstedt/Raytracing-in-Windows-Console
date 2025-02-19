@@ -102,8 +102,30 @@ namespace MyMath
 		}
 
 		//Copying functions
-		__host__ __device__
 		Vector3 Normalize() const
+		{
+			const float length = sqrt(x * x + y * y + z * z);
+			const float divider = length < 0.000001f ? 0.0f : 1.0f / length;
+
+			return Vector3(x * divider, y * divider, z * divider);
+		}
+
+		//In place alternatives to copying functions.
+		Vector3& Normalize_InPlace()
+		{
+			const float length = sqrt(x * x + y * y + z * z);
+			const float divider = length < 0.000001f ? 0.0f : 1.0f / length;
+
+			x *= divider;
+			y *= divider;
+			z *= divider;
+			return *this;
+		}
+
+		//FAST GPU VERSIONS WITHOUT DIVIDE-BY-ZERO CHECKS!
+		//Copying functions
+		__host__ __device__
+			Vector3 Normalize_GPU() const
 		{
 			const float length = 1.0f / sqrt(x * x + y * y + z * z);
 
@@ -112,7 +134,7 @@ namespace MyMath
 
 		//In place alternatives to copying functions.
 		__host__ __device__
-		Vector3& Normalize_InPlace()
+			Vector3& Normalize_InPlace_GPU()
 		{
 			const float length = 1.0f / sqrt(x * x + y * y + z * z);
 

@@ -2,7 +2,7 @@
 #include "PrintMachine.h"
 #include "Camera3D.h"
 #include "Scene3D.h"
-#include "RayTracing.h"
+#include "RayTracingManager.h"
 
 class Engine3D {
 public:
@@ -14,7 +14,7 @@ public:
 	void CleanUp();
 
 private:
-	void Render();
+	void Render(const long double dt);
 
 	void CheckKeyboard(const long double dt);
 
@@ -30,10 +30,7 @@ private:
 	//Move these to input handler.
 	bool m_bIsMouseLocked = false;
 
-	std::unique_ptr<RayTracer> m_rayTracer;
-
-	//The raytracingparameters is always nullptr on the CPU. Meaning "new" is never called on it.
-	RayTracingParameters DEVICE_MEMORY_PTR m_deviceRayTracingParameters;
+	std::unique_ptr<RayTracingManager> m_rayTracingManager;
 
 	bool m_bShouldQuit = false;
 };

@@ -8,16 +8,13 @@ void Engine3D::Start()
 	m_camera = std::make_unique<Camera3D>();
 	m_scene = std::make_unique<Scene3D>();
 
-	//Allocate memory for the raytracingparameters.
-	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
-
 	//When we create the print machine it also starts printing.
 	//Set it to 1920x500 for high resolution.
 	//Set it to 400x150 for low resolution.
 	PrintMachine::Start(400, 150);
 
 	//The printmachine needs to be created for the raytracer to be created.
-	m_rayTracer = std::make_unique<RayTracer>();
+	m_rayTracingManager = std::make_unique<RayTracingManager>();
 
 	m_camera->Init();
 	m_camera->Update();
@@ -43,9 +40,10 @@ bool Engine3D::Run()
 		return false;
 	}
 
-	long double dt = m_timer->DeltaTime();
 	m_timer->Update();
-	m_fpsTimer += m_timer->DeltaTime();
+	long double dt = m_timer->DeltaTime();
+
+	m_fpsTimer += dt;
 	m_fps++;
 
 	//Handle keyboard input
@@ -54,7 +52,7 @@ bool Engine3D::Run()
 	//Move using the current input.
 	m_camera->Move(dt);
 
-	Render();
+	Render(dt);
 
 	//Once every second we update the fps.
 	if (m_fpsTimer >= 1.0f)
@@ -78,13 +76,13 @@ bool Engine3D::Run()
 	return true;
 }
 
-void Engine3D::Render()
+void Engine3D::Render(const long double dt)
 {
 	//Update the view matrix.
 	m_camera->Update();
 
 	//Update the objects in the scene.
-	m_scene->Update(m_timer->DeltaTime());
+	m_scene->Update(dt);
 
 	//Update pixel shader variables.
 	RayTracingParameters params;
@@ -95,18 +93,14 @@ void Engine3D::Render()
 	params.element1 = m_camera->GetPMatrix().row1.x;
 	params.element2 = m_camera->GetPMatrix().row2.y;
 	params.camFarDist = m_camera->GetFarPlaneDistance();
-
-	gpuErrchk(cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice));
 	
 	DeviceObjectArray<Object3D*> objects = m_scene->GetObjects();
 
 	//x and y have to be sent to the wrapper anyway, as they are also used on the CPU.
-	m_rayTracer->RayTracingWrapper(
-		params.x,
-		params.y,
-		objects, 
-		m_deviceRayTracingParameters, 
-		m_timer->DeltaTime()
+	m_rayTracingManager->Update(
+		params,
+		objects,
+		dt
 	);
 }
 
@@ -181,23 +175,23 @@ void Engine3D::CheckKeyboard(const long double dt)
 	//Change printing mode.
 	if (GetKeyState(VK_F1) & 0x8000)
 	{
-		PrintMachine::SetPrintMode(PrintMachine::ASCII);
+		m_rayTracingManager->SetRenderingMode(RayTracingManager::ASCII);
 	}
 	if (GetKeyState(VK_F2) & 0x8000)
 	{
-		PrintMachine::SetPrintMode(PrintMachine::PIXEL);
+		m_rayTracingManager->SetRenderingMode(RayTracingManager::PIXEL);
 	}
 	if (GetKeyState(VK_F3) & 0x8000)
 	{
-		PrintMachine::SetPrintMode(PrintMachine::RGB_ASCII);
+		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_ASCII);
 	}
 	if (GetKeyState(VK_F4) & 0x8000)
 	{
-		PrintMachine::SetPrintMode(PrintMachine::RGB_PIXEL);
+		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_PIXEL);
 	}
 	if (GetKeyState(VK_F5) & 0x8000)
 	{
-		PrintMachine::SetPrintMode(PrintMachine::RGB_NORMALS);
+		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_NORMALS);
 	}
 
 	//Mouse input.
@@ -246,6 +240,4 @@ void Engine3D::CheckKeyboard(const long double dt)
 void Engine3D::CleanUp()
 {
 	PrintMachine::CleanUp();
-
-	cudaFree(m_deviceRayTracingParameters);
 }

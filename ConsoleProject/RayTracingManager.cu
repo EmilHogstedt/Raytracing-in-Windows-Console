@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "RayTracing.h"
+#include "RayTracingManager.h"
 
 #include "ANSIRGB.h"
 
@@ -51,7 +51,7 @@ __global__ void RayTrace(
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray,
-	const PrintMachine::PrintMode mode
+	const RayTracingManager::RenderingMode mode
 )
 {
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -67,7 +67,7 @@ __global__ void RayTrace(
 	}
 
 	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL) ? 12 : 20;
+	const size_t size = (mode == RayTracingManager::ASCII || mode == RayTracingManager::PIXEL) ? 12 : 20;
 
 	//#todo: Do this when minimizing instead of in a thread.
 	//If the pixel is at the end of a line, output \n and return.
@@ -90,7 +90,7 @@ __global__ void RayTrace(
 
 	//Calculate the ray.
 	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace();
+	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
 	
 	//Used during intersection tests with spheres.
 	const float a = Dot(directionWSpace, directionWSpace);
@@ -141,7 +141,7 @@ __global__ void RayTrace(
 				if (t1 < closest && t1 > 0.0f)
 				{
 					closest = t1;
-					const MyMath::Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize();
+					const MyMath::Vector3 normalSphere = (cameraPos + directionWSpace * closest - spherePos).Normalize_GPU();
 					bestNormal = normalSphere;
 
 					//1, 0, 0 is just temporary light direction.
@@ -218,7 +218,7 @@ __global__ void RayTrace(
 	
 	//Now we need to take the raytraced information and output it to our result array of chars.
 	//If the mode is not RGB we need to convert the colors to 8bit.
-	if (mode == PrintMachine::PIXEL || mode == PrintMachine::ASCII)
+	if (mode == RayTracingManager::PIXEL || mode == RayTracingManager::ASCII)
 	{
 		//If the pixel hit something during ray tracing.
 		if (data != ' ')
@@ -254,7 +254,7 @@ __global__ void RayTrace(
 			third = singles + '0';
 
 			//If in ASCII mode we change foreground color and also print the value in data.
-			if (mode == PrintMachine::ASCII)
+			if (mode == RayTracingManager::ASCII)
 			{
 				char finalData[12] = {
 					'\x1b', '[',			//Escape character
@@ -322,7 +322,7 @@ __global__ void RayTrace(
 			//R
 			uint8_t originalIndex;
 			uint8_t index;
-			if (mode == PrintMachine::RGB_NORMALS)
+			if (mode == RayTracingManager::RGB_NORMALS)
 			{
 				originalIndex = (uint8_t)(bestNormal.x * 255);
 				index = (uint8_t)(bestNormal.x * 255);
@@ -349,7 +349,7 @@ __global__ void RayTrace(
 			thirdR = singles + '0';
 
 			//G
-			if (mode == PrintMachine::RGB_NORMALS)
+			if (mode == RayTracingManager::RGB_NORMALS)
 			{
 				originalIndex = (uint8_t)(bestNormal.y * 255);
 				index = (uint8_t)(bestNormal.y * 255);
@@ -376,7 +376,7 @@ __global__ void RayTrace(
 			thirdG = singles + '0';
 
 			//B
-			if (mode == PrintMachine::RGB_NORMALS)
+			if (mode == RayTracingManager::RGB_NORMALS)
 			{
 				originalIndex = (uint8_t)(bestNormal.z * 255);
 				index = (uint8_t)(bestNormal.z * 255);
@@ -403,7 +403,7 @@ __global__ void RayTrace(
 			thirdB = singles + '0';
 
 			//If in ASCII mode we change foreground color and also print the value in data.
-			if (mode == PrintMachine::RGB_ASCII)
+			if (mode == RayTracingManager::RGB_ASCII)
 			{
 				char finalData[20] = {
 					'\x1b', '[',					//Escape character
@@ -416,7 +416,7 @@ __global__ void RayTrace(
 				};
 				memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char)* size);
 			}
-			else if (mode == PrintMachine::RGB_PIXEL)
+			else if (mode == RayTracingManager::RGB_PIXEL)
 			{
 				char finalData[20] = {
 					'\x1b', '[',					//Escape character
@@ -463,8 +463,11 @@ __global__ void RayTrace(
 	return;
 }
 
-RayTracer::RayTracer()
+RayTracingManager::RayTracingManager()
 {
+	//Allocate memory for the raytracingparameters.
+	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
+
 	const size_t size = PrintMachine::GetMaxSize();
 
 	cudaMalloc(&m_deviceResultArray, sizeof(char) * size);
@@ -476,29 +479,34 @@ RayTracer::RayTracer()
 	m_minimizedResultArray = std::make_unique<char[]>(size);
 }
 
-RayTracer::~RayTracer()
+RayTracingManager::~RayTracingManager()
 {
 	cudaFree(m_deviceResultArray);
+
+	cudaFree(m_deviceRayTracingParameters);
 }
 
-void RayTracer::RayTracingWrapper(
-	const size_t x,
-	const size_t y,
+void RayTracingManager::Update(
+	const RayTracingParameters& params,
 	const DeviceObjectArray<Object3D*>& deviceObjects,
-	const RayTracingParameters DEVICE_MEMORY_PTR rayTracingParameters,
 	double dt
 )
 {
+	//Set the raytracingparameters on the GPU.
+	gpuErrchk(cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice));
+
 	//The backbuffer needs to be reset in order to not produce artefacts, especially when switching printing mode to RGB.
 	ResetDeviceBackBuffer();
 
 	//Update the objects. 1 thread per object.
 	unsigned int threadsPerBlock = deviceObjects.count;
 	unsigned int numberOfBlocks = 1;
+
 	if (deviceObjects.count > 1024)
 	{
 		numberOfBlocks = static_cast<int>(std::ceil(deviceObjects.count / 1024.0));
 	}
+
 	dim3 gridDims(numberOfBlocks, 1, 1);
 	dim3 blockDims(threadsPerBlock, 1, 1);
 	
@@ -524,17 +532,17 @@ void RayTracer::RayTracingWrapper(
 
 	//Do the raytracing. Calculate x and y dimensions in blocks depending on screensize.
 	//1 thread per pixel.
-	gridDims.x = static_cast<unsigned int>(std::ceil((x + 1) / 16.0));
-	gridDims.y = static_cast<unsigned int>(std::ceil(y / 16.0));
+	gridDims.x = static_cast<unsigned int>(std::ceil((params.x + 1) / 16.0));
+	gridDims.y = static_cast<unsigned int>(std::ceil(params.y / 16.0));
 	blockDims.x = 16u;
 	blockDims.y = 16u;
-	
+
 	RayTrace CUDA_KERNEL(gridDims, blockDims)(
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
-		rayTracingParameters,
+		m_deviceRayTracingParameters,
 		m_deviceResultArray,
-		PrintMachine::GetPrintMode()
+		currentRenderingMode
 	);
 
 	//Make sure all the threads are done with the ray tracing.
@@ -547,7 +555,7 @@ void RayTracer::RayTracingWrapper(
 	gpuErrchk(cudaMemcpy(m_hostResultArray.get(), m_deviceResultArray, size, cudaMemcpyDeviceToHost));
 
 	//Minimize the result, by removing unneccessary ANSI escape sequences.
-	size_t newSize = MinimizeResults(size, y);
+	size_t newSize = MinimizeResults(size, params.y);
 
 	//Locking/unlocking of the mutex, flagging for changing buffer, and changing the printing size now all happens within this function.
 	//-----------------------------------------------------------------------------------------------------
@@ -557,19 +565,21 @@ void RayTracer::RayTracingWrapper(
 	return;
 }
 
-void RayTracer::ResetDeviceBackBuffer()
+void RayTracingManager::SetRenderingMode(const RenderingMode newRenderMode)
+{
+	currentRenderingMode = newRenderMode;
+}
+
+void RayTracingManager::ResetDeviceBackBuffer()
 {
 	const size_t size = PrintMachine::GetMaxSize();
 	cudaMemset(m_deviceResultArray, 0, size);
 }
 
-size_t RayTracer::MinimizeResults(const size_t size, const size_t y)
+size_t RayTracingManager::MinimizeResults(const size_t size, const size_t y)
 {
-	PrintMachine::PrintMode mode = PrintMachine::GetPrintMode();
-
-
 	//If its in 8 bit mode.
-	if (mode == PrintMachine::ASCII || mode == PrintMachine::PIXEL)
+	if (currentRenderingMode == ASCII || currentRenderingMode == PIXEL)
 	{
 		return Minimize8bit(size, y);
 	}
@@ -580,7 +590,7 @@ size_t RayTracer::MinimizeResults(const size_t size, const size_t y)
 	}
 }
 
-size_t RayTracer::Minimize8bit(const size_t size, const size_t y)
+size_t RayTracingManager::Minimize8bit(const size_t size, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -649,7 +659,7 @@ size_t RayTracer::Minimize8bit(const size_t size, const size_t y)
 	return addedChars;
 }
 
-size_t RayTracer::MinimizeRGB(const size_t size, const size_t y)
+size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;

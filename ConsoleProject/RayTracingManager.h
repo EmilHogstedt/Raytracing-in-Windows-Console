@@ -14,20 +14,22 @@ struct RayTracingParameters
 	float camFarDist;
 };
 
-class RayTracer
+class RayTracingManager
 {
 public:
-	RayTracer();
+	RayTracingManager();
 
-	~RayTracer();
+	~RayTracingManager();
 
-	void RayTracingWrapper(
-		const size_t x,
-		const size_t y,
+	void Update(
+		const RayTracingParameters& params,
 		const DeviceObjectArray<Object3D*>& objects,
-		const RayTracingParameters DEVICE_MEMORY_PTR rayTracingParameters,
 		double dt
 	);
+
+	enum RenderingMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS, SDL };
+
+	void SetRenderingMode(const RenderingMode newRenderMode);
 
 private:
 	void ResetDeviceBackBuffer();
@@ -40,6 +42,11 @@ private:
 
 	std::unique_ptr<char[]> m_hostResultArray;
 	std::unique_ptr<char[]> m_minimizedResultArray;
+
+	//The raytracingparameters is always nullptr on the CPU. Meaning "new" is never called on it.
+	RayTracingParameters DEVICE_MEMORY_PTR m_deviceRayTracingParameters;
+
+	RenderingMode currentRenderingMode = ASCII;
 };
 
 #define NUM_ASCII_CHARACTERS 68

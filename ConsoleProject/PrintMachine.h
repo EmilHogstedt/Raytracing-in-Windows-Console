@@ -12,8 +12,6 @@ protected:
 	PrintMachine() = delete;
 
 public:
-	enum PrintMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS };
-
 	static void Start(const size_t x, const size_t y);
 	static void CleanUp();
 
@@ -22,7 +20,7 @@ public:
 	static void TerminateThread();
 
 public:
-	//Thread function.
+	//This function is run on a seperate thread.
 	static bool Print();
 
 	static void UpdateRenderingFPS(const int fps);
@@ -40,18 +38,14 @@ public:
 	static const HANDLE GetConsoleInputHandle();
 	static const HANDLE GetConsoleOutputHandle();
 	static const size_t GetPrintSize();
-	static const PrintMode GetPrintMode();
 
 	static void ResetBackBuffer();
 	static void FlagForBufferSwap();
 	static void SetPrintSize(const size_t newSize);
-	static void SetPrintMode(const PrintMode mode);
 
 private:
 	static HANDLE m_inputHandle;
 	static HANDLE m_outputHandle;
-
-	static PrintMode m_printMode;
 
 	static void ResetConsolePointer();
 
