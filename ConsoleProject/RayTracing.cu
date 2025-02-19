@@ -505,7 +505,7 @@ void RayTracer::RayTracingWrapper(
 	//If it is the first rendering loop we need to construct the octtree, so that we can access it in the physicsupdate. But otherwise it only has to be done after the physics update.
 	// 
 	//Physics update of the objects.
-	UpdateObjects<<<gridDims, blockDims>>>(
+	UpdateObjects CUDA_KERNEL(gridDims, blockDims)(
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
 		dt
@@ -514,7 +514,7 @@ void RayTracer::RayTracingWrapper(
 	//Classify the objects into the octtree.
 	//Mark objects within the frustum
 	/*
-	Culling<<<gridDims, blockDims>>>(
+	Culling CUDA_KERNEL(gridDims, blockDims)(
 		deviceObjects.using1st ? deviceObjects.m_deviceArray1 : deviceObjects.m_deviceArray2,
 
 	);
@@ -529,13 +529,14 @@ void RayTracer::RayTracingWrapper(
 	blockDims.x = 16u;
 	blockDims.y = 16u;
 	
-	RayTrace<<<gridDims, blockDims>>>(
+	RayTrace CUDA_KERNEL(gridDims, blockDims)(
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
 		rayTracingParameters,
 		m_deviceResultArray,
 		PrintMachine::GetPrintMode()
 	);
+
 	//Make sure all the threads are done with the ray tracing.
 	gpuErrchk(cudaDeviceSynchronize());
 
