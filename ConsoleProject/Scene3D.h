@@ -1,6 +1,7 @@
 #pragma once
-#include "Sphere.h"
+
 #include "Plane.h"
+#include "Sphere.h"
 
 #define FIVE_MEGABYTES 5'000'000
 #define HUNDRED_MEGABYTES 100'000'000

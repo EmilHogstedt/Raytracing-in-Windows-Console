@@ -1,4 +1,5 @@
 #pragma once
+
 #include "MyMath.h"
 
 //Used for sending objects to the GPU.

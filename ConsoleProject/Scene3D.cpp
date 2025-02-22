@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Scene3D.h"
+
 #include "PrintMachine.h"
+#include "MyMath.h"
 
 void Scene3D::Init()
 {

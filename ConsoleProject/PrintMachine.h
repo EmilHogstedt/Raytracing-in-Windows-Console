@@ -1,8 +1,9 @@
 #pragma once
-#include "Timer.h"
 
 #define WIDTHLIMIT 1000
 #define HEIGHTLIMIT 500
+
+class Time;
 
 class PrintMachine {
 private:

@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Sphere.h"
 
+#include "MyMath.h"
+
 __host__ __device__ float Sphere::GetRadius() const
 {
 	return m_radius;

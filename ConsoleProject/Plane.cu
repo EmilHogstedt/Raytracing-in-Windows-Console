@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Plane.h"
 
+#include "MyMath.h"
+
 Plane::Plane(const MyMath::Vector3& center, const MyMath::Vector3& normal, const MyMath::Vector3& color, const float width, const float height) : Object3D(center, ObjectType::PlaneType, color)
 {
 	//Normalize the normal.

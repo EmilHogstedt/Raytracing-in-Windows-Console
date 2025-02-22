@@ -1,6 +1,8 @@
 #pragma once
-#include "RayTracingManager.h"
 
+#include "MyMath.h"
+
+enum RenderingMode;
 class Object3D;
 struct RayTracingParameters;
 
@@ -8,7 +10,7 @@ struct alignas(32) TraceData
 {
 	MyMath::Vector3 color;
 	MyMath::Vector3 normal;
-	float distance;
+	float distance = 99999999.f;
 	float shadingValue;
 };
 
@@ -19,15 +21,20 @@ public:
 	~RayTracing() = delete;
 
 	static void RayTrace(
+		const dim3& gridDims,
+		const dim3& blockDims,
 		Object3D* DEVICE_MEMORY_PTR const objects,
 		const unsigned int count,
 		const RayTracingParameters* params,
 		char* resultArray,
-		const RayTracingManager::RenderingMode mode);
+		const RenderingMode mode);
 
 private:
 	
 };
+
+__device__
+MyMath::Vector3 CalculateInitialDirection(const RayTracingParameters* params);
 
 __device__
 char GetASCIICharacter(const float distance, const float farPlane, const float shadingValue);
@@ -40,42 +47,42 @@ void Trace(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	TraceData& traceData);
 
-__device__
+__global__
 void RayTrace_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray);
 
-__device__
+__global__
 void RayTrace_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray);
 
-__device__
+__global__
 void RayTrace_RGB_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray);
 
-__device__
+__global__
 void RayTrace_RGB_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray);
 
-__device__
+__global__
 void RayTrace_RGB_NORMALS(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
 	const RayTracingParameters* params,
 	char* resultArray);
 
-__device__
+__global__
 void RayTrace_SDL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
@@ -104,3 +111,9 @@ const char ASCII[NUM_ASCII_CHARACTERS] = {
 
 __constant__
 const float AMBIENT_LIGHT = 0.01492537f * 19;
+
+__constant__
+const size_t SIZE_8BIT = 12;
+
+__constant__
+const size_t SIZE_RGB = 20;

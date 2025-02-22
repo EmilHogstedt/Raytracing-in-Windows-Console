@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "PrintMachine.h"
 
+#include "Timer.h"
+
 std::mutex PrintMachine::m_Lock;
 
 int PrintMachine::m_renderingFps = 60;

@@ -2,10 +2,28 @@
 #include "RayTracing.h"
 
 #include "ANSIRGB.h"
-#include "MyMath.h"
+#include "RayTracingManager.h"
 #include "Sphere.h"
 #include "Plane.h"
 
+__device__
+MyMath::Vector3 CalculateInitialDirection(const RayTracingParameters* params)
+{
+	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+
+	//Convert pixel coordinates to (clip space? screen space?)
+	const float convertedY = ((float)(params->y) - row * 2) / params->y;
+	const float convertedX = (2 * column - (float)(params->x)) / params->x;
+
+	//Calculate the ray.
+	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * params->element1, convertedY * params->element2, 1.0f, 0.0f);
+
+	const MyMath::Vector3 WorldSpaceDirection = params->inverseVMatrix.Mult(pixelVSpace).xyz();
+	return WorldSpaceDirection.Normalize_GPU();
+}
+
+__device__
 char GetASCIICharacter(const float distance, const float farPlane, const float shadingValue)
 {
 	//If we miss or its outside the frustum we dont print anything.
@@ -20,6 +38,7 @@ char GetASCIICharacter(const float distance, const float farPlane, const float s
 	}
 }
 
+__device__
 void Trace(
 	const MyMath::Vector3& direction,
 	const MyMath::Vector3& origin,
@@ -31,11 +50,6 @@ void Trace(
 	const float a = MyMath::Dot(direction, direction);
 	const float fourA = 4.0f * a;
 	const float divTwoA = 1.0f / (2.0f * a);
-
-	float closest = 99999999.f;
-	float shadingValue = 0.0f;
-	MyMath::Vector3 bestColor;
-	MyMath::Vector3 bestNormal;
 
 	//Ray trace against every object.
 	for (size_t i = 0; i < count; i++)
@@ -72,16 +86,16 @@ void Trace(
 					t1 = t2;
 				}
 
-				if (t1 < closest && t1 > 0.0f)
+				if (t1 < traceData.distance && t1 > 0.0f)
 				{
-					closest = t1;
-					const MyMath::Vector3 normalSphere = (origin + direction * closest - spherePos).Normalize_GPU();
-					bestNormal = normalSphere;
+					traceData.distance = t1;
+					const MyMath::Vector3 normalSphere = (origin + direction * traceData.distance - spherePos).Normalize_GPU();
+					traceData.normal = normalSphere;
 
 					//1, 0, 0 is just temporary light direction.
 					//#todo: INTRODUCE REAL LIGHTS!
-					shadingValue = Dot(normalSphere, MyMath::Vector3(1.0f, 0.0f, 0.0f));
-					bestColor = sphere->GetColor();
+					traceData.shadingValue = Dot(normalSphere, MyMath::Vector3(1.0f, 0.0f, 0.0f));
+					traceData.color = sphere->GetColor();
 				}
 			}
 		}
@@ -100,7 +114,7 @@ void Trace(
 
 				if (t1 > 0.0f)
 				{
-					if (t1 < closest)
+					if (t1 < traceData.distance)
 					{
 						MyMath::Vector3 point = origin + (direction * t1);
 						const float halfPlaneWidth = plane->GetWidth() * 0.5f;
@@ -114,20 +128,20 @@ void Trace(
 						{
 							//1, 0, 0 is just temporary light direction.
 							//#todo: INTRODUCE REAL LIGHTS!
-							shadingValue = Dot(planeNormal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
+							traceData.shadingValue = Dot(planeNormal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
 
 							//Comment in this if statement to get "backface" culling for planes.
 							//if (shadingValue > 0.0f) {
-							closest = t1;
+							traceData.distance = t1;
 							//}
 
-							bestColor = plane->GetColor();
-							bestNormal = planeNormal;
+							traceData.color = plane->GetColor();
+							traceData.normal = planeNormal;
 
 							//Reverse the normal if viewed from backside.
 							if (dotLineAndPlaneNormal > 0.0f)
 							{
-								bestNormal *= -1;
+								traceData.normal *= -1;
 							}
 						}
 					}
@@ -148,52 +162,38 @@ void RayTrace_ASCII(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
-	if (column >= (x - 1) || row >= y)
+	if (column >= (localParams.x - 1) || row >= localParams.y)
 	{
 		return;
 	}
 
-	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = 12;
-
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
-
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
 
 	//Decide what character to write for this pixel.
-	char data = GetASCIICharacter(traceData.distance, camFarDist, traceData.shadingValue);
+	const char data = GetASCIICharacter(traceData.distance, localParams.camFarDist, traceData.shadingValue);
 	
 	//If the pixel hit something during ray tracing.
-	if (data != ' ')
+	if (traceData.distance <= localParams.camFarDist)
 	{
 		if (traceData.shadingValue < AMBIENT_LIGHT)
 		{
 			traceData.shadingValue = AMBIENT_LIGHT;
 		}
+
+		//#TODO: THIS SHOULD PROBABLY BE DONE IN THE TRACE FUNCTION? ESPECIALLY WHEN MULTIPLE TRACES WILL BE DONE RECURSIVELY, AS THE SHADING NEEDS TO BE APPLIED EACH TIME.
 		//Apply shading.
-		bestColor *= shadingValue;
+		traceData.color *= traceData.shadingValue;
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
-		uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
+		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -214,27 +214,27 @@ void RayTrace_ASCII(
 		}
 		third = singles + '0';
 
-		char finalData[12] = {
+		char finalData[SIZE_8BIT] = {
 			'\x1b', '[',			//Escape character
 			'3', '8', ';',			//Keycode for foreground
 			'5', ';',				//Keycode for foreground
 			first, second, third,	//Index
 			'm', data				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
 		
 	}
 	//If it is an empty space we can not use a background color.
 	else
 	{
-		char finalData[12] = {
+		char finalData[SIZE_8BIT] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
 			'\0', '1', '6',			//Index
 			'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
 	}
 }
 
@@ -249,49 +249,34 @@ void RayTrace_PIXEL(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
-	if (column >= (x - 1) || row >= y)
+	if (column >= (localParams.x - 1) || row >= localParams.y)
 	{
 		return;
 	}
 
-	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = 12;
-
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
-
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
 
 	//If the pixel hit something during ray tracing.
-	if (data != ' ')
+	if (traceData.distance <= localParams.camFarDist)
 	{
 		if (traceData.shadingValue < AMBIENT_LIGHT)
 		{
 			traceData.shadingValue = AMBIENT_LIGHT;
 		}
+
 		//Apply shading.
-		bestColor *= traceData.shadingValue;
+		traceData.color *= traceData.shadingValue;
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
-		uint8_t index = ansi256_from_rgb(((uint8_t)bestColor.x << 16) + ((uint8_t)bestColor.y << 8) + (uint8_t)bestColor.z);
+		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -312,26 +297,26 @@ void RayTrace_PIXEL(
 		}
 		third = singles + '0';
 
-		char finalData[12] = {
+		char finalData[SIZE_8BIT] = {
 				'\x1b', '[',			//Escape character
 				'4', '8', ';',			//Keycode for background
 				'5', ';',				//Keycode for background
 				first, second, third,	//Index
 				'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
 	}
 	//If it is an empty space we can not use a background color.
 	else
 	{
-		char finalData[12] = {
+		char finalData[SIZE_8BIT] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'5', ';',				//Keycode for background
 			'\0', '1', '6',			//Index
 			'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
 	}
 }
 
@@ -346,49 +331,34 @@ void RayTrace_RGB_ASCII(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
-	if (column >= (x - 1) || row >= y)
+	if (column >= (localParams.x - 1) || row >= localParams.y)
 	{
 		return;
 	}
 
-	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = 20;
-
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
-
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
 
 	//Decide what character to write for this pixel.
-	char data = GetASCIICharacter(traceData.distance, camFarDist, traceData.shadingValue);
+	const char data = GetASCIICharacter(traceData.distance, localParams.camFarDist, traceData.shadingValue);
 
 	//If the pixel hit something during ray tracing.
-	if (data != ' ')
+	if (traceData.distance <= localParams.camFarDist)
 	{
 		if (traceData.shadingValue < AMBIENT_LIGHT)
 		{
 			traceData.shadingValue = AMBIENT_LIGHT;
 		}
+
 		//Apply shading.
-		bestColor *= traceData.shadingValue;
+		traceData.color *= traceData.shadingValue;
 
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
@@ -407,8 +377,8 @@ void RayTrace_RGB_ASCII(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)bestColor.x;
-		index = (uint8_t)bestColor.x;
+		originalIndex = (uint8_t)traceData.color.x;
+		index = (uint8_t)traceData.color.x;
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -427,8 +397,8 @@ void RayTrace_RGB_ASCII(
 
 
 		//G
-		originalIndex = (uint8_t)bestColor.y;
-		index = (uint8_t)bestColor.y;
+		originalIndex = (uint8_t)traceData.color.y;
+		index = (uint8_t)traceData.color.y;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -447,8 +417,8 @@ void RayTrace_RGB_ASCII(
 
 
 		//B
-		originalIndex = (uint8_t)bestColor.z;
-		index = (uint8_t)bestColor.z;
+		originalIndex = (uint8_t)traceData.color.z;
+		index = (uint8_t)traceData.color.z;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -465,7 +435,7 @@ void RayTrace_RGB_ASCII(
 		}
 		thirdB = singles + '0';
 
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',					//Escape character
 			'3', '8', ';',					//Keycode for foreground
 			'2', ';',						//Keycode for foreground
@@ -474,12 +444,12 @@ void RayTrace_RGB_ASCII(
 			firstB, secondB, thirdB,		//B
 			'm', data						//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'2', ';',				//Keycode for background
@@ -488,7 +458,7 @@ void RayTrace_RGB_ASCII(
 			'\0', '\0', '0',		//B
 			'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 }
 
@@ -503,46 +473,31 @@ void RayTrace_RGB_PIXEL(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
-	if (column >= (x - 1) || row >= y)
+	if (column >= (localParams.x - 1) || row >= localParams.y)
 	{
 		return;
 	}
 
-	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = 20;
-
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
-
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
 
 	//If the pixel hit something during ray tracing.
-	if (data != ' ')
+	if (traceData.distance <= localParams.camFarDist)
 	{
 		if (traceData.shadingValue < AMBIENT_LIGHT)
 		{
 			traceData.shadingValue = AMBIENT_LIGHT;
 		}
+
 		//Apply shading.
-		bestColor *= traceData.shadingValue;
+		traceData.color *= traceData.shadingValue;
 
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
@@ -561,8 +516,8 @@ void RayTrace_RGB_PIXEL(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)bestColor.x;
-		index = (uint8_t)bestColor.x;
+		originalIndex = (uint8_t)traceData.color.x;
+		index = (uint8_t)traceData.color.x;
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -581,8 +536,8 @@ void RayTrace_RGB_PIXEL(
 
 
 		//G
-		originalIndex = (uint8_t)bestColor.y;
-		index = (uint8_t)bestColor.y;
+		originalIndex = (uint8_t)traceData.color.y;
+		index = (uint8_t)traceData.color.y;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -601,8 +556,8 @@ void RayTrace_RGB_PIXEL(
 
 
 		//B
-		originalIndex = (uint8_t)bestColor.z;
-		index = (uint8_t)bestColor.z;
+		originalIndex = (uint8_t)traceData.color.z;
+		index = (uint8_t)traceData.color.z;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -619,7 +574,7 @@ void RayTrace_RGB_PIXEL(
 		}
 		thirdB = singles + '0';
 
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',					//Escape character
 			'4', '8', ';',					//Keycode for foreground
 			'2', ';',						//Keycode for foreground
@@ -628,12 +583,12 @@ void RayTrace_RGB_PIXEL(
 			firstB, secondB, thirdB,		//B
 			'm', ' '						//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'2', ';',				//Keycode for background
@@ -642,7 +597,7 @@ void RayTrace_RGB_PIXEL(
 			'\0', '\0', '0',		//B
 			'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 }
 
@@ -657,46 +612,33 @@ void RayTrace_RGB_NORMALS(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
-	if (column >= (x - 1) || row >= y)
+	if (column >= (localParams.x - 1) || row >= localParams.y)
 	{
 		return;
 	}
 
-	//Set the amount of characters in the buffer per pixel depending on the mode.
-	const size_t size = 20;
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
-
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
-
+	//#TODO: Add a special trace function for normals, which is not recursive.
+	//This would make it so that TraceData does not need to hold normal information.
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
 
 	//If the pixel hit something during ray tracing.
-	if (data != ' ')
+	if (traceData.distance <= localParams.camFarDist)
 	{
 		if (traceData.shadingValue < AMBIENT_LIGHT)
 		{
 			traceData.shadingValue = AMBIENT_LIGHT;
 		}
-		//Apply shading.
-		bestColor *= traceData.shadingValue;
+
+		//Apply shading. NOT NEEDED FOR NORMALS.
+		//traceData.color *= traceData.shadingValue;
 
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
@@ -716,8 +658,8 @@ void RayTrace_RGB_NORMALS(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)(bestNormal.x * 255);
-		index = (uint8_t)(bestNormal.x * 255);
+		originalIndex = (uint8_t)(traceData.normal.x * 255);
+		index = (uint8_t)(traceData.normal.x * 255);
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -736,8 +678,8 @@ void RayTrace_RGB_NORMALS(
 
 
 		//G
-		originalIndex = (uint8_t)(bestNormal.y * 255);
-		index = (uint8_t)(bestNormal.y * 255);
+		originalIndex = (uint8_t)(traceData.normal.y * 255);
+		index = (uint8_t)(traceData.normal.y * 255);
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -756,8 +698,8 @@ void RayTrace_RGB_NORMALS(
 
 
 		//B
-		originalIndex = (uint8_t)(bestNormal.z * 255);
-		index = (uint8_t)(bestNormal.z * 255);
+		originalIndex = (uint8_t)(traceData.normal.z * 255);
+		index = (uint8_t)(traceData.normal.z * 255);
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -774,7 +716,7 @@ void RayTrace_RGB_NORMALS(
 		}
 		thirdB = singles + '0';
 
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',					//Escape character
 			'4', '8', ';',					//Keycode for foreground
 			'2', ';',						//Keycode for foreground
@@ -783,12 +725,12 @@ void RayTrace_RGB_NORMALS(
 			firstB, secondB, thirdB,		//B
 			'm', ' '						//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[20] = {
+		char finalData[SIZE_RGB] = {
 			'\x1b', '[',			//Escape character
 			'4', '8', ';',			//Keycode for background
 			'2', ';',				//Keycode for background
@@ -797,7 +739,7 @@ void RayTrace_RGB_NORMALS(
 			'\0', '\0', '0',		//B
 			'm', ' '				//Character data.
 		};
-		memcpy(resultArray + (row * (x * size) + column * size), finalData, sizeof(char) * size);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
 	}
 }
 
@@ -812,35 +754,45 @@ void RayTrace_SDL(
 	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
 	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Localization of variables.
-	const size_t x = params->x;
-	const size_t y = params->y;
+	//Localization of parameters.
+	__shared__ RayTracingParameters localParams;
+	localParams = *params;
 
-	//Convert pixel coordinates to (clip space? screen space?)
-	const float convertedY = ((float)y - row * 2) / y;
-	const float convertedX = (2 * column - (float)x) / x;
+	//x - 1 because the last x-line is for newlines.
+	if (column >= (localParams.x - 1) || row >= localParams.y)
+	{
+		return;
+	}
 
-	//Localization of variables.
-	const MyMath::Vector3 cameraPos = params->camPos;
-	const float element1 = params->element1;
-	const float element2 = params->element2;
-	const MyMath::Matrix inverseVMatrix = params->inverseVMatrix;
-	const float camFarDist = params->camFarDist;
-
-	//Calculate the ray.
-	const MyMath::Vector4 pixelVSpace = MyMath::Vector4(convertedX * element1, convertedY * element2, 1.0f, 0.0f);
-	const MyMath::Vector3 directionWSpace = inverseVMatrix.Mult(pixelVSpace).xyz().Normalize_InPlace_GPU();
+	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	TraceData traceData;
-	Trace(directionWSpace, cameraPos, count, objects, traceData);
+	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+
+	//If the pixel hit something during ray tracing.
+	if (traceData.distance <= localParams.camFarDist)
+	{
+
+	}
+	else
+	{
+
+	}
 }
 
-void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsigned int count, const RayTracingParameters* params, char* resultArray, const RayTracingManager::RenderingMode mode)
+void RayTracing::RayTrace(
+	const dim3& gridDims,
+	const dim3& blockDims,
+	Object3D* DEVICE_MEMORY_PTR const objects,
+	const unsigned int count,
+	const RayTracingParameters* params,
+	char* resultArray,
+	const RenderingMode mode)
 {
 	//Use different raytracing functions depending on the rendering mode.
 	switch (mode)
 	{
-	case RayTracingManager::RenderingMode::ASCII:
+	case RenderingMode::BIT_ASCII:
 		RayTrace_ASCII CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,
@@ -849,7 +801,7 @@ void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsig
 
 		break;
 
-	case RayTracingManager::RenderingMode::PIXEL:
+	case RenderingMode::BIT_PIXEL:
 		RayTrace_PIXEL CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,
@@ -858,7 +810,7 @@ void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsig
 
 		break;
 
-	case RayTracingManager::RenderingMode::RGB_ASCII:
+	case RenderingMode::RGB_ASCII:
 		RayTrace_RGB_ASCII CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,
@@ -867,7 +819,7 @@ void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsig
 
 		break;
 
-	case RayTracingManager::RenderingMode::RGB_PIXEL:
+	case RenderingMode::RGB_PIXEL:
 		RayTrace_RGB_PIXEL CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,
@@ -876,7 +828,7 @@ void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsig
 
 		break;
 
-	case RayTracingManager::RenderingMode::RGB_NORMALS:
+	case RenderingMode::RGB_NORMALS:
 		RayTrace_RGB_NORMALS CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,
@@ -885,7 +837,7 @@ void RayTracing::RayTrace(Object3D* DEVICE_MEMORY_PTR const objects, const unsig
 
 		break;
 
-	case RayTracingManager::RenderingMode::SDL:
+	case RenderingMode::SDL:
 		RayTrace_SDL CUDA_KERNEL(gridDims, blockDims)(
 			objects,
 			count,

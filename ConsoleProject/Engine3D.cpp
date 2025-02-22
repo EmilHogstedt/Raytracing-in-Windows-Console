@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Engine3D.h"
 
+#include "PrintMachine.h"
+
 void Engine3D::Start()
 {
 	//Engine objects
@@ -175,23 +177,23 @@ void Engine3D::CheckKeyboard(const long double dt)
 	//Change printing mode.
 	if (GetKeyState(VK_F1) & 0x8000)
 	{
-		m_rayTracingManager->SetRenderingMode(RayTracingManager::ASCII);
+		m_rayTracingManager->SetRenderingMode(RenderingMode::BIT_ASCII);
 	}
 	if (GetKeyState(VK_F2) & 0x8000)
 	{
-		m_rayTracingManager->SetRenderingMode(RayTracingManager::PIXEL);
+		m_rayTracingManager->SetRenderingMode(RenderingMode::BIT_PIXEL);
 	}
 	if (GetKeyState(VK_F3) & 0x8000)
 	{
-		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_ASCII);
+		m_rayTracingManager->SetRenderingMode(RenderingMode::RGB_ASCII);
 	}
 	if (GetKeyState(VK_F4) & 0x8000)
 	{
-		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_PIXEL);
+		m_rayTracingManager->SetRenderingMode(RenderingMode::RGB_PIXEL);
 	}
 	if (GetKeyState(VK_F5) & 0x8000)
 	{
-		m_rayTracingManager->SetRenderingMode(RayTracingManager::RGB_NORMALS);
+		m_rayTracingManager->SetRenderingMode(RenderingMode::RGB_NORMALS);
 	}
 
 	//Mouse input.

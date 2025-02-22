@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include "PrintMachine.h"
-#include "Camera3D.h"
-#include "Scene3D.h"
+
 #include "RayTracingManager.h"
+#include "Scene3D.h"
+#include "Camera3D.h"
+#include "Timer.h"
 
 class Engine3D {
 public:

@@ -1,3 +1,4 @@
+#pragma once
 #include "MyMath.h"
 
 class Object3D;
@@ -17,10 +18,11 @@ struct RayTracingParameters
 	float camFarDist;
 };
 
+enum RenderingMode { BIT_ASCII = 0, BIT_PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS, SDL };
+
 class RayTracingManager
 {
 public:
-	enum RenderingMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS, SDL };
 
 	RayTracingManager();
 
@@ -49,5 +51,5 @@ private:
 	//The raytracingparameters is always nullptr on the CPU. Meaning "new" is never called on it.
 	RayTracingParameters DEVICE_MEMORY_PTR m_deviceRayTracingParameters;
 
-	RenderingMode currentRenderingMode = ASCII;
+	RenderingMode currentRenderingMode = BIT_ASCII;
 };

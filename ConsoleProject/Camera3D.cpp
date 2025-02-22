@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Camera3D.h"
+
+#include "MyMath.h"
 #include "PrintMachine.h"
 
 //The pMatrix is set up in init. Since there is no option to change it atm.

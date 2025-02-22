@@ -1,4 +1,5 @@
 #pragma once
+
 #include "MyMath.h"
 
 //A column major 3D camera.
