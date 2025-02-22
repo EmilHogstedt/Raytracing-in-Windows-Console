@@ -127,8 +127,7 @@ void PrintMachine::Start(const size_t x, const size_t y)
 		//The console handler handles when the console is closed for any reason.
 		if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE))
 		{
-			printf("Unable to install handler!\n");
-			assert(false);
+			assert(false && "Unable to install handler!");
 		}
 	}
 	
@@ -136,8 +135,7 @@ void PrintMachine::Start(const size_t x, const size_t y)
 	currentHeight = y;
 
 	//The console window is width * characters per pixel * height.
-	//+ currentHeight is to account for the line-ending characters.
-	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight) + currentHeight;
+	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight);
 
 	m_printBuffer = std::make_unique<char[]>(m_maxSize);
 

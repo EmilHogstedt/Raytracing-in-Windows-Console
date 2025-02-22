@@ -1,95 +1,127 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
+    <Filter Include="Public">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Private">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Private\Math">
+      <UniqueIdentifier>{426d679f-d161-4b81-b3d2-759877529122}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\Math">
+      <UniqueIdentifier>{1617468a-e267-4451-b1f8-c6f7edc2e052}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\Defines">
+      <UniqueIdentifier>{f7a062d9-6d9c-49e7-a6e6-88f412d59b9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\Primitives">
+      <UniqueIdentifier>{04ae2d36-fe01-4156-bebd-70ea711a206a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\RayTracing">
+      <UniqueIdentifier>{6009a526-f591-4663-b01f-bce498117fe7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private\RayTracing">
+      <UniqueIdentifier>{4fe56194-b09e-4f60-a8e1-bca0e5c8a79b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private\Primitives">
+      <UniqueIdentifier>{5d921703-cff4-4657-8b40-bc8d7fa95c20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private\Defines">
+      <UniqueIdentifier>{558c84b1-8a7f-47d4-9ce8-19173475a919}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public\Core">
+      <UniqueIdentifier>{3160de31-2191-4c6d-a4e0-f0e989c3cd32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Private\Core">
+      <UniqueIdentifier>{f5fbf51e-7e5e-4bf3-846e-87b11a76bdbc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Entrypoint.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private\Defines</Filter>
     </ClCompile>
     <ClCompile Include="Camera3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene3D.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private\Core</Filter>
     </ClCompile>
     <ClCompile Include="Engine3D.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private\Core</Filter>
     </ClCompile>
     <ClCompile Include="PrintMachine.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene3D.cpp">
+      <Filter>Private\Core</Filter>
     </ClCompile>
     <ClCompile Include="Timer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Private\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PrintMachine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Camera3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Object3D.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Plane.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Sphere.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RayTracingManager.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
     <ClInclude Include="MyMath.h">
-      <Filter>Resource Files</Filter>
+      <Filter>Public\Math</Filter>
     </ClInclude>
     <ClInclude Include="ANSIRGB.h">
-      <Filter>Resource Files</Filter>
+      <Filter>Public\Defines</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Public\Defines</Filter>
+    </ClInclude>
+    <ClInclude Include="Plane.h">
+      <Filter>Public\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.h">
+      <Filter>Public\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracingManager.h">
+      <Filter>Public\RayTracing</Filter>
+    </ClInclude>
+    <ClInclude Include="Object3D.h">
+      <Filter>Public\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera3D.h">
+      <Filter>Public\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine3D.h">
+      <Filter>Public\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="PrintMachine.h">
+      <Filter>Public\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene3D.h">
+      <Filter>Public\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Public\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracing.h">
+      <Filter>Public\RayTracing</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="MyMath.cu">
+      <Filter>Private\Math</Filter>
+    </CudaCompile>
     <CudaCompile Include="RayTracingManager.cu">
-      <Filter>Resource Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Object3D.cu">
-      <Filter>Resource Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Plane.cu">
-      <Filter>Resource Files</Filter>
+      <Filter>Private\RayTracing</Filter>
     </CudaCompile>
     <CudaCompile Include="Sphere.cu">
-      <Filter>Resource Files</Filter>
+      <Filter>Private\Primitives</Filter>
     </CudaCompile>
-    <CudaCompile Include="MyMath.cu">
-      <Filter>Resource Files</Filter>
+    <CudaCompile Include="Object3D.cu">
+      <Filter>Private\Primitives</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Plane.cu">
+      <Filter>Private\Primitives</Filter>
+    </CudaCompile>
+    <CudaCompile Include="RayTracing.cu">
+      <Filter>Private\RayTracing</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

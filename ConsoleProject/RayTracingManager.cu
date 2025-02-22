@@ -1,6 +1,10 @@
 ﻿#include "pch.h"
 #include "RayTracingManager.h"
 
+#include "PrintMachine.h"
+#include "Object3D.h"
+#include "RayTracing.h"
+
 #include "ANSIRGB.h"
 
 __global__ void UpdateObjects(
@@ -61,21 +65,14 @@ __global__ void RayTrace(
 	const size_t x = params->x;
 	const size_t y = params->y;
 
-	if (column >= x || row >= y)
+	//x - 1 because the last x-line is for newlines.
+	if (column >= (x - 1) || row >= y)
 	{
 		return;
 	}
 
 	//Set the amount of characters in the buffer per pixel depending on the mode.
 	const size_t size = (mode == RayTracingManager::ASCII || mode == RayTracingManager::PIXEL) ? 12 : 20;
-
-	//#todo: Do this when minimizing instead of in a thread.
-	//If the pixel is at the end of a line, output \n and return.
-	if (column == (x - 1))
-	{
-		resultArray[row * (x * size) + column * size] = '\n';
-		return;
-	}
 
 	//Convert pixel coordinates to (clip space? screen space?)
 	const float convertedY = ((float)y - row * 2) / y;
@@ -537,13 +534,12 @@ void RayTracingManager::Update(
 	blockDims.x = 16u;
 	blockDims.y = 16u;
 
-	RayTrace CUDA_KERNEL(gridDims, blockDims)(
+	RayTracing::RayTrace(
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
 		m_deviceRayTracingParameters,
 		m_deviceResultArray,
-		currentRenderingMode
-	);
+		currentRenderingMode);
 
 	//Make sure all the threads are done with the ray tracing.
 	gpuErrchk(cudaDeviceSynchronize());
@@ -555,7 +551,7 @@ void RayTracingManager::Update(
 	gpuErrchk(cudaMemcpy(m_hostResultArray.get(), m_deviceResultArray, size, cudaMemcpyDeviceToHost));
 
 	//Minimize the result, by removing unneccessary ANSI escape sequences.
-	size_t newSize = MinimizeResults(size, params.y);
+	size_t newSize = MinimizeResults(size, params.x, params.y);
 
 	//Locking/unlocking of the mutex, flagging for changing buffer, and changing the printing size now all happens within this function.
 	//-----------------------------------------------------------------------------------------------------
@@ -576,21 +572,21 @@ void RayTracingManager::ResetDeviceBackBuffer()
 	cudaMemset(m_deviceResultArray, 0, size);
 }
 
-size_t RayTracingManager::MinimizeResults(const size_t size, const size_t y)
+size_t RayTracingManager::MinimizeResults(const size_t size, const size_t x, const size_t y)
 {
 	//If its in 8 bit mode.
 	if (currentRenderingMode == ASCII || currentRenderingMode == PIXEL)
 	{
-		return Minimize8bit(size, y);
+		return Minimize8bit(size, x, y);
 	}
 	//Else it is rgb.
 	else
 	{
-		return MinimizeRGB(size, y);
+		return MinimizeRGB(size, x, y);
 	}
 }
 
-size_t RayTracingManager::Minimize8bit(const size_t size, const size_t y)
+size_t RayTracingManager::Minimize8bit(const size_t size, const size_t x, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -633,7 +629,8 @@ size_t RayTracingManager::Minimize8bit(const size_t size, const size_t y)
 			i += 12;
 		}
 		//If we are handling the end of a line.
-		else if (current == '\n')
+		//If i + 1 is the end of the line. A line is 12 characters times the size of x, then +1.
+		else if (current == '\n' || ((i + 1) % (12 * x)) == 0)
 		{
 			++newlines;
 
@@ -659,7 +656,7 @@ size_t RayTracingManager::Minimize8bit(const size_t size, const size_t y)
 	return addedChars;
 }
 
-size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t y)
+size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t x, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -702,7 +699,8 @@ size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t y)
 			i += 20;
 		}
 		//If we are handling the end of a line.
-		else if (current == '\n')
+		//If i + 1 is the end of the line. A line is 20 characters times the size of x, then +1.
+		else if (current == '\n' || ((i + 1) % (20 * x)) == 0)
 		{
 			++newlines;
 

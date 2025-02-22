@@ -1,6 +1,9 @@
-#include "Sphere.h"
-#include "Plane.h"
-#include "PrintMachine.h"
+#include "MyMath.h"
+
+class Object3D;
+
+template<typename T>
+struct DeviceObjectArray;
 
 struct RayTracingParameters
 {
@@ -17,6 +20,8 @@ struct RayTracingParameters
 class RayTracingManager
 {
 public:
+	enum RenderingMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS, SDL };
+
 	RayTracingManager();
 
 	~RayTracingManager();
@@ -27,16 +32,14 @@ public:
 		double dt
 	);
 
-	enum RenderingMode { ASCII = 0, PIXEL, RGB_ASCII, RGB_PIXEL, RGB_NORMALS, SDL };
-
 	void SetRenderingMode(const RenderingMode newRenderMode);
 
 private:
 	void ResetDeviceBackBuffer();
 
-	size_t MinimizeResults(const size_t size, const size_t y);
-	size_t Minimize8bit(const size_t size, const size_t y);
-	size_t MinimizeRGB(const size_t size, const size_t y);
+	size_t MinimizeResults(const size_t size, const size_t x, const size_t y);
+	size_t Minimize8bit(const size_t size, const size_t x, const size_t y);
+	size_t MinimizeRGB(const size_t size, const size_t x, const size_t y);
 
 	char DEVICE_MEMORY_PTR m_deviceResultArray;
 
@@ -47,22 +50,4 @@ private:
 	RayTracingParameters DEVICE_MEMORY_PTR m_deviceRayTracingParameters;
 
 	RenderingMode currentRenderingMode = ASCII;
-};
-
-#define NUM_ASCII_CHARACTERS 68
-__constant__ const char ascii[NUM_ASCII_CHARACTERS] = {
-	' ', '.', '`', '^', '"',
-	',', ':', ';', 'I', 'l',
-	'!', 'i', '>', '<', '~',
-	'+', '_', '-', '?', '*',
-	']', '[', '}', '{', '1',
-	')', '(', '|', '/', 't',
-	'f', 'j', 'r', 'x', 'n',
-	'u', 'v', 'c', 'z', 'm',
-	'w', 'X', 'Y', 'U', 'J',
-	'C', 'L', 'q', 'p', 'd',
-	'b', 'k', 'h', 'a', 'o',
-	'#', '%', 'Z', 'O', '8',
-	'B', '$', '0', 'Q', 'M',
-	'&', 'W', '@'
 };
