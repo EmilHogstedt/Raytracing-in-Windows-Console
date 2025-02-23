@@ -190,7 +190,7 @@ void RayTrace_ASCII(
 
 		//#TODO: THIS SHOULD PROBABLY BE DONE IN THE TRACE FUNCTION? ESPECIALLY WHEN MULTIPLE TRACES WILL BE DONE RECURSIVELY, AS THE SHADING NEEDS TO BE APPLIED EACH TIME.
 		//Apply shading.
-		traceData.color *= traceData.shadingValue;
+		//traceData.color *= traceData.shadingValue;
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
 		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
@@ -214,27 +214,21 @@ void RayTrace_ASCII(
 		}
 		third = singles + '0';
 
-		char finalData[SIZE_8BIT] = {
-			'\x1b', '[',			//Escape character
-			'3', '8', ';',			//Keycode for foreground
-			'5', ';',				//Keycode for foreground
+		char finalData[SIZE_8BIT_ASCII] = {
 			first, second, third,	//Index
-			'm', data				//Character data.
+			data					//Character data.
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT_ASCII) + column * SIZE_8BIT_ASCII), finalData, sizeof(char) * SIZE_8BIT_ASCII);
 		
 	}
 	//If it is an empty space we can not use a background color.
 	else
 	{
-		char finalData[SIZE_8BIT] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'5', ';',				//Keycode for background
+		char finalData[SIZE_8BIT_ASCII] = {
 			'\0', '1', '6',			//Index
-			'm', ' '				//Character data.
+			' '						//Character data.
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT_ASCII) + column * SIZE_8BIT_ASCII), finalData, sizeof(char) * SIZE_8BIT_ASCII);
 	}
 }
 
@@ -273,7 +267,7 @@ void RayTrace_PIXEL(
 		}
 
 		//Apply shading.
-		traceData.color *= traceData.shadingValue;
+		//traceData.color *= traceData.shadingValue;
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
 		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
@@ -297,26 +291,18 @@ void RayTrace_PIXEL(
 		}
 		third = singles + '0';
 
-		char finalData[SIZE_8BIT] = {
-				'\x1b', '[',			//Escape character
-				'4', '8', ';',			//Keycode for background
-				'5', ';',				//Keycode for background
-				first, second, third,	//Index
-				'm', ' '				//Character data.
+		char finalData[SIZE_8BIT_PIXEL] = {
+			first, second, third,	//Index
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT_PIXEL) + column * SIZE_8BIT_PIXEL), finalData, sizeof(char) * SIZE_8BIT_PIXEL);
 	}
 	//If it is an empty space we can not use a background color.
 	else
 	{
-		char finalData[SIZE_8BIT] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'5', ';',				//Keycode for background
-			'\0', '1', '6',			//Index
-			'm', ' '				//Character data.
+		char finalData[SIZE_8BIT_PIXEL] = {
+			'\0', '1', '6'			//Index
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT) + column * SIZE_8BIT), finalData, sizeof(char) * SIZE_8BIT);
+		memcpy(resultArray + (row * (localParams.x * SIZE_8BIT_PIXEL) + column * SIZE_8BIT_PIXEL), finalData, sizeof(char) * SIZE_8BIT_PIXEL);
 	}
 }
 
@@ -435,30 +421,24 @@ void RayTrace_RGB_ASCII(
 		}
 		thirdB = singles + '0';
 
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',					//Escape character
-			'3', '8', ';',					//Keycode for foreground
-			'2', ';',						//Keycode for foreground
-			firstR, secondR, thirdR, ';',	//R
-			firstG, secondG, thirdG, ';',	//G
-			firstB, secondB, thirdB,		//B
-			'm', data						//Character data.
+		char finalData[SIZE_RGB_ASCII] = {
+			firstR, secondR, thirdR,	//R
+			firstG, secondG, thirdG,	//G
+			firstB, secondB, thirdB,	//B
+			data						//Character data.
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_ASCII) + column * SIZE_RGB_ASCII), finalData, sizeof(char) * SIZE_RGB_ASCII);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'2', ';',				//Keycode for background
-			'\0', '\0', '0', ';',	//R
-			'\0', '\0', '0', ';',	//G
-			'\0', '\0', '0',		//B
-			'm', ' '				//Character data.
+		char finalData[SIZE_RGB_ASCII] = {
+			'\0', '\0', '0',	//R
+			'\0', '\0', '0',	//G
+			'\0', '\0', '0',	//B
+			' '					//Character data.
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_ASCII) + column * SIZE_RGB_ASCII), finalData, sizeof(char) * SIZE_RGB_ASCII);
 	}
 }
 
@@ -574,30 +554,22 @@ void RayTrace_RGB_PIXEL(
 		}
 		thirdB = singles + '0';
 
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',					//Escape character
-			'4', '8', ';',					//Keycode for foreground
-			'2', ';',						//Keycode for foreground
-			firstR, secondR, thirdR, ';',	//R
-			firstG, secondG, thirdG, ';',	//G
-			firstB, secondB, thirdB,		//B
-			'm', ' '						//Character data.
+		char finalData[SIZE_RGB_PIXEL] = {
+			firstR, secondR, thirdR,	//R
+			firstG, secondG, thirdG,	//G
+			firstB, secondB, thirdB		//B
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_PIXEL) + column * SIZE_RGB_PIXEL), finalData, sizeof(char) * SIZE_RGB_PIXEL);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'2', ';',				//Keycode for background
-			'\0', '\0', '0', ';',	//R
-			'\0', '\0', '0', ';',	//G
-			'\0', '\0', '0',		//B
-			'm', ' '				//Character data.
+		char finalData[SIZE_RGB_PIXEL] = {
+			'\0', '\0', '0',	//R
+			'\0', '\0', '0',	//G
+			'\0', '\0', '0'		//B
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_PIXEL) + column * SIZE_RGB_PIXEL), finalData, sizeof(char) * SIZE_RGB_PIXEL);
 	}
 }
 
@@ -716,30 +688,22 @@ void RayTrace_RGB_NORMALS(
 		}
 		thirdB = singles + '0';
 
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',					//Escape character
-			'4', '8', ';',					//Keycode for foreground
-			'2', ';',						//Keycode for foreground
-			firstR, secondR, thirdR, ';',	//R
-			firstG, secondG, thirdG, ';',	//G
-			firstB, secondB, thirdB,		//B
-			'm', ' '						//Character data.
+		char finalData[SIZE_RGB_PIXEL] = {
+			firstR, secondR, thirdR,	//R
+			firstG, secondG, thirdG,	//G
+			firstB, secondB, thirdB		//B
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_PIXEL) + column * SIZE_RGB_PIXEL), finalData, sizeof(char) * SIZE_RGB_PIXEL);
 	}
 	//If it is an empty space we can not use a background color. 
 	else
 	{
-		char finalData[SIZE_RGB] = {
-			'\x1b', '[',			//Escape character
-			'4', '8', ';',			//Keycode for background
-			'2', ';',				//Keycode for background
-			'\0', '\0', '0', ';',	//R
-			'\0', '\0', '0', ';',	//G
-			'\0', '\0', '0',		//B
-			'm', ' '				//Character data.
+		char finalData[SIZE_RGB_PIXEL] = {
+			'\0', '\0', '0',	//R
+			'\0', '\0', '0',	//G
+			'\0', '\0', '0'		//B
 		};
-		memcpy(resultArray + (row * (localParams.x * SIZE_RGB) + column * SIZE_RGB), finalData, sizeof(char) * SIZE_RGB);
+		memcpy(resultArray + (row * (localParams.x * SIZE_RGB_PIXEL) + column * SIZE_RGB_PIXEL), finalData, sizeof(char) * SIZE_RGB_PIXEL);
 	}
 }
 

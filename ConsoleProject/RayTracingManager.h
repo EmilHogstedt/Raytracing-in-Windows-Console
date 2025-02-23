@@ -40,8 +40,10 @@ private:
 	void ResetDeviceBackBuffer();
 
 	size_t MinimizeResults(const size_t size, const size_t x, const size_t y);
-	size_t Minimize8bit(const size_t size, const size_t x, const size_t y);
-	size_t MinimizeRGB(const size_t size, const size_t x, const size_t y);
+	size_t MinimizeASCII(const size_t size, const size_t x, const size_t y);
+	size_t MinimizePIXEL(const size_t size, const size_t x, const size_t y);
+	size_t MinimizeASCIIRGB(const size_t size, const size_t x, const size_t y);
+	size_t MinimizePIXELRGB(const size_t size, const size_t x, const size_t y);
 
 	char DEVICE_MEMORY_PTR m_deviceResultArray;
 

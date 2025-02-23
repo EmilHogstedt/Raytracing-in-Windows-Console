@@ -113,7 +113,13 @@ __constant__
 const float AMBIENT_LIGHT = 0.01492537f * 19;
 
 __constant__
-const size_t SIZE_8BIT = 12;
+const size_t SIZE_8BIT_ASCII = 4;
 
 __constant__
-const size_t SIZE_RGB = 20;
+const size_t SIZE_8BIT_PIXEL = 3;
+
+__constant__
+const size_t SIZE_RGB_ASCII = 10;
+
+__constant__
+const size_t SIZE_RGB_PIXEL = 9;

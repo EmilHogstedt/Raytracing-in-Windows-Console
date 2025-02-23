@@ -167,18 +167,26 @@ void RayTracingManager::ResetDeviceBackBuffer()
 size_t RayTracingManager::MinimizeResults(const size_t size, const size_t x, const size_t y)
 {
 	//If its in 8 bit mode.
-	if (currentRenderingMode == RenderingMode::BIT_ASCII || currentRenderingMode == RenderingMode::BIT_PIXEL)
+	if (currentRenderingMode == RenderingMode::BIT_ASCII)
 	{
-		return Minimize8bit(size, x, y);
+		return MinimizeASCII(size, x, y);
+	}
+	else if (currentRenderingMode == RenderingMode::BIT_PIXEL)
+	{
+		return MinimizePIXEL(size, x, y);
 	}
 	//Else it is rgb.
+	else if (currentRenderingMode == RenderingMode::RGB_ASCII)
+	{
+		return MinimizeASCIIRGB(size, x, y);
+	}
 	else
 	{
-		return MinimizeRGB(size, x, y);
+		return MinimizePIXELRGB(size, x, y);
 	}
 }
 
-size_t RayTracingManager::Minimize8bit(const size_t size, const size_t x, const size_t y)
+size_t RayTracingManager::MinimizeASCII(const size_t size, const size_t x, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -188,49 +196,14 @@ size_t RayTracingManager::Minimize8bit(const size_t size, const size_t x, const 
 
 	for (size_t i = 0; i < size;)
 	{
-		char current = m_hostResultArray[i];
-
-		//If we are handling a pixel.
-		if (current == '\x1b')
-		{
-			//If its not the same color add the whole escape sequence and update latest color.
-			if (
-				!latestColor ||
-				latestColor[0] != m_hostResultArray[i + 7] ||
-				latestColor[1] != m_hostResultArray[i + 8] ||
-				latestColor[2] != m_hostResultArray[i + 9]
-			)
-			{
-				//Move the pointer to the spot in the array with the color.
-				latestColor = m_hostResultArray.get() + i + 7;
-
-				//Copy the escape sequence and data to the minimized result.
-				memcpy(m_minimizedResultArray.get() + addedChars, m_hostResultArray.get() + i, SIZE_8BIT);
-
-				addedChars += SIZE_8BIT;
-			}
-			//Only add the data and not the escape sequence.
-			else
-			{
-				m_minimizedResultArray[addedChars] = m_hostResultArray[i + SIZE_8BIT - 1];
-
-				addedChars += 1;
-			}
-
-			//Move 12 characters forward.
-			i += SIZE_8BIT;
-		}
 		//If we are handling the end of a line.
-		//If i + 1 is the end of the line. A line is 12 characters times the size of x, then +1.
-		else if (((i + 1) % (SIZE_8BIT * x)) == 0)
+		//If i + 1 is the end of the line. A line is 4 characters times the size of x, then +1.
+		if ((i % (SIZE_8BIT_ASCII * x)) == 0)
 		{
 			++newlines;
 
 			m_minimizedResultArray[addedChars] = '\n';
 			++addedChars;
-
-			//Move 1 character forward.
-			++i;
 
 			//Stop iterating if the amount of lines equals the height.
 			if (newlines == y)
@@ -238,17 +211,51 @@ size_t RayTracingManager::Minimize8bit(const size_t size, const size_t x, const 
 				break;
 			}
 		}
-		//For \0. Simply move one character forward.
+
+		//If its not the same color add the whole escape sequence and update latest color.
+		if (
+			!latestColor ||
+			latestColor[0] != m_hostResultArray[i + 0] ||
+			latestColor[1] != m_hostResultArray[i + 1] ||
+			latestColor[2] != m_hostResultArray[i + 2]
+			)
+		{
+			//Move the pointer to the spot in the array with the color.
+			latestColor = m_hostResultArray.get() + i;
+
+			char data[12] =
+			{
+				'\x1b', '[',				//Escape character
+				'3', '8', ';',				//Keycode for foreground
+				'5', ';',					//Keycode for foreground
+				m_hostResultArray[i + 0],
+				m_hostResultArray[i + 1],
+				m_hostResultArray[i + 2],	//Index
+				'm',
+				m_hostResultArray[i + 3]	//Character data.
+			};
+
+			//Copy the escape sequence and data to the minimized result.
+			memcpy(m_minimizedResultArray.get() + addedChars, data, 12);
+
+			addedChars += 12;
+		}
+		//Only add the data and not the escape sequence.
 		else
 		{
-			++i;
+			m_minimizedResultArray[addedChars] = m_hostResultArray[i + 3];
+
+			addedChars += 1;
 		}
+
+		//Move 4 characters forward.
+		i += SIZE_8BIT_ASCII;
 	}
 
 	return addedChars;
 }
 
-size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t x, const size_t y)
+size_t RayTracingManager::MinimizePIXEL(const size_t size, const size_t x, const size_t y)
 {
 	size_t newlines = 0;
 	size_t addedChars = 0;
@@ -258,61 +265,209 @@ size_t RayTracingManager::MinimizeRGB(const size_t size, const size_t x, const s
 
 	for (size_t i = 0; i < size;)
 	{
-		char current = m_hostResultArray[i];
-
-		//If we are handling a pixel.
-		if (current == '\x1b')
-		{
-			//If its not the same color Add the escape sequence and update latest color.
-			if (
-				!latestColor ||
-				latestColor[0] != m_hostResultArray[i + 7] || latestColor[1] != m_hostResultArray[i + 8] || latestColor[2] != m_hostResultArray[i + 9] ||		//R
-				latestColor[4] != m_hostResultArray[i + 11] || latestColor[5] != m_hostResultArray[i + 12] || latestColor[6] != m_hostResultArray[i + 13] ||	//G
-				latestColor[8] != m_hostResultArray[i + 15] || latestColor[9] != m_hostResultArray[i + 16] || latestColor[10] != m_hostResultArray[i + 17]		//B
-			)
-			{
-				//Move the pointer to the spot in the array with the color.
-				latestColor = m_hostResultArray.get() + i + 7;
-
-				//Copy the escape sequence and data to the minimized result.
-				memcpy(m_minimizedResultArray.get() + addedChars, m_hostResultArray.get() + i, SIZE_RGB);
-
-				addedChars += SIZE_RGB;
-			}
-			//Only add the data and not the escape sequence.
-			else
-			{
-				m_minimizedResultArray[addedChars] = m_hostResultArray[i + SIZE_RGB - 1];
-
-				addedChars += 1;
-			}
-
-			//Move 20 characters forward.
-			i += SIZE_RGB;
-		}
 		//If we are handling the end of a line.
-		//If i + 1 is the end of the line. A line is 20 characters times the size of x, then +1.
-		else if (((i + 1) % (SIZE_RGB * x)) == 0)
+		//If i + 1 is the end of the line. A line is 3 characters times the size of x, then +1.
+		if ((i % (SIZE_8BIT_PIXEL * x)) == 0)
 		{
 			++newlines;
 
 			m_minimizedResultArray[addedChars] = '\n';
 			++addedChars;
 
-			//Move 1 character forward.
-			++i;
-
 			//Stop iterating if the amount of lines equals the height.
-			if (newlines == PrintMachine::GetHeight())
+			if (newlines == y)
 			{
 				break;
 			}
 		}
-		//For \0. Simply move 1 character forward.
+
+		//If its not the same color add the whole escape sequence and update latest color.
+		if (
+			!latestColor ||
+			latestColor[0] != m_hostResultArray[i + 0] ||
+			latestColor[1] != m_hostResultArray[i + 1] ||
+			latestColor[2] != m_hostResultArray[i + 2]
+			)
+		{
+			//Move the pointer to the spot in the array with the color.
+			latestColor = m_hostResultArray.get() + i;
+
+			char data[12] =
+			{
+				'\x1b', '[',				//Escape character
+				'4', '8', ';',				//Keycode for background
+				'5', ';',					//Keycode for background
+				m_hostResultArray[i + 0],
+				m_hostResultArray[i + 1],
+				m_hostResultArray[i + 2],	//Index
+				'm', ' '
+			};
+
+			//Copy the escape sequence and data to the minimized result.
+			memcpy(m_minimizedResultArray.get() + addedChars, data, 12);
+
+			addedChars += 12;
+		}
+		//Only add the data and not the escape sequence.
 		else
 		{
-			++i;
+			m_minimizedResultArray[addedChars] = ' ';
+
+			addedChars += 1;
 		}
+
+		//Move 3 characters forward.
+		i += SIZE_8BIT_PIXEL;
+	}
+
+	return addedChars;
+}
+
+size_t RayTracingManager::MinimizeASCIIRGB(const size_t size, const size_t x, const size_t y)
+{
+	size_t newlines = 0;
+	size_t addedChars = 0;
+
+	//We hold a pointer to the spot in the buffer with the latest color.
+	char* latestColor = nullptr;
+
+	for (size_t i = 0; i < size;)
+	{
+		//If we are handling the end of a line.
+		//If i + 1 is the end of the line. A line is 10 characters times the size of x, then +1.
+		if ((i % (SIZE_RGB_ASCII * x)) == 0)
+		{
+			++newlines;
+
+			m_minimizedResultArray[addedChars] = '\n';
+			++addedChars;
+
+			//Stop iterating if the amount of lines equals the height.
+			if (newlines == y)
+			{
+				break;
+			}
+		}
+
+		//If its not the same color add the whole escape sequence and update latest color.
+		if (
+			!latestColor ||
+			latestColor[0] != m_hostResultArray[i + 0] || latestColor[1] != m_hostResultArray[i + 1] || latestColor[2] != m_hostResultArray[i + 2] ||		//R
+			latestColor[3] != m_hostResultArray[i + 3] || latestColor[4] != m_hostResultArray[i + 4] || latestColor[5] != m_hostResultArray[i + 5] ||	//G
+			latestColor[6] != m_hostResultArray[i + 6] || latestColor[7] != m_hostResultArray[i + 7] || latestColor[8] != m_hostResultArray[i + 8]		//B
+			)
+		{
+			//Move the pointer to the spot in the array with the color.
+			latestColor = m_hostResultArray.get() + i;
+
+			char data[20] =
+			{
+				'\x1b', '[',					//Escape character
+				'3', '8', ';',					//Keycode for foreground
+				'2', ';',						//Keycode for foreground
+				m_hostResultArray[i + 0],
+				m_hostResultArray[i + 1],
+				m_hostResultArray[i + 2], ';',	//R
+				m_hostResultArray[i + 3],
+				m_hostResultArray[i + 4],
+				m_hostResultArray[i + 5], ';',	//G
+				m_hostResultArray[i + 6],
+				m_hostResultArray[i + 7],
+				m_hostResultArray[i + 8],		//B
+				'm',
+				m_hostResultArray[i + 9]		//Character data.
+			};
+
+			//Copy the escape sequence and data to the minimized result.
+			memcpy(m_minimizedResultArray.get() + addedChars, data, 20);
+
+			addedChars += 20;
+		}
+		//Only add the data and not the escape sequence.
+		else
+		{
+			m_minimizedResultArray[addedChars] = m_hostResultArray[i + 9];
+
+			addedChars += 1;
+		}
+
+		//Move 10 characters forward.
+		i += SIZE_RGB_ASCII;
+	}
+
+	return addedChars;
+}
+
+size_t RayTracingManager::MinimizePIXELRGB(const size_t size, const size_t x, const size_t y)
+{
+	size_t newlines = 0;
+	size_t addedChars = 0;
+
+	//We hold a pointer to the spot in the buffer with the latest color.
+	char* latestColor = nullptr;
+
+	for (size_t i = 0; i < size;)
+	{
+		//If we are handling the end of a line.
+		//If i + 1 is the end of the line. A line is 9 characters times the size of x, then +1.
+		if ((i % (SIZE_RGB_PIXEL * x)) == 0)
+		{
+			++newlines;
+
+			m_minimizedResultArray[addedChars] = '\n';
+			++addedChars;
+
+			//Stop iterating if the amount of lines equals the height.
+			if (newlines == y)
+			{
+				break;
+			}
+		}
+
+		//If its not the same color add the whole escape sequence and update latest color.
+		if (
+			!latestColor ||
+			latestColor[0] != m_hostResultArray[i + 0] || latestColor[1] != m_hostResultArray[i + 1] || latestColor[2] != m_hostResultArray[i + 2] ||		//R
+			latestColor[3] != m_hostResultArray[i + 3] || latestColor[4] != m_hostResultArray[i + 4] || latestColor[5] != m_hostResultArray[i + 5] ||	//G
+			latestColor[6] != m_hostResultArray[i + 6] || latestColor[7] != m_hostResultArray[i + 7] || latestColor[8] != m_hostResultArray[i + 8]		//B
+			)
+		{
+			//Move the pointer to the spot in the array with the color.
+			latestColor = m_hostResultArray.get() + i;
+
+			char data[20] =
+			{
+				'\x1b', '[',					//Escape character
+				'4', '8', ';',					//Keycode for background
+				'2', ';',						//Keycode for background
+				m_hostResultArray[i + 0],
+				m_hostResultArray[i + 1],
+				m_hostResultArray[i + 2], ';',	//R
+				m_hostResultArray[i + 3],
+				m_hostResultArray[i + 4],
+				m_hostResultArray[i + 5], ';',	//G
+				m_hostResultArray[i + 6],
+				m_hostResultArray[i + 7],
+				m_hostResultArray[i + 8],		//B
+				'm',
+				' '
+			};
+
+			//Copy the escape sequence and data to the minimized result.
+			memcpy(m_minimizedResultArray.get() + addedChars, data, 20);
+
+			addedChars += 20;
+		}
+		//Only add the data and not the escape sequence.
+		else
+		{
+			m_minimizedResultArray[addedChars] = ' ';
+
+			addedChars += 1;
+		}
+
+		//Move 9 characters forward.
+		i += SIZE_RGB_PIXEL;
 	}
 
 	return addedChars;
