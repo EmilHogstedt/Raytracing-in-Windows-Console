@@ -193,6 +193,9 @@ void RayTrace_ASCII(
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
 		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
+
+		//#TODO: SIMPLY OUTPUT THE INDEX VALUE! DO ALL THIS STUFF OUTSIDE. THIS REDUCES THE VALUES FROM 4 TO 2!
+
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -269,6 +272,9 @@ void RayTrace_PIXEL(
 
 		//Convert the 24bit RGB color to ANSI 8 bit color.
 		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
+
+		//#TODO: SIMPLY OUTPUT THE INDEX VALUE! DO ALL THIS STUFF OUTSIDE. THIS REDUCES THE VALUES FROM 3 TO 1!
+
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -343,6 +349,8 @@ void RayTrace_RGB_ASCII(
 		//Apply shading.
 		traceData.color *= traceData.shadingValue;
 
+		//#TODO: SIMPLY OUTPUT THE RGB VALUES! DO ALL THIS STUFF OUTSIDE. THIS REDUCES THE VALUES FROM 10 TO 4!
+		
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
 		char secondR = '\0';
@@ -475,6 +483,8 @@ void RayTrace_RGB_PIXEL(
 		//Apply shading.
 		traceData.color *= traceData.shadingValue;
 
+		//#TODO: SIMPLY OUTPUT THE RGB VALUES! DO ALL THIS STUFF OUTSIDE. THIS REDUCES THE VALUES FROM 9 TO 3!
+		
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
 		char secondR = '\0';
@@ -606,6 +616,8 @@ void RayTrace_RGB_NORMALS(
 
 		//Apply shading. NOT NEEDED FOR NORMALS.
 		//traceData.color *= traceData.shadingValue;
+
+		//#TODO: SIMPLY OUTPUT THE RGB VALUES! DO ALL THIS STUFF OUTSIDE. THIS REDUCES THE VALUES FROM 9 TO 3!
 
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
