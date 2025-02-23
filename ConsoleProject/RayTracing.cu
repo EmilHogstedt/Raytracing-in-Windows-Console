@@ -166,8 +166,7 @@ void RayTrace_ASCII(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}
@@ -247,8 +246,7 @@ void RayTrace_PIXEL(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}
@@ -321,8 +319,7 @@ void RayTrace_RGB_ASCII(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}
@@ -457,8 +454,7 @@ void RayTrace_RGB_PIXEL(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}
@@ -588,8 +584,7 @@ void RayTrace_RGB_NORMALS(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}
@@ -722,8 +717,7 @@ void RayTrace_SDL(
 	__shared__ RayTracingParameters localParams;
 	localParams = *params;
 
-	//x - 1 because the last x-line is for newlines.
-	if (column >= (localParams.x - 1) || row >= localParams.y)
+	if (column >= localParams.x || row >= localParams.y)
 	{
 		return;
 	}

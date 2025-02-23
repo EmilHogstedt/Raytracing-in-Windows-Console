@@ -334,7 +334,7 @@ size_t RayTracingManager::MinimizeASCIIRGB(const size_t size, const size_t x, co
 	for (size_t i = 0; i < size;)
 	{
 		//If we are handling the end of a line.
-		//If i + 1 is the end of the line. A line is 10 characters times the size of x, then +1.
+		//If i is the end of the line. A line is 10 characters times the size of x, then +1.
 		if (i != 0 && (i % (SIZE_RGB_ASCII * x)) == 0)
 		{
 			++newlines;

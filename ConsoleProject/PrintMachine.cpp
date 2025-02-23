@@ -137,7 +137,7 @@ void PrintMachine::Start(const size_t x, const size_t y)
 	currentHeight = y;
 
 	//The console window is width * characters per pixel * height.
-	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight);
+	m_maxSize = (m_charsPerPixel * currentWidth * currentHeight) + currentHeight;
 
 	m_printBuffer = std::make_unique<char[]>(m_maxSize);
 
@@ -297,7 +297,6 @@ bool PrintMachine::Print()
 		printf("\x1b[m");
 		printf("Rendering FPS: %d    \n", m_renderingFps);
 		printf("Printing FPS: %d    \n", m_printingFps);
-
 		//DEBUG ONLY
 		//std::cout << m_debugInfo << std::endl;
 	}
