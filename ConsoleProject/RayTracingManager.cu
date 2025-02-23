@@ -198,7 +198,7 @@ size_t RayTracingManager::MinimizeASCII(const size_t size, const size_t x, const
 	{
 		//If we are handling the end of a line.
 		//If i + 1 is the end of the line. A line is 4 characters times the size of x, then +1.
-		if ((i % (SIZE_8BIT_ASCII * x)) == 0)
+		if (i != 0 && (i % (SIZE_8BIT_ASCII * x)) == 0)
 		{
 			++newlines;
 
@@ -267,7 +267,7 @@ size_t RayTracingManager::MinimizePIXEL(const size_t size, const size_t x, const
 	{
 		//If we are handling the end of a line.
 		//If i + 1 is the end of the line. A line is 3 characters times the size of x, then +1.
-		if ((i % (SIZE_8BIT_PIXEL * x)) == 0)
+		if (i != 0 && (i % (SIZE_8BIT_PIXEL * x)) == 0)
 		{
 			++newlines;
 
@@ -335,7 +335,7 @@ size_t RayTracingManager::MinimizeASCIIRGB(const size_t size, const size_t x, co
 	{
 		//If we are handling the end of a line.
 		//If i + 1 is the end of the line. A line is 10 characters times the size of x, then +1.
-		if ((i % (SIZE_RGB_ASCII * x)) == 0)
+		if (i != 0 && (i % (SIZE_RGB_ASCII * x)) == 0)
 		{
 			++newlines;
 
@@ -410,7 +410,7 @@ size_t RayTracingManager::MinimizePIXELRGB(const size_t size, const size_t x, co
 	{
 		//If we are handling the end of a line.
 		//If i + 1 is the end of the line. A line is 9 characters times the size of x, then +1.
-		if ((i % (SIZE_RGB_PIXEL * x)) == 0)
+		if (i != 0 && (i % (SIZE_RGB_PIXEL * x)) == 0)
 		{
 			++newlines;
 
