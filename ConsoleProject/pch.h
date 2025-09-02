@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <limits>
+#include <chrono>
 
 #include <thread>
 #include <mutex>
@@ -53,6 +54,19 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
 
 #ifdef __INTELLISENSE__
 #define CUDA_KERNEL(...)
+#define blockIdxX NULL
+#define blockIdxY NULL
+#define blockDimX NULL
+#define blockDimY NULL
+#define threadIdxX NULL
+#define threadIdxY NULL
 #else
 #define CUDA_KERNEL(...) <<< __VA_ARGS__ >>>
+#define blockIdxX blockIdx.x
+#define blockIdxY blockIdx.y
+#define blockDimX blockDim.x
+#define blockDimY blockDim.y
+#define threadIdxX threadIdx.x
+#define threadIdxY threadIdx.y
 #endif
+

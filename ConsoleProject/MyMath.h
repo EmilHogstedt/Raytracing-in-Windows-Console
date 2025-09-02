@@ -1,7 +1,5 @@
 #pragma once
 
-#define FLT_EPSILON 0.000000001f
-
 namespace MyMath
 {
 
@@ -33,7 +31,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		~Vector3() = default;
+		virtual ~Vector3() = default;
 
 		__host__ __device__
 		Vector3(const Vector3& other)
@@ -180,7 +178,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		~Vector4() = default;
+		virtual ~Vector4() = default;
 
 		__host__ __device__
 		Vector4(const Vector4& other)
@@ -264,7 +262,7 @@ namespace MyMath
 		}
 
 		__host__ __device__
-		~Matrix() = default;
+		virtual ~Matrix() = default;
 
 		__host__ __device__
 		Matrix(const Matrix& other)

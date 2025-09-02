@@ -143,7 +143,7 @@ void Camera3D::Move(const long double dt)
 {
 	static const float speed = 10.0f;
 
-	const float deltaSpeed = dt * speed;
+	const float deltaSpeed = static_cast<float>(dt) * speed;
 
 	//#todo: Remake this. Right now it moves faster diagonally. Should also use velocity. 
 	
@@ -204,12 +204,11 @@ const MyMath::Matrix& Camera3D::GetVMatrix() const
 
 //Manual calculation of the inverse 4x4 matrix. Is there any way to optimize this???
 //Here be dragons
-const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
+const MyMath::Matrix Camera3D::GetInverseVMatrix() const
 {
 	MyMath::Matrix inverseMatrix = MyMath::Matrix();
 
 	//First column.
-	//00 Done
 	inverseMatrix.row1.x = 
 		m_vMatrix.row2.y * m_vMatrix.row3.z * m_vMatrix.row4.w -
 		m_vMatrix.row2.y * m_vMatrix.row3.w * m_vMatrix.row4.z -
@@ -218,7 +217,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.y * m_vMatrix.row2.z * m_vMatrix.row3.w -
 		m_vMatrix.row4.y * m_vMatrix.row2.w * m_vMatrix.row3.z;
 
-	//10 Done
 	inverseMatrix.row2.x =
 		-m_vMatrix.row2.x * m_vMatrix.row3.z * m_vMatrix.row4.w +
 		m_vMatrix.row2.x * m_vMatrix.row3.w * m_vMatrix.row4.z +
@@ -227,7 +225,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row2.z * m_vMatrix.row3.w +
 		m_vMatrix.row4.x * m_vMatrix.row2.w * m_vMatrix.row3.z;
 
-	//20 Done
 	inverseMatrix.row3.x =
 		m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row4.w -
 		m_vMatrix.row2.x * m_vMatrix.row3.w * m_vMatrix.row4.y -
@@ -236,7 +233,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row2.y * m_vMatrix.row3.w -
 		m_vMatrix.row4.x * m_vMatrix.row2.w * m_vMatrix.row3.y;
 
-	//30 Done
 	inverseMatrix.row4.x =
 		-m_vMatrix.row2.x * m_vMatrix.row3.y * m_vMatrix.row4.z +
 		m_vMatrix.row2.x * m_vMatrix.row3.z * m_vMatrix.row4.y +
@@ -246,7 +242,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row2.z * m_vMatrix.row3.y;
 
 	//Second column.
-	//01 Done
 	inverseMatrix.row1.y =
 		-m_vMatrix.row1.y * m_vMatrix.row3.z * m_vMatrix.row4.w +
 		m_vMatrix.row1.y * m_vMatrix.row3.w * m_vMatrix.row4.z +
@@ -255,7 +250,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.y * m_vMatrix.row1.z * m_vMatrix.row3.w +
 		m_vMatrix.row4.y * m_vMatrix.row1.w * m_vMatrix.row3.z;
 
-	//11 Done
 	inverseMatrix.row2.y =
 		m_vMatrix.row1.x * m_vMatrix.row3.z * m_vMatrix.row4.w -
 		m_vMatrix.row1.x * m_vMatrix.row3.w * m_vMatrix.row4.z -
@@ -264,7 +258,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row3.w -
 		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row3.z;
 
-	//21 Done
 	inverseMatrix.row3.y =
 		-m_vMatrix.row1.x * m_vMatrix.row3.y * m_vMatrix.row4.w +
 		m_vMatrix.row1.x * m_vMatrix.row3.w * m_vMatrix.row4.y +
@@ -273,7 +266,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row3.w +
 		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row3.y;
 
-	//31 Done
 	inverseMatrix.row4.y =
 		m_vMatrix.row1.x * m_vMatrix.row3.y * m_vMatrix.row4.z -
 		m_vMatrix.row1.x * m_vMatrix.row3.z * m_vMatrix.row4.y -
@@ -283,7 +275,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row3.y;
 
 	//Third column.
-	//02 Done
 	inverseMatrix.row1.z =
 		m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row4.w -
 		m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row4.z -
@@ -292,7 +283,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.y * m_vMatrix.row1.z * m_vMatrix.row2.w -
 		m_vMatrix.row4.y * m_vMatrix.row1.w * m_vMatrix.row2.z;
 
-	//12 Done
 	inverseMatrix.row2.z =
 		-m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row4.w +
 		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row4.z +
@@ -301,7 +291,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row2.w +
 		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row2.z;
 
-	//22 Done
 	inverseMatrix.row3.z =
 		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row4.w -
 		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row4.y -
@@ -310,7 +299,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.y * m_vMatrix.row2.w -
 		m_vMatrix.row4.x * m_vMatrix.row1.w * m_vMatrix.row2.y;
 
-	//32 Done
 	inverseMatrix.row4.z =
 		-m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row4.z +
 		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row4.y +
@@ -320,7 +308,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row4.x * m_vMatrix.row1.z * m_vMatrix.row2.y;
 
 	//Fourth column.
-	//03 Done
 	inverseMatrix.row1.w =
 		-m_vMatrix.row1.y * m_vMatrix.row2.z * m_vMatrix.row3.w +
 		m_vMatrix.row1.y * m_vMatrix.row2.w * m_vMatrix.row3.z +
@@ -329,7 +316,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row3.y * m_vMatrix.row1.z * m_vMatrix.row2.w +
 		m_vMatrix.row3.y * m_vMatrix.row1.w * m_vMatrix.row2.z;
 
-	//13 Done
 	inverseMatrix.row2.w =
 		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.w -
 		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.z -
@@ -338,7 +324,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row3.x * m_vMatrix.row1.z * m_vMatrix.row2.w -
 		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row2.z;
 
-	//23 Done
 	inverseMatrix.row3.w =
 		-m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.w +
 		m_vMatrix.row1.x * m_vMatrix.row2.w * m_vMatrix.row3.y +
@@ -347,7 +332,6 @@ const MyMath::Matrix& Camera3D::GetInverseVMatrix() const
 		m_vMatrix.row3.x * m_vMatrix.row1.y * m_vMatrix.row2.w +
 		m_vMatrix.row3.x * m_vMatrix.row1.w * m_vMatrix.row2.y;
 
-	//33 Done
 	inverseMatrix.row4.w =
 		m_vMatrix.row1.x * m_vMatrix.row2.y * m_vMatrix.row3.z -
 		m_vMatrix.row1.x * m_vMatrix.row2.z * m_vMatrix.row3.y -

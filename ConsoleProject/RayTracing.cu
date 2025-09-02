@@ -9,8 +9,8 @@
 __device__
 MyMath::Vector3 CalculateInitialDirection(const RayTracingParameters* params)
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Convert pixel coordinates to (clip space? screen space?)
 	const float convertedY = ((float)(params->y) - row * 2) / params->y;
@@ -159,11 +159,12 @@ void RayTrace_ASCII(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
+
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -246,11 +247,11 @@ void RayTrace_PIXEL(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -328,11 +329,11 @@ void RayTrace_RGB_ASCII(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -470,11 +471,11 @@ void RayTrace_RGB_PIXEL(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -609,11 +610,11 @@ void RayTrace_RGB_NORMALS(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -751,11 +752,11 @@ void RayTrace_SDL(
 	char* resultArray
 )
 {
-	const size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-	const size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+	const size_t row = blockIdxY * blockDimY + threadIdxY;
+	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	__shared__ RayTracingParameters localParams;
+	RayTracingParameters localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.

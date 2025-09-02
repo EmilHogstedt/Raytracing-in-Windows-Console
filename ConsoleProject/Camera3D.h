@@ -17,7 +17,7 @@ public:
 	void AddRot(const long double dt, const short p, const short y, const short r);
 
 	const MyMath::Matrix& GetVMatrix() const;
-	const MyMath::Matrix& GetInverseVMatrix() const;
+	const MyMath::Matrix GetInverseVMatrix() const;
 	const MyMath::Matrix& GetPMatrix() const;
 
 	const MyMath::Vector3& GetPos() const;

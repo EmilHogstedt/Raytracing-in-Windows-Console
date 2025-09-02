@@ -191,32 +191,32 @@ void PrintMachine::SetDataInBackBuffer(const char* data, const size_t size)
 	m_backBufferMutex.unlock();
 }
 
-const size_t PrintMachine::GetWidth()
+size_t PrintMachine::GetWidth()
 {
 	return currentWidth;
 }
 
-const size_t PrintMachine::GetHeight()
+size_t PrintMachine::GetHeight()
 {
 	return currentHeight;
 }
 
-const size_t PrintMachine::GetMaxSize()
+size_t PrintMachine::GetMaxSize()
 {
 	return m_maxSize;
 }
 
-const HANDLE PrintMachine::GetConsoleInputHandle()
+HANDLE PrintMachine::GetConsoleInputHandle()
 {
 	return m_inputHandle;
 }
 
-const HANDLE PrintMachine::GetConsoleOutputHandle()
+HANDLE PrintMachine::GetConsoleOutputHandle()
 {
 	return m_outputHandle;
 }
 
-const size_t PrintMachine::GetPrintSize()
+size_t PrintMachine::GetPrintSize()
 {
 	return m_printSize;
 }
@@ -261,7 +261,7 @@ bool PrintMachine::Print()
 		m_timer->Update();
 		m_printingFpsCounter++;
 
-		m_printingFpsTimer += m_timer->DeltaTime();
+		m_printingFpsTimer += static_cast<float>(m_timer->DeltaTime());
 
 		//Once every second we update the fps.
 		if (m_printingFpsTimer >= 1.0f)

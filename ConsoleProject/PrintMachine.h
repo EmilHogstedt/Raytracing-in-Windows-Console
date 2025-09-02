@@ -33,12 +33,12 @@ public:
 	static const char* GetBackBuffer();
 	static void SetDataInBackBuffer(const char* data, const size_t size);
 
-	static const size_t GetWidth();
-	static const size_t GetHeight();
-	static const size_t GetMaxSize();
-	static const HANDLE GetConsoleInputHandle();
-	static const HANDLE GetConsoleOutputHandle();
-	static const size_t GetPrintSize();
+	static size_t GetWidth();
+	static size_t GetHeight();
+	static size_t GetMaxSize();
+	static HANDLE GetConsoleInputHandle();
+	static HANDLE GetConsoleOutputHandle();
+	static size_t GetPrintSize();
 
 	static void ResetBackBuffer();
 	static void FlagForBufferSwap();
