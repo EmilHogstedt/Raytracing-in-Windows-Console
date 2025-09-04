@@ -6,7 +6,7 @@ class Object3D;
 template<typename T>
 struct DeviceObjectArray;
 
-struct RayTracingParameters
+struct RayTracingCPUToGPUData
 {
 	MyMath::Matrix inverseVMatrix;
 	MyMath::Vector3 camPos;
@@ -29,7 +29,7 @@ public:
 	~RayTracingManager();
 
 	void Update(
-		const RayTracingParameters& params,
+		const RayTracingCPUToGPUData& params,
 		const DeviceObjectArray<Object3D*>& objects,
 		double dt
 	);
@@ -49,7 +49,7 @@ private:
 	std::unique_ptr<char[]> m_minimizedResultArray;
 
 	//The raytracingparameters is always nullptr on the CPU. Meaning "new" is never called on it.
-	RayTracingParameters DEVICE_MEMORY_PTR m_deviceRayTracingParameters;
+	RayTracingCPUToGPUData DEVICE_MEMORY_PTR m_deviceRayTracingData;
 
 	RenderingMode currentRenderingMode = BIT_ASCII;
 };

@@ -14,6 +14,9 @@ public:
 	__host__ __device__
 	float GetRadius() const;
 
+	__device__
+	void Trace(const ObjectTraceInputData& inputData, ObjectTraceReturnData& returnData) const;
+
 private:
 	float m_radius;
 

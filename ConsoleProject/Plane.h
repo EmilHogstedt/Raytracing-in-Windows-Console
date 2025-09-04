@@ -27,6 +27,10 @@ public:
 
 	__host__ __device__
 	float GetHeight() const;
+
+	__device__
+	void Trace(const ObjectTraceInputData& inputData, ObjectTraceReturnData& returnData) const;
+
 private:
 	MyMath::Vector3 m_normal;
 	float m_width;

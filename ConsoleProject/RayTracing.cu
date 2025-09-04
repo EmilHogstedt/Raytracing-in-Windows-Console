@@ -7,7 +7,7 @@
 #include "Plane.h"
 
 __device__
-MyMath::Vector3 CalculateInitialDirection(const RayTracingParameters* params)
+MyMath::Vector3 CalculateInitialDirection(const RayTracingCPUToGPUData* params)
 {
 	const size_t row = blockIdxY * blockDimY + threadIdxY;
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
@@ -38,124 +38,140 @@ char GetASCIICharacter(const float distance, const float farPlane, const float s
 	}
 }
 
-__device__
-void Trace(
-	const MyMath::Vector3& direction,
-	const MyMath::Vector3& origin,
-	const unsigned int count,
-	Object3D* DEVICE_MEMORY_PTR const objects,
-	TraceData& traceData)
+__device__ MyMath::Vector3 BlinnPhongShading(
+	const MyMath::Vector3& objectDiffuseColour, const MyMath::Vector3& objectSpecularColour,
+	const MyMath::Vector3& lightPos,
+	const MyMath::Vector3& lightDiffuseColour, const float lightDiffusePower,
+	const MyMath::Vector3& lightSpecularColour, const float lightSpecularPower,
+	const MyMath::Vector3& point, const MyMath::Vector3& viewDir, const MyMath::Vector3& normal)
 {
+	MyMath::Vector3 lightDir = (lightPos - point); //Vector from the point to the light.
+
+	float distance = lightDir.Length();
+	distance = distance * distance; //Square the distance for attenuation.
+	const float divDistance = 1.0f / distance; //Precalculate 1/distance for optimization.
+
+	lightDir = lightDir.Normalize_GPU();
+
+	MyMath::Vector3 normalizedNormal = normal.Normalize_GPU();
+	MyMath::Vector3 normalizedViewDir = viewDir.Normalize_GPU();
+
+	//Intensity of the diffuse light. Clamp to keep within the 0-1 range.
+	float NdotL = MyMath::Dot(normalizedNormal, lightDir);
+	float diffuseIntensity = MyMath::Clamp(NdotL, 0.0f, 1.0f);
+
+	// Calculate the diffuse light factoring in light color, power and the attenuation
+	const MyMath::Vector3 diffuse = lightDiffuseColour * diffuseIntensity * lightDiffusePower * divDistance;
+
+	//Calculate the half vector between the light vector and the view vector.
+	const MyMath::Vector3 h = (lightDir + normalizedViewDir).Normalize_GPU();
+
+	static constexpr float specularHardness = 32.0f;
+
+	//Intensity of the specular light
+	const float NdotH = MyMath::Dot(normalizedNormal, h);
+	const float specularIntensity = pow(MyMath::Clamp(NdotH, 0.0f, 1.0f), specularHardness); //Hardcoded shininess.
+
+	const MyMath::Vector3 specular = lightSpecularColour * specularIntensity * lightSpecularPower * divDistance;
+
+	const MyMath::Vector3 ambientLight(0.2f, 0.2f, 0.2f);
+	return MyMath::ComponentMul(ambientLight, objectDiffuseColour) + MyMath::ComponentMul(diffuse, objectDiffuseColour) + MyMath::ComponentMul(specular, objectSpecularColour);
+}
+
+__device__
+void RayTrace(
+	const RayTraceInputData& rayTraceInputData,
+	RayTraceReturnData& rayTraceReturnData)
+{
+	ObjectTraceInputData objectTraceInputData;
+	objectTraceInputData.origin = rayTraceInputData.origin;
+	objectTraceInputData.direction = rayTraceInputData.direction;
+
 	//Used during intersection tests with spheres.
-	const float a = MyMath::Dot(direction, direction);
-	const float fourA = 4.0f * a;
-	const float divTwoA = 1.0f / (2.0f * a);
+	objectTraceInputData.a = MyMath::Dot(rayTraceInputData.direction, rayTraceInputData.direction);
+	objectTraceInputData.fourA = 4.0f * objectTraceInputData.a;
+	objectTraceInputData.divTwoA = 1.0f / (2.0f * objectTraceInputData.a);
+
+	ObjectTraceReturnData objectTraceReturnData;
+
+	bool bHitSomething = false;
 
 	//Ray trace against every object.
-	for (size_t i = 0; i < count; i++)
+	for (size_t i = 0; i < rayTraceInputData.objectCount; i++)
 	{
 		//#todo: Here we need to check if the object is culled, if it is we continue on the next object.
 
-		const ObjectType type = objects[i]->GetType();
-
-		//Ray-Sphere intersection test.
-		if (type == ObjectType::SphereType)
+		const ObjectType type = rayTraceInputData.objects[i]->GetType();
+		switch (type)
 		{
-			const Sphere* sphere = (Sphere*)objects[i];
-			const MyMath::Vector3 spherePos = sphere->GetPos();
-
-			const MyMath::Vector3 objectToCam = origin - spherePos;
-			const float radius = sphere->GetRadius();
-
-			const float b = 2.0f * Dot(direction, objectToCam);
-			const float c = Dot(objectToCam, objectToCam) - (radius * radius);
-
-			const float discriminant = b * b - fourA * c;
-
-			//It hit
-			if (discriminant >= 0.0f)
-			{
-				const float sqrtDiscriminant = sqrt(discriminant);
-				const float minusB = -b;
-				float t1 = (minusB + sqrtDiscriminant) * divTwoA;
-				const float t2 = (minusB - sqrtDiscriminant) * divTwoA;
-
-				//Remove second condition to enable "backface" culling for spheres. IE; not hit when inside them.
-				if (t1 > t2 && t2 >= 0.0f)
-				{
-					t1 = t2;
-				}
-
-				if (t1 < traceData.distance && t1 > 0.0f)
-				{
-					traceData.distance = t1;
-					const MyMath::Vector3 normalSphere = (origin + direction * traceData.distance - spherePos).Normalize_GPU();
-					traceData.normal = normalSphere;
-
-					//1, 0, 0 is just temporary light direction.
-					//#todo: INTRODUCE REAL LIGHTS!
-					traceData.shadingValue = Dot(normalSphere, MyMath::Vector3(1.0f, 0.0f, 0.0f));
-					traceData.color = sphere->GetColor();
-				}
-			}
+		case ObjectType::PlaneType:
+		{
+			const Plane* plane = (Plane*)(rayTraceInputData.objects[i]);
+			plane->Trace(objectTraceInputData, objectTraceReturnData);
+			break;
 		}
-		else if (type == ObjectType::PlaneType)
+		case ObjectType::SphereType:
 		{
-			const Plane* plane = (Plane*)objects[i];
-			const MyMath::Vector3 planeNormal = plane->GetNormal();
-			const MyMath::Vector3 planePos = plane->GetPos();
+			const Sphere* sphere = (Sphere*)(rayTraceInputData.objects[i]);
+			sphere->Trace(objectTraceInputData, objectTraceReturnData);
+			break;
+		}
+		default:
+			break;
+		}
 
-			const float dotLineAndPlaneNormal = Dot(direction, planeNormal);
+		if (objectTraceReturnData.bHit && objectTraceReturnData.distance < rayTraceReturnData.distance)
+		{
+			bHitSomething = true;
 
-			//Check if the line and plane are paralell, if not it hit.
-			if (!MyMath::FloatEquals(dotLineAndPlaneNormal, 0.0f))
-			{
-				float t1 = Dot((planePos - origin), planeNormal) / dotLineAndPlaneNormal;
+			rayTraceReturnData.distance = objectTraceReturnData.distance;
+			rayTraceReturnData.normal = objectTraceReturnData.normal;
+			rayTraceReturnData.normal = rayTraceReturnData.normal.Normalize_GPU();
 
-				if (t1 > 0.0f)
-				{
-					if (t1 < traceData.distance)
-					{
-						MyMath::Vector3 point = origin + (direction * t1);
-						const float halfPlaneWidth = plane->GetWidth() * 0.5f;
-						const float halfPlaneHeight = plane->GetHeight() * 0.5f;
-
-						//If the ray hit inbetween the width & height.
-						if (
-							point.x > planePos.x - halfPlaneWidth && point.x < planePos.x + halfPlaneWidth &&	//Width
-							point.z > planePos.z - halfPlaneHeight && point.z < planePos.z + halfPlaneHeight	//Height
-							)
-						{
-							//1, 0, 0 is just temporary light direction.
-							//#todo: INTRODUCE REAL LIGHTS!
-							traceData.shadingValue = Dot(planeNormal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
-
-							//Comment in this if statement to get "backface" culling for planes.
-							//if (shadingValue > 0.0f) {
-							traceData.distance = t1;
-							//}
-
-							traceData.color = plane->GetColor();
-							traceData.normal = planeNormal;
-
-							//Reverse the normal if viewed from backside.
-							if (dotLineAndPlaneNormal > 0.0f)
-							{
-								traceData.normal *= -1;
-							}
-						}
-					}
-				}
-			}
+			//1, 0, 0 is just temporary light direction.
+			//#todo: INTRODUCE REAL LIGHTS!
+			rayTraceReturnData.shadingValue = Dot(rayTraceReturnData.normal, MyMath::Vector3(1.0f, 0.0f, 0.0f));
+			rayTraceReturnData.color = rayTraceInputData.objects[i]->GetColor();
 		}
 	}
+
+	if (!bHitSomething)
+	{
+		return;
+	}
+
+	MyMath::Vector3 shading = BlinnPhongShading(
+		rayTraceReturnData.color / 255.0f, //Object diffuse color
+		MyMath::Vector3(1.0f, 1.0f, 1.0f), //Object specular color
+		MyMath::Vector3(1.0f, 50.0f, 0.0f), //Light position.
+		MyMath::Vector3(1.0f, 1.0f, 1.0f), 2000.0f, //Diffuse color and power of the light.
+		MyMath::Vector3(1.0f, 1.0f, 1.0f), 3000.0f, //Specular color and power of the light.
+		rayTraceInputData.origin + rayTraceInputData.direction * rayTraceReturnData.distance, //Point in world space.
+		(rayTraceInputData.direction * -1.0f).Normalize_GPU(), //View direction.
+		rayTraceReturnData.normal //Normal at the point.
+	);
+
+	shading *= 255.0f; //Scale to 0-255 range.
+
+	//rayTraceReturnData.color = MyMath::ComponentMul(rayTraceReturnData.color, shading);
+	rayTraceReturnData.color = MyMath::Vector3(MyMath::Min(255.0f, shading.x), MyMath::Min(255.0f, shading.y), MyMath::Min(255.0f, shading.z));
+	//rayTraceReturnData.color += shading;
+	/*
+	if (rayTraceReturnData.shadingValue < AMBIENT_LIGHT)
+	{
+		rayTraceReturnData.shadingValue = AMBIENT_LIGHT;
+	}
+
+	//#TODO: THIS SHOULD BE DONE WITH PHONG SHADING INSTEAD!
+	//Apply shading.
+	rayTraceReturnData.color *= rayTraceReturnData.shadingValue;*/
 }
 
 __global__
 void RayTrace_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -163,7 +179,7 @@ void RayTrace_ASCII(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 
 	localParams = *params;
 
@@ -175,26 +191,23 @@ void RayTrace_ASCII(
 
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//Decide what character to write for this pixel.
-	const char data = GetASCIICharacter(traceData.distance, localParams.camFarDist, traceData.shadingValue);
+	const char data = GetASCIICharacter(rayTraceData.distance, localParams.camFarDist, rayTraceData.shadingValue);
 	
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
-		if (traceData.shadingValue < AMBIENT_LIGHT)
-		{
-			traceData.shadingValue = AMBIENT_LIGHT;
-		}
-
-		//#TODO: THIS SHOULD PROBABLY BE DONE IN THE TRACE FUNCTION? ESPECIALLY WHEN MULTIPLE TRACES WILL BE DONE RECURSIVELY, AS THE SHADING NEEDS TO BE APPLIED EACH TIME.
-		//Apply shading.
-		traceData.color *= traceData.shadingValue;
-
 		//Convert the 24bit RGB color to ANSI 8 bit color.
-		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
+		uint8_t index = ansi256_from_rgb(((uint8_t)rayTraceData.color.x << 16) + ((uint8_t)rayTraceData.color.y << 8) + (uint8_t)rayTraceData.color.z);
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -243,7 +256,7 @@ __global__
 void RayTrace_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -251,7 +264,7 @@ void RayTrace_PIXEL(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -262,22 +275,20 @@ void RayTrace_PIXEL(
 
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
-		if (traceData.shadingValue < AMBIENT_LIGHT)
-		{
-			traceData.shadingValue = AMBIENT_LIGHT;
-		}
-
-		//Apply shading.
-		traceData.color *= traceData.shadingValue;
-
 		//Convert the 24bit RGB color to ANSI 8 bit color.
-		uint8_t index = ansi256_from_rgb(((uint8_t)traceData.color.x << 16) + ((uint8_t)traceData.color.y << 8) + (uint8_t)traceData.color.z);
+		uint8_t index = ansi256_from_rgb(((uint8_t)rayTraceData.color.x << 16) + ((uint8_t)rayTraceData.color.y << 8) + (uint8_t)rayTraceData.color.z);
 		uint8_t originalIndex = index;
 		//Now we need to convert this number (0-255) to 3 chars.
 		uint8_t tens = index % 100;
@@ -325,7 +336,7 @@ __global__
 void RayTrace_RGB_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -333,7 +344,7 @@ void RayTrace_RGB_ASCII(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -344,23 +355,21 @@ void RayTrace_RGB_ASCII(
 
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//Decide what character to write for this pixel.
-	const char data = GetASCIICharacter(traceData.distance, localParams.camFarDist, traceData.shadingValue);
+	const char data = GetASCIICharacter(rayTraceData.distance, localParams.camFarDist, rayTraceData.shadingValue);
 
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
-		if (traceData.shadingValue < AMBIENT_LIGHT)
-		{
-			traceData.shadingValue = AMBIENT_LIGHT;
-		}
-
-		//Apply shading.
-		traceData.color *= traceData.shadingValue;
-
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
 		char secondR = '\0';
@@ -378,8 +387,8 @@ void RayTrace_RGB_ASCII(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)traceData.color.x;
-		index = (uint8_t)traceData.color.x;
+		originalIndex = (uint8_t)rayTraceData.color.x;
+		index = (uint8_t)rayTraceData.color.x;
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -398,8 +407,8 @@ void RayTrace_RGB_ASCII(
 
 
 		//G
-		originalIndex = (uint8_t)traceData.color.y;
-		index = (uint8_t)traceData.color.y;
+		originalIndex = (uint8_t)rayTraceData.color.y;
+		index = (uint8_t)rayTraceData.color.y;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -418,8 +427,8 @@ void RayTrace_RGB_ASCII(
 
 
 		//B
-		originalIndex = (uint8_t)traceData.color.z;
-		index = (uint8_t)traceData.color.z;
+		originalIndex = (uint8_t)rayTraceData.color.z;
+		index = (uint8_t)rayTraceData.color.z;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -467,7 +476,7 @@ __global__
 void RayTrace_RGB_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -475,7 +484,7 @@ void RayTrace_RGB_PIXEL(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -486,20 +495,18 @@ void RayTrace_RGB_PIXEL(
 
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
-		if (traceData.shadingValue < AMBIENT_LIGHT)
-		{
-			traceData.shadingValue = AMBIENT_LIGHT;
-		}
-
-		//Apply shading.
-		traceData.color *= traceData.shadingValue;
-
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
 		char secondR = '\0';
@@ -517,8 +524,8 @@ void RayTrace_RGB_PIXEL(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)traceData.color.x;
-		index = (uint8_t)traceData.color.x;
+		originalIndex = (uint8_t)rayTraceData.color.x;
+		index = (uint8_t)rayTraceData.color.x;
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -537,8 +544,8 @@ void RayTrace_RGB_PIXEL(
 
 
 		//G
-		originalIndex = (uint8_t)traceData.color.y;
-		index = (uint8_t)traceData.color.y;
+		originalIndex = (uint8_t)rayTraceData.color.y;
+		index = (uint8_t)rayTraceData.color.y;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -557,8 +564,8 @@ void RayTrace_RGB_PIXEL(
 
 
 		//B
-		originalIndex = (uint8_t)traceData.color.z;
-		index = (uint8_t)traceData.color.z;
+		originalIndex = (uint8_t)rayTraceData.color.z;
+		index = (uint8_t)rayTraceData.color.z;
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -606,7 +613,7 @@ __global__
 void RayTrace_RGB_NORMALS(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -614,7 +621,7 @@ void RayTrace_RGB_NORMALS(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -626,20 +633,20 @@ void RayTrace_RGB_NORMALS(
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
 	//#TODO: Add a special trace function for normals, which is not recursive.
-	//This would make it so that TraceData does not need to hold normal information.
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
-		if (traceData.shadingValue < AMBIENT_LIGHT)
-		{
-			traceData.shadingValue = AMBIENT_LIGHT;
-		}
-
-		//Apply shading. NOT NEEDED FOR NORMALS.
-		//traceData.color *= traceData.shadingValue;
+		//Remove the shading, since we are working with normals.
+		rayTraceData.color /= rayTraceData.shadingValue;
 
 		//Needed to print the rgb values to final data.
 		char firstR = '\0';
@@ -659,8 +666,8 @@ void RayTrace_RGB_NORMALS(
 		uint8_t index;
 
 		//R
-		originalIndex = (uint8_t)(traceData.normal.x * 255);
-		index = (uint8_t)(traceData.normal.x * 255);
+		originalIndex = (uint8_t)(rayTraceData.normal.x * 255);
+		index = (uint8_t)(rayTraceData.normal.x * 255);
 
 		uint8_t tens = index % 100;
 		uint8_t singles = tens % 10;
@@ -679,8 +686,8 @@ void RayTrace_RGB_NORMALS(
 
 
 		//G
-		originalIndex = (uint8_t)(traceData.normal.y * 255);
-		index = (uint8_t)(traceData.normal.y * 255);
+		originalIndex = (uint8_t)(rayTraceData.normal.y * 255);
+		index = (uint8_t)(rayTraceData.normal.y * 255);
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -699,8 +706,8 @@ void RayTrace_RGB_NORMALS(
 
 
 		//B
-		originalIndex = (uint8_t)(traceData.normal.z * 255);
-		index = (uint8_t)(traceData.normal.z * 255);
+		originalIndex = (uint8_t)(rayTraceData.normal.z * 255);
+		index = (uint8_t)(rayTraceData.normal.z * 255);
 
 		tens = index % 100;
 		singles = tens % 10;
@@ -748,7 +755,7 @@ __global__
 void RayTrace_SDL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray
 )
 {
@@ -756,7 +763,7 @@ void RayTrace_SDL(
 	const size_t column = blockIdxX * blockDimX + threadIdxX;
 
 	//Localization of parameters.
-	RayTracingParameters localParams;
+	RayTracingCPUToGPUData localParams;
 	localParams = *params;
 
 	//x - 1 because the last x-line is for newlines.
@@ -767,11 +774,17 @@ void RayTrace_SDL(
 
 	const MyMath::Vector3 directionWSpace = CalculateInitialDirection(params);
 
-	TraceData traceData;
-	Trace(directionWSpace, localParams.camPos, count, objects, traceData);
+	RayTraceInputData rayTraceInputData;
+	rayTraceInputData.origin = localParams.camPos;
+	rayTraceInputData.direction = directionWSpace;
+	rayTraceInputData.objectCount = count;
+	rayTraceInputData.objects = objects;
+
+	RayTraceReturnData rayTraceData;
+	RayTrace(rayTraceInputData, rayTraceData);
 
 	//If the pixel hit something during ray tracing.
-	if (traceData.distance <= localParams.camFarDist)
+	if (rayTraceData.distance <= localParams.camFarDist)
 	{
 
 	}
@@ -786,7 +799,7 @@ void RayTracing::RayTrace(
 	const dim3& blockDims,
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray,
 	const RenderingMode mode)
 {

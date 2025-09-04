@@ -4,7 +4,7 @@
 
 //Used for sending objects to the GPU.
 template<typename T>
-struct DeviceObjectArray {
+struct alignas(32) DeviceObjectArray {
 	T DEVICE_MEMORY_PTR m_deviceArray;
 
 	unsigned int allocatedBytes;
@@ -13,6 +13,23 @@ struct DeviceObjectArray {
 
 enum class ObjectType { None = 0, PlaneType, SphereType };
 
+struct alignas(32) ObjectTraceInputData
+{
+	MyMath::Vector3 origin;
+	MyMath::Vector3 direction;
+
+	//Only stored here to avoid recalculating these values for every object.
+	float a = 0.0f;
+	float fourA = 0.0f;
+	float divTwoA = 0.0f;
+};
+
+struct alignas(32) ObjectTraceReturnData
+{
+	bool bHit = false;
+	MyMath::Vector3 normal;
+	float distance = 99999999.f;
+};
 
 //#todo: INTRODUCE WORLDMATRIX FOR OBJECTS INSTEAD OF POSITIONS AND ROTATIONS!
 //Barebones baseclass in order to be able to group all objects together.
@@ -36,6 +53,10 @@ public:
 
 	void SetType(const ObjectType type);
 	void SetMiddlePos(const MyMath::Vector3& center);
+
+	//Cuda does not support virtual functions.
+	//__device__
+	//virtual void Trace(const ObjectTraceInputData& inputData, ObjectTraceReturnData& returnData) const = 0;
 
 protected:
 	MyMath::Vector3 m_center;

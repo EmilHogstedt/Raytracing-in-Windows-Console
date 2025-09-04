@@ -13,7 +13,7 @@ __global__ void UpdateObjects(
 	double dt
 )
 {
-	size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+	size_t index = blockIdxX * blockDimX + threadIdxX;
 	if (index >= count)
 	{
 		return;
@@ -53,7 +53,7 @@ __global__ void Culling(
 RayTracingManager::RayTracingManager()
 {
 	//Allocate memory for the raytracingparameters.
-	cudaMalloc(&m_deviceRayTracingParameters, sizeof(RayTracingParameters));
+	cudaMalloc(&m_deviceRayTracingData, sizeof(RayTracingCPUToGPUData));
 
 	const size_t size = PrintMachine::GetMaxSize();
 
@@ -70,17 +70,17 @@ RayTracingManager::~RayTracingManager()
 {
 	cudaFree(m_deviceResultArray);
 
-	cudaFree(m_deviceRayTracingParameters);
+	cudaFree(m_deviceRayTracingData);
 }
 
 void RayTracingManager::Update(
-	const RayTracingParameters& params,
+	const RayTracingCPUToGPUData& params,
 	const DeviceObjectArray<Object3D*>& deviceObjects,
 	double dt
 )
 {
 	//Set the raytracingparameters on the GPU.
-	gpuErrchk(cudaMemcpy(m_deviceRayTracingParameters, &params, sizeof(RayTracingParameters), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(m_deviceRayTracingData, &params, sizeof(RayTracingCPUToGPUData), cudaMemcpyHostToDevice));
 
 	//The backbuffer needs to be reset in order to not produce artefacts, especially when switching printing mode to RGB.
 	ResetDeviceBackBuffer();
@@ -129,7 +129,7 @@ void RayTracingManager::Update(
 		blockDims,
 		deviceObjects.m_deviceArray,
 		deviceObjects.count,
-		m_deviceRayTracingParameters,
+		m_deviceRayTracingData,
 		m_deviceResultArray,
 		currentRenderingMode);
 

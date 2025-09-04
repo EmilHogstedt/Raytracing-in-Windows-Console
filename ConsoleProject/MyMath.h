@@ -99,6 +99,20 @@ namespace MyMath
 			z *= other;
 		}
 
+		__host__ __device__
+		Vector3 operator/(const float other) const
+		{
+			return Vector3(x / other, y / other, z / other);
+		}
+
+		__host__ __device__
+		void operator/=(const float other)
+		{
+			x /= other;
+			y /= other;
+			z /= other;
+		}
+
 		//Copying functions
 		Vector3 Normalize() const
 		{
@@ -140,6 +154,12 @@ namespace MyMath
 			y *= length;
 			z *= length;
 			return *this;
+		}
+
+		__host__ __device__
+		float Length() const
+		{
+			return sqrt(x * x + y * y + z * z);
 		}
 
 		float x;
@@ -313,6 +333,9 @@ namespace MyMath
 	//#todo: Implement cross product for Vector4.
 
 	__host__ __device__
+	Vector3 ComponentMul(const Vector3& v1, const Vector3& v2);
+
+	__host__ __device__
 	float Clamp(const float val, const float min, const float max);
 
 	__host__ __device__
@@ -320,4 +343,16 @@ namespace MyMath
 
 	__host__ __device__
 	bool FloatEquals(float f1, float f2);
+
+	__host__ __device__
+	int Min(int a, int b);
+
+	__host__ __device__
+	int Max(int a, int b);
+
+	__host__ __device__
+	float Min(float a, float b);
+
+	__host__ __device__
+	float Max(float a, float b);
 }

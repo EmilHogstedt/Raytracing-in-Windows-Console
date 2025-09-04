@@ -87,7 +87,7 @@ void Engine3D::Render(const long double dt)
 	m_scene->Update(dt);
 
 	//Update pixel shader variables.
-	RayTracingParameters params;
+	RayTracingCPUToGPUData params;
 	params.inverseVMatrix = m_camera->GetInverseVMatrix();
 	params.camPos = m_camera->GetPos();
 	params.x = PrintMachine::GetWidth();

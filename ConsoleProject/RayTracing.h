@@ -4,14 +4,22 @@
 
 enum RenderingMode;
 class Object3D;
-struct RayTracingParameters;
+struct RayTracingCPUToGPUData;
 
-struct alignas(32) TraceData
+struct alignas(32) RayTraceInputData
+{
+	MyMath::Vector3 origin;
+	MyMath::Vector3 direction;
+	unsigned int objectCount = 0;
+	Object3D* DEVICE_MEMORY_PTR objects = nullptr;
+};
+
+struct alignas(32) RayTraceReturnData
 {
 	MyMath::Vector3 color;
 	MyMath::Vector3 normal;
 	float distance = 99999999.f;
-	float shadingValue;
+	float shadingValue = 0.0f;
 };
 
 class RayTracing
@@ -25,7 +33,7 @@ public:
 		const dim3& blockDims,
 		Object3D* DEVICE_MEMORY_PTR const objects,
 		const unsigned int count,
-		const RayTracingParameters* params,
+		const RayTracingCPUToGPUData* params,
 		char* resultArray,
 		const RenderingMode mode);
 
@@ -34,59 +42,56 @@ private:
 };
 
 __device__
-MyMath::Vector3 CalculateInitialDirection(const RayTracingParameters* params);
+MyMath::Vector3 CalculateInitialDirection(const RayTracingCPUToGPUData* params);
 
 __device__
 char GetASCIICharacter(const float distance, const float farPlane, const float shadingValue);
 
 __device__
 void Trace(
-	const MyMath::Vector3& direction,
-	const MyMath::Vector3& origin,
-	const unsigned int count,
-	Object3D* DEVICE_MEMORY_PTR const objects,
-	TraceData& traceData);
+	const RayTraceInputData& rayTraceInputData,
+	RayTraceReturnData& rayTraceReturnData);
 
 __global__
 void RayTrace_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 __global__
 void RayTrace_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 __global__
 void RayTrace_RGB_ASCII(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 __global__
 void RayTrace_RGB_PIXEL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 __global__
 void RayTrace_RGB_NORMALS(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 __global__
 void RayTrace_SDL(
 	Object3D* DEVICE_MEMORY_PTR const objects,
 	const unsigned int count,
-	const RayTracingParameters* params,
+	const RayTracingCPUToGPUData* params,
 	char* resultArray);
 
 #define NUM_ASCII_CHARACTERS 68
